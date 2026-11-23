@@ -664,8 +664,8 @@ function nearBox() {
   return (furn[cur] || []).find(f => f.t === 'transportbox' && Math.abs(bob.x - f.x) < 200 && Math.abs(bob.y - f.y) < 150);
 }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
-function nearKasse() { const k = kasse(); return k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse()); }
+function nearKasse() { const k = kasse(); return onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -816,11 +816,12 @@ let toast = { text: '', t: 0 };
 function openMenu() {
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
-  if (nearKasse()) {
-    menu.kind = 'kasse'; menu.title = 'Kasse – ' + money(bank.money);
-    const p = 250, ok = bank.money >= p;
-    menu.items = [{ label: 'Transportbox', tag: money(p), tagCol: ok ? '#0a8a1f' : '#c0392b', furnBuy: 'transportbox', price: p, disabled: !ok },
-                  { label: 'Tschüss', tag: '' }];
+  if (nearKasse()) { startWork(); return; }
+  if (nearBett()) {
+    menu.kind = 'sleep'; menu.title = 'Schlafen – ' + hm(gMin()) + ' Uhr';
+    menu.items = [{ label: 'Bis morgen früh', sleep: 'morgen' }];
+    if (canSleepNight()) menu.items.push({ label: 'Bis in die Nacht', sleep: 'nacht' });
+    menu.items.push({ label: 'Abbrechen' });
   } else if (nearHaendler() && haendler().shop === 'moebel') { openCatalog(); return;
   } else if (nearHaendler()) {
     const first = owned.length === 0;
@@ -830,7 +831,8 @@ function openMenu() {
       if (have) return { label: PETS[k].name, tag: 'Hast du', pet: k, disabled: true };
       if (first) return { label: PETS[k].name, tag: 'Gratis', tagCol: '#0a8a1f', pet: k, price: 0 };
       return { label: PETS[k].name, tag: money(p), tagCol: ok ? '#0a8a1f' : '#c0392b', pet: k, price: p, disabled: !ok };
-    }).concat([{ label: 'Tschüss', tag: '' }]);
+    }).concat([{ label: 'Transportbox', tag: money(250), tagCol: bank.money >= 250 ? '#0a8a1f' : '#c0392b', furnBuy: 'transportbox', price: 250, disabled: bank.money < 250 },
+               { label: 'Tschüss', tag: '' }]);
   } else {
     const st = ROOMS[cur].stop;
     menu.kind = 'bus'; menu.title = 'Wohin?';
@@ -842,6 +844,7 @@ function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
+  if (it.sleep) sleepTo(it.sleep);
   if (it.pet) {
     if (it.price) { bank.money -= it.price; bank.log.push({ t: PETS[it.pet].name + ' gekauft', v: -it.price }); saveBank(); }
     owned.push(it.pet); activePet = it.pet; saveOwned(); petFor(it.pet);
@@ -883,7 +886,9 @@ function interactTarget() {
   const bx = nearBox();
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
-  if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Einkaufen' };
+  if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  const bt = nearBett();
+  if (bt) return { x: bt.x, y: furnBox(bt).top - 16, label: 'Schlafen' };
   const sch = nearSchrank();
   if (sch) return { x: sch.x - 20, y: furnBox(sch).top - 16, label: 'Kleiderschrank' };
   const h = nearHaendler() && haendler();
@@ -963,6 +968,8 @@ function updateBus(dt) {
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
+  if (wk.on) { workDown(x, y); return; }
+  if (sleepFx) return;
   if (shopCat.open) { catalogClick(x, y); return; }
   if (phone.open) { phoneClick(x, y); return; }
   if (wr.open) { wardrobeClick(x, y); return; }
@@ -1524,8 +1531,9 @@ function phoneScreen() { const b = phoneBox(); return { x: b.x + 16, y: b.y + 16
 const APPS = [
   { id: 'bauen', name: 'Bauen', col: '#ff8a1a' },
   { id: 'bank',  name: 'Bank',  col: '#13b84a' },
+  { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
 ];
-function canPhone() { return !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open; }
+function canPhone() { return !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; keys.clear(); joy.on = false; }
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
@@ -1539,7 +1547,7 @@ function phoneClick(x, y) {
   if (x < b.x || x > b.x + b.w || y < b.y || y > b.y + b.h) { togglePhone(false); return; }
   // Home-Leiste unten
   if (y > s.y + s.h - 40) { phone.app = null; return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) phone.app = null; return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
@@ -1551,7 +1559,11 @@ addEventListener('keydown', e => {
 function appIcon(id, x, y, sz) {
   g.save(); g.translate(x + sz / 2, y + sz / 2); g.scale(sz / 92, sz / 92);
   g.lineWidth = 4; g.strokeStyle = LINE; g.lineJoin = 'round';
-  if (id === 'bauen') {
+  if (id === 'jobs') {
+    g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-34, -18, 68, 48, 8); g.fill(); g.stroke();
+    g.beginPath(); g.roundRect(-14, -30, 28, 14, 5); g.stroke();
+    g.fillStyle = '#ffd23a'; g.fillRect(-6, -2, 12, 10); g.strokeRect(-6, -2, 12, 10);
+  } else if (id === 'bauen') {
     g.rotate(-0.7);
     g.fillStyle = '#9a4a1a'; g.fillRect(-7, -8, 14, 44); g.strokeRect(-7, -8, 14, 44);
     g.fillStyle = '#cfd4da'; g.fillRect(-26, -30, 52, 24); g.strokeRect(-26, -30, 52, 24);
@@ -1586,7 +1598,7 @@ function drawPhone(dt) {
   g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.roundRect(b.x + 10, b.y + 14, b.w, b.h, 54); g.fill();
   g.fillStyle = '#1b1d22'; g.lineWidth = 6; g.strokeStyle = LINE; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 54); g.fill(); g.stroke();
   g.save(); g.beginPath(); g.roundRect(s.x, s.y, s.w, s.h, 40); g.clip();
-  const now = new Date(), hhmm = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const hhmm = hm(gMin());
   if (!phone.app) {
     // Startbildschirm
     const bg = g.createLinearGradient(0, s.y, 0, s.y + s.h); bg.addColorStop(0, '#5fb8ff'); bg.addColorStop(1, '#2f6fe0');
@@ -1595,7 +1607,7 @@ function drawPhone(dt) {
     for (let i = 0; i < 4; i++) wrIcon(i, s.x + 70 + (i % 2) * 220, s.y + 470 + Math.floor(i / 2) * 150, 90, (i - 1.5) * 0.25);
     g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = '200 76px system-ui'; g.fillText(hhmm, s.x + s.w / 2, s.y + 120);
-    g.font = '500 20px system-ui'; g.fillText(now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }), s.x + s.w / 2, s.y + 175);
+    g.font = '500 20px system-ui'; g.fillText(WD[gWd()] + ', Tag ' + (gDay() + 1), s.x + s.w / 2, s.y + 175);
     APPS.forEach((ap, i) => {
       const r = appRect(i);
       g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.roundRect(r.x + 3, r.y + 5, r.w, r.h, 24); g.fill();
@@ -1630,6 +1642,8 @@ function drawPhone(dt) {
       g.fillStyle = l.v >= 0 ? '#0a8a2f' : '#d12'; g.font = '700 18px system-ui'; g.textAlign = 'right';
       g.fillText((l.v >= 0 ? '+' : '') + money(l.v), s.x + s.w - 34, ly + 25);
     });
+  } else if (phone.app === 'jobs') {
+    drawJobsApp(s);
   } else if (phone.app === 'bauen') {
     g.fillStyle = '#ff8a1a'; g.fillRect(s.x, s.y, s.w, s.h);
     backBtn(s);
@@ -1785,6 +1799,312 @@ function drawCatalog(dt) {
   g.beginPath(); g.moveTo(WR_CLOSE.x - 15, WR_CLOSE.y - 15); g.lineTo(WR_CLOSE.x + 15, WR_CLOSE.y + 15); g.moveTo(WR_CLOSE.x + 15, WR_CLOSE.y - 15); g.lineTo(WR_CLOSE.x - 15, WR_CLOSE.y + 15); g.stroke();
 }
 
+// ---------- Spielzeit ----------
+const WD = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const WDK = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const TIME_SPEED = 1; // Spielminuten pro echter Sekunde (ein Tag = 24 Minuten)
+let gt = { T: 8 * 60 };
+try { const v = JSON.parse(localStorage.getItem('bob-zeit') || 'null'); if (v && typeof v.T === 'number') gt = v; } catch (e) {}
+let gtSave = 0;
+function saveTime() { try { localStorage.setItem('bob-zeit', JSON.stringify(gt)); } catch (e) {} }
+const gDay = () => Math.floor(gt.T / 1440), gMin = () => gt.T % 1440, gWd = () => gDay() % 7;
+const hm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(Math.floor(m % 60)).padStart(2, '0');
+function tickTime(dt) { if (!fade.dir && !sleepFx) gt.T += dt * TIME_SPEED; gtSave += dt; if (gtSave > 5) { gtSave = 0; saveTime(); } }
+function nightAmount() { const h = gMin() / 60; if (h >= 21 || h < 5) return 1; if (h >= 19) return (h - 19) / 2; if (h < 7) return 1 - (h - 5) / 2; return 0; }
+function drawNight() {
+  const n = nightAmount(); if (n <= 0) return;
+  const a = (ROOMS[cur].outside ? 0.5 : 0.2) * n;
+  g.fillStyle = `rgba(10,20,60,${a})`; g.fillRect(XL, 0, VW, H);
+}
+function drawClock() {
+  if (build.on || phone.open || wr.open || menu.open || shopCat.open || wk.on) return;
+  const t = WDK[gWd()] + '  ' + hm(gMin());
+  g.font = '700 24px system-ui'; const w = g.measureText(t).width + 34, x = XR - w - 18;
+  g.fillStyle = 'rgba(15,20,30,.55)'; g.beginPath(); g.roundRect(x, 16, w, 44, 22); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, x + w / 2, 39);
+}
+
+// ---------- Schlafen ----------
+let sleepFx = null;
+function nearBett() {
+  if (build.on || fade.dir) return null;
+  return (furn[cur] || []).find(f => (f.t === 'bett' || f.t === 'doppelbett') && Math.abs(bob.x - f.x) < 230 && Math.abs(bob.y - f.y) < 160);
+}
+function canSleepNight() { const m = gMin(); return m >= 5 * 60 && m < 21 * 60; }
+function sleepTo(kind) {
+  const target = kind === 'morgen' ? (gMin() < 5 * 60 ? gDay() : gDay() + 1) * 1440 + 7 * 60 : gDay() * 1440 + 22 * 60;
+  sleepFx = { t: 0, target, kind, done: false }; keys.clear();
+}
+function drawSleep(dt) {
+  if (!sleepFx) return;
+  const f = sleepFx; f.t += dt;
+  let a = f.t < 0.8 ? f.t / 0.8 : f.t < 2.4 ? 1 : 1 - (f.t - 2.4) / 0.8;
+  if (f.t >= 0.8 && !f.done) { f.done = true; gt.T = f.target; saveTime(); }
+  g.fillStyle = `rgba(5,8,20,${Math.max(0, a)})`; g.fillRect(XL, 0, VW, H);
+  if (f.t > 0.6 && f.t < 2.8) {
+    g.globalAlpha = Math.max(0, Math.min(1, a));
+    for (let i = 0; i < 3; i++) marker('Z', W / 2 - 40 + i * 50, H / 2 - i * 50 - Math.sin(f.t * 2 + i) * 8, 50 + i * 16, '#fff');
+    marker(f.kind === 'morgen' ? WD[gWd()] + ', ' + hm(gMin()) : 'Nacht, ' + hm(gMin()), W / 2, H / 2 + 120, 34, '#fff');
+    g.globalAlpha = 1;
+  }
+  if (f.t >= 3.2) { toast = { text: f.kind === 'morgen' ? 'Guten Morgen!' : 'Gute Nacht!', t: 2.5 }; sleepFx = null; }
+}
+
+// ---------- Jobs ----------
+const JOBS = { kasse: { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60 } };
+let job = null;
+try { const j = JSON.parse(localStorage.getItem('bob-job') || 'null'); if (j && JOBS[j.id]) job = j; } catch (e) {}
+function saveJob() { try { localStorage.setItem('bob-job', JSON.stringify(job)); } catch (e) {} }
+function onShift(early) { if (!job) return false; const J = JOBS[job.id], m = gMin(); return J.days.includes(gWd()) && m >= J.from - (early ?? 30) && m < J.to; }
+function quitDay() { return job ? job.start + 7 : 0; }
+function canQuit() { return job && gDay() >= quitDay(); }
+function nextShiftText() {
+  const J = JOBS[job.id];
+  for (let d = 0; d < 8; d++) {
+    const day = gDay() + d, wd = day % 7;
+    if (!J.days.includes(wd)) continue;
+    if (d === 0 && gMin() >= J.to) continue;
+    return (d === 0 ? 'Heute' : d === 1 ? 'Morgen' : WD[wd]) + ', ' + hm(J.from) + '–' + hm(J.to);
+  }
+  return '';
+}
+function drawJobsApp(s) {
+  g.fillStyle = '#f3effb'; g.fillRect(s.x, s.y, s.w, s.h);
+  g.fillStyle = '#7a4ae0'; g.fillRect(s.x, s.y, s.w, 150);
+  backBtn(s);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '700 26px system-ui'; g.fillText('Jobs', s.x + s.w / 2, s.y + 62);
+  g.font = '500 19px system-ui'; g.fillText(WD[gWd()] + ' · ' + hm(gMin()) + ' Uhr', s.x + s.w / 2, s.y + 112);
+  phone.ui = null;
+  const L = s.x + 22, Wd = s.w - 44;
+  const card = (y, h) => { g.fillStyle = '#fff'; g.beginPath(); g.roundRect(L, y, Wd, h, 16); g.fill(); g.strokeStyle = '#ddd'; g.lineWidth = 2; g.stroke(); };
+  const btn = (y, label, col, on) => { const b = { x: L + 20, y, w: Wd - 40, h: 52 }; g.fillStyle = on ? col : '#cfcfd6'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill(); g.fillStyle = '#fff'; g.font = '700 20px system-ui'; g.textAlign = 'center'; g.fillText(label, b.x + b.w / 2, b.y + 27); return b; };
+  g.textAlign = 'left';
+  if (!job) {
+    const J = JOBS.kasse;
+    card(s.y + 175, 300);
+    g.fillStyle = '#7a4ae0'; g.font = '700 15px system-ui'; g.fillText('JOB-ANGEBOT', L + 20, s.y + 205);
+    g.fillStyle = '#111'; g.font = '700 22px system-ui'; g.fillText(J.name, L + 20, s.y + 240);
+    g.fillStyle = '#444'; g.font = '500 18px system-ui';
+    g.fillText('📍 ' + J.place, L + 20, s.y + 280);
+    g.fillText(J.wage + ' € pro Stunde + Trinkgeld', L + 20, s.y + 312);
+    g.fillText(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 20, s.y + 344);
+    g.fillText('Kündigen geht nach 1 Woche', L + 20, s.y + 376);
+    phone.ui = { kind: 'take', btn: btn(s.y + 405, 'Job annehmen', '#7a4ae0', true) };
+  } else {
+    const J = JOBS[job.id];
+    g.fillStyle = '#111'; g.font = '700 21px system-ui'; g.fillText(J.name, L + 4, s.y + 180);
+    g.fillStyle = onShift(0) ? '#0a8a2f' : '#555'; g.font = '600 17px system-ui';
+    g.fillText(onShift(0) ? 'Jetzt ist Schicht – ab zur Kasse!' : 'Nächste Schicht: ' + nextShiftText(), L + 4, s.y + 208);
+    card(s.y + 228, 7 * 40 + 16);
+    for (let i = 0; i < 7; i++) {
+      const day = gDay() - gWd() + i, wd = i, y = s.y + 244 + i * 40, today = wd === gWd(), work = J.days.includes(wd);
+      if (today) { g.fillStyle = '#efe6ff'; g.fillRect(L + 6, y - 4, Wd - 12, 36); }
+      g.fillStyle = today ? '#7a4ae0' : '#111'; g.font = (today ? '700' : '600') + ' 18px system-ui'; g.textAlign = 'left';
+      g.fillText(WD[wd], L + 18, y + 14);
+      g.textAlign = 'right'; g.fillStyle = work ? '#111' : '#999'; g.font = '500 18px system-ui';
+      g.fillText(work ? hm(J.from) + '–' + hm(J.to) : 'frei', L + Wd - 18, y + 14);
+    }
+    g.textAlign = 'left'; g.fillStyle = '#444'; g.font = '500 16px system-ui';
+    g.fillText('Verdient bisher: ' + money(job.earned || 0), L + 4, s.y + 552);
+    const left = quitDay() - gDay();
+    phone.ui = { kind: 'quit', btn: btn(s.y + 572, canQuit() ? 'Kündigen' : 'Kündigen in ' + left + (left === 1 ? ' Tag' : ' Tagen'), '#d12f2f', canQuit()) };
+  }
+}
+function jobsClick(x, y) {
+  const u = phone.ui; if (!u) return;
+  const b = u.btn; if (!(x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h)) return;
+  if (u.kind === 'take') { job = { id: 'kasse', start: gDay(), earned: 0 }; saveJob(); }
+  else if (canQuit()) { job = null; saveJob(); }
+}
+
+// ---------- Arbeiten an der Kasse (aus Bobs Sicht) ----------
+const wk = { on: false };
+const CUST_COLS = ['#ff7a1a', '#2f6fe0', '#9b5de5', '#e0262b', '#13c000', '#ff7ac6', '#00b3b3', '#8a4316', '#555555'];
+const ITEM_COL2 = ['#ff4d4d', '#3b82f6', '#ffb000', '#9b5de5', '#13c000', '#ff7ac6', '#00b3b3'];
+const SCAN = { x0: W / 2 - 300, x1: W / 2 - 150, y0: 560, y1: 690 }, BELT_Y = 650;
+function startWork() {
+  Object.assign(wk, { on: true, t0: performance.now(), start: gt.T, bonus: 0, items: [], cust: null, phase: 'wait', wait: 0.8, drag: null, flash: 0, end: false, served: 0, bag: [] });
+  keys.clear(); joy.on = false;
+}
+function newCustomer() {
+  const n = 2 + Math.floor(Math.random() * 4), pick = a => a[Math.floor(Math.random() * a.length)];
+  const c = pick(CUST_COLS);
+  wk.cust = { pal: { front: c, front2: shade(c, 0.25), side: shade(c, -0.25), side2: shade(c, -0.42), top: shade(c, -0.12), top2: shade(c, -0.22) }, x: XR + 250, tx: W / 2 + 230, say: 'Hallo!', sayT: 2 };
+  wk.items = [];
+  for (let i = 0; i < n; i++) wk.items.push({ kind: Math.floor(Math.random() * 3), col: pick(ITEM_COL2), price: 2 + Math.floor(Math.random() * 14), x: XR + 120 + i * 140, y: BELT_Y, done: false, fly: 0 });
+  wk.total = 0; wk.phase = 'arrive';
+}
+function shiftEndT() { return gDay() * 1440 + JOBS[job.id].to; }
+function workedMin() { const J = JOBS[job.id], s = Math.max(wk.start, gDay() * 1440 + J.from); return Math.max(0, Math.min(gt.T, shiftEndT()) - s); }
+function finishWork() {
+  const mins = workedMin(), lohn = Math.round(mins / 60 * JOBS[job.id].wage), sum = lohn + wk.bonus;
+  if (sum > 0) { bank.money += sum; bank.log.push({ t: 'Lohn Tierladen', v: sum }); saveBank(); }
+  job.earned = (job.earned || 0) + sum; saveJob();
+  wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' aufs Konto!' : 'Feierabend.', t: 3 };
+}
+function scanItem(it) {
+  if (it.done) return;
+  it.done = true; it.fly = 1; wk.total += it.price; wk.flash = 0.35; wk.bonus += 1;
+}
+function payNow() {
+  if (wk.phase !== 'pay') return;
+  wk.served++; wk.cust.say = 'Danke, tschüss!'; wk.cust.sayT = 1.6; wk.phase = 'leave';
+  if (Math.random() < 0.5) { const tip = 1 + Math.floor(Math.random() * 4); wk.bonus += tip; wk.tip = { v: tip, t: 1.8 }; }
+}
+function wkItemAt(x, y) { return wk.items.slice().reverse().find(it => !it.done && Math.abs(x - it.x) < 50 && y > it.y - 90 && y < it.y + 10); }
+function wkSize() { return { pay: { x: XL + 60, y: 290, w: 340, h: 78 }, close: { x: XR - 70, y: 70, r: 40 }, ok: { x: W / 2 - 150, y: 600, w: 300, h: 76 } }; }
+function workDown(x, y) {
+  const u = wkSize();
+  if (wk.end) { if (x > u.ok.x && x < u.ok.x + u.ok.w && y > u.ok.y && y < u.ok.y + u.ok.h) finishWork(); return; }
+  if (Math.hypot(x - u.close.x, y - u.close.y) < u.close.r + 8) { wk.end = true; return; }
+  if (wk.phase === 'pay' && x > u.pay.x && x < u.pay.x + u.pay.w && y > u.pay.y && y < u.pay.y + u.pay.h) { payNow(); return; }
+  const it = wkItemAt(x, y); if (it && wk.phase === 'scan') { wk.drag = { it, dx: it.x - x, dy: it.y - y }; it.held = true; }
+}
+cv.addEventListener('pointermove', e => {
+  if (!wk.on || !wk.drag) return;
+  const [x, y] = toCanvas(e), it = wk.drag.it; it.x = x + wk.drag.dx; it.y = y + wk.drag.dy;
+  if (it.x > SCAN.x0 - 20 && it.x < SCAN.x1 + 20 && it.y > SCAN.y0 && it.y < SCAN.y1 + 40) { scanItem(it); it.held = false; wk.drag = null; }
+});
+addEventListener('pointerup', () => { if (wk.drag) { wk.drag.it.held = false; wk.drag.it.y = BELT_Y; wk.drag = null; } });
+addEventListener('keydown', e => {
+  if (!wk.on || performance.now() - wk.t0 < 150) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (wk.end) { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') finishWork(); return; }
+  if (e.code === 'Escape') wk.end = true;
+  else if (e.code === 'Space' && wk.phase === 'scan') { const it = wk.items.find(i => !i.done); if (it) scanItem(it); }
+  else if ((e.code === 'Enter' || e.code === 'Space') && wk.phase === 'pay') payNow();
+}, true);
+
+function drawWkItem(it, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.lineWidth = 4; g.strokeStyle = LINE;
+  if (it.kind === 0) {
+    g.fillStyle = it.col; g.beginPath(); g.roundRect(-34, -86, 68, 86, [14, 14, 5, 5]); g.fill(); g.stroke();
+    g.fillStyle = '#fff'; g.fillRect(-24, -58, 48, 30);
+    g.fillStyle = '#8a4316'; g.beginPath(); g.ellipse(0, -40, 8, 7, 0, 0, 7); g.fill();
+    for (const [px, py] of [[-9, -50], [-3, -54], [3, -54], [9, -50]]) { g.beginPath(); g.arc(px, py, 3, 0, 7); g.fill(); }
+  } else if (it.kind === 1) {
+    g.fillStyle = it.col; g.fillRect(-24, -56, 48, 56); g.strokeRect(-24, -56, 48, 56);
+    g.fillStyle = '#ddd'; g.fillRect(-24, -56, 48, 9); g.strokeRect(-24, -56, 48, 9);
+    g.fillStyle = '#fff'; g.fillRect(-16, -38, 32, 18);
+  } else {
+    g.fillStyle = it.col; g.beginPath(); g.arc(0, -26, 26, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.arc(0, -26, 15, 0.6, 2.6); g.stroke();
+  }
+  // Strichcode
+  g.fillStyle = '#111'; for (let i = 0; i < 6; i++) g.fillRect(-12 + i * 4, -8 - (it.kind === 2 ? 26 : 0), i % 2 ? 1.5 : 2.5, 6);
+  g.restore();
+}
+function drawPerson(pal, x, y, k) {
+  g.save(); g.translate(x, y); g.scale(k, k);
+  g.lineWidth = 4.5; g.strokeStyle = LINE; g.lineJoin = 'round';
+  const bx = -BODY.w / 2, by = -BODY.h;
+  cube(bx, by, BODY.w, BODY.h, DEPTH, pal, true, 1);
+  const hx = -HEAD.w / 2, hy = by - HEAD.h + 2;
+  cube(hx, hy, HEAD.w, HEAD.h, DEPTH, YEL, true, 1);
+  if (face.complete && face.width) g.drawImage(face, hx + 12, hy + 18);
+  g.restore();
+}
+function updateWork(dt) {
+  if (!wk.on || wk.end) return;
+  if (gt.T >= shiftEndT() || !onShift(60 * 24)) { wk.end = true; return; }
+  wk.flash = Math.max(0, wk.flash - dt);
+  if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
+  const c = wk.cust;
+  if (c && c.sayT > 0) c.sayT -= dt;
+  if (wk.phase === 'wait') { wk.wait -= dt; if (wk.wait <= 0) newCustomer(); return; }
+  if (wk.phase === 'arrive') { c.x += (c.tx - c.x) * Math.min(1, dt * 4); if (Math.abs(c.x - c.tx) < 3) wk.phase = 'scan'; }
+  if (wk.phase === 'leave') { c.x += 600 * dt; if (c.x > XR + 300) { wk.cust = null; wk.phase = 'wait'; wk.wait = 0.9 + Math.random() * 1.2; } }
+  // Band schiebt Sachen nach links
+  let k = 0;
+  for (const it of wk.items) {
+    if (it.done) { it.fly = Math.max(0, it.fly - dt * 2.2); continue; }
+    if (it.held) continue;
+    const tx = SCAN.x1 + 80 + k * 125; k++;
+    it.x = Math.max(tx, it.x - 480 * dt); it.y = BELT_Y;
+  }
+  if (wk.phase === 'scan' && wk.items.every(i => i.done)) { wk.phase = 'pay'; c.say = 'Bitte schön!'; c.sayT = 99; }
+}
+function drawWork(dt) {
+  updateWork(dt);
+  if (!wk.on) return;
+  const t = performance.now() / 1000, u = wkSize();
+  // Laden hinten
+  for (const s of stripes) { g.fillStyle = s.light ? '#cdf5bf' : '#7fd96b'; g.fillRect(s.x, 0, s.w, 460); g.fillStyle = LINE; g.fillRect(s.x - 2, 0, 4, 460); }
+  drawShelf({ x: XL + 30, w: 360, base: 440, h: 300, seed: 7 });
+  drawShelf({ x: XR - 390, w: 360, base: 440, h: 300, seed: 8 });
+  g.fillStyle = '#c99a48'; g.fillRect(XL, 440, VW, 120);
+  // Kunde
+  if (wk.cust) {
+    drawPerson(wk.cust.pal, wk.cust.x, 575, 0.78);
+    if (wk.cust.sayT > 0) {
+      g.font = '700 24px system-ui'; const tw = g.measureText(wk.cust.say).width + 36, bx = Math.min(XR - tw - 20, wk.cust.x + 40), by = 210;
+      g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 52, 18); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(bx + 20, by + 52); g.lineTo(bx + 8, by + 72); g.lineTo(bx + 40, by + 52); g.fill();
+      g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(wk.cust.say, bx + tw / 2, by + 27);
+    }
+  }
+  // Theke
+  const cg = g.createLinearGradient(0, 520, 0, H); cg.addColorStop(0, '#e9ecef'); cg.addColorStop(1, '#c8ced4');
+  g.fillStyle = cg; g.fillRect(XL, 520, VW, H - 520);
+  g.fillStyle = '#ff1a1a'; g.fillRect(XL, 512, VW, 14); g.fillStyle = LINE; g.fillRect(XL, 524, VW, 4);
+  // Band
+  g.fillStyle = '#2b2b2b'; g.fillRect(SCAN.x1, 572, XR - SCAN.x1, 100);
+  g.fillStyle = '#3a3a3a'; for (let x = SCAN.x1 + ((-t * 260) % 60 + 60) % 60; x < XR; x += 60) g.fillRect(x, 572, 6, 100);
+  g.strokeStyle = LINE; g.lineWidth = 4; g.strokeRect(SCAN.x1, 572, XR - SCAN.x1 + 10, 100);
+  // Scanner
+  g.fillStyle = wk.flash > 0 ? '#13f000' : '#1d2a33'; g.fillRect(SCAN.x0, 572, SCAN.x1 - SCAN.x0, 100); g.strokeRect(SCAN.x0, 572, SCAN.x1 - SCAN.x0, 100);
+  g.strokeStyle = `rgba(255,40,40,${0.6 + 0.4 * Math.sin(t * 12)})`; g.lineWidth = 3;
+  for (const d of [-14, 0, 14]) { g.beginPath(); g.moveTo(SCAN.x0 + 10, 622 + d); g.lineTo(SCAN.x1 - 10, 622 - d); g.stroke(); }
+  // Tüte links
+  const bx = XL + 120;
+  g.fillStyle = '#d9b77a'; g.strokeStyle = LINE; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(bx - 70, 560); g.lineTo(bx + 70, 560); g.lineTo(bx + 80, 700); g.lineTo(bx - 80, 700); g.closePath(); g.fill(); g.stroke();
+  // Kasse mit Anzeige
+  g.fillStyle = '#cfcfcf'; g.fillRect(XL + 40, 390, 340, 140); g.strokeRect(XL + 40, 390, 340, 140);
+  g.fillStyle = '#0d1a12'; g.fillRect(XL + 58, 404, 304, 76); g.strokeRect(XL + 58, 404, 304, 76);
+  g.fillStyle = '#3cff3c'; g.font = '700 30px ui-monospace, monospace'; g.textAlign = 'right'; g.textBaseline = 'middle';
+  g.fillText(((wk.total || 0)).toFixed(2).replace('.', ',') + ' €', XL + 346, 444);
+  g.textAlign = 'left'; g.font = '600 15px system-ui'; g.fillStyle = '#9bffa0'; g.fillText('SUMME', XL + 70, 420);
+  // Sachen
+  for (const it of wk.items) {
+    if (it.done) { if (it.fly > 0) { g.globalAlpha = it.fly; drawWkItem(it, bx + (it.x - bx) * it.fly * 0.3, 620, 0.8); g.globalAlpha = 1; } continue; }
+    drawWkItem(it, it.x, it.y, it.held ? 1.15 : 1);
+  }
+  // Bezahlen
+  if (wk.phase === 'pay') {
+    const b = u.pay; g.fillStyle = '#13c000'; g.lineWidth = 5; g.strokeStyle = LINE;
+    g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 20); g.fill(); g.stroke();
+    marker('Kassieren ' + money(wk.total), b.x + b.w / 2, b.y + 40, 30, '#111');
+  }
+  if (wk.tip) { g.globalAlpha = Math.min(1, wk.tip.t); marker('+' + wk.tip.v + ' € Trinkgeld!', W / 2 + 230, 250 - (1.8 - wk.tip.t) * 30, 34, '#0a8a2f'); g.globalAlpha = 1; }
+  // Infos oben
+  const J = JOBS[job.id], info = 'Schicht bis ' + hm(J.to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Kunden: ' + wk.served;
+  g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40;
+  g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(info, XL + 40, 42);
+  const tip = wk.phase === 'pay' ? 'Klick auf „Kassieren“ (oder Enter)' : 'Zieh die Sachen über den Scanner (oder drück Leertaste)';
+  g.font = '600 22px system-ui'; const tw2 = g.measureText(tip).width + 40;
+  g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(W / 2 - tw2 / 2, H - 70, tw2, 46, 23); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(tip, W / 2, H - 46);
+  // Gehen
+  const cb = u.close; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d';
+  g.beginPath(); g.arc(cb.x, cb.y, cb.r, 0, 7); g.fill(); g.stroke();
+  g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cb.x - 15, cb.y - 15); g.lineTo(cb.x + 15, cb.y + 15); g.moveTo(cb.x + 15, cb.y - 15); g.lineTo(cb.x - 15, cb.y + 15); g.stroke();
+  // Feierabend
+  if (wk.end) {
+    g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(XL, 0, VW, H);
+    g.fillStyle = '#fff'; g.lineWidth = 6; g.strokeStyle = LINE; g.beginPath(); g.roundRect(W / 2 - 260, 230, 520, 470, 28); g.fill(); g.stroke();
+    const mins = workedMin(), lohn = Math.round(mins / 60 * J.wage);
+    marker(gt.T >= shiftEndT() ? 'Feierabend!' : 'Schicht beendet', W / 2, 290, 48, '#111');
+    g.fillStyle = '#333'; g.font = '600 24px system-ui'; g.textAlign = 'left';
+    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], ['Kunden', String(wk.served)], ['Lohn', money(lohn)], ['Trinkgeld & Bonus', money(wk.bonus)]];
+    rows.forEach(([a, b], i) => { g.textAlign = 'left'; g.fillText(a, W / 2 - 210, 360 + i * 46); g.textAlign = 'right'; g.fillText(b, W / 2 + 210, 360 + i * 46); });
+    g.fillStyle = '#0a8a2f'; g.font = '800 30px system-ui'; g.textAlign = 'left'; g.fillText('Gesamt', W / 2 - 210, 556); g.textAlign = 'right'; g.fillText(money(lohn + wk.bonus), W / 2 + 210, 556);
+    const b = u.ok; g.fillStyle = '#13c000'; g.lineWidth = 5; g.strokeStyle = LINE; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 20); g.fill(); g.stroke();
+    marker('Geld nehmen', W / 2, b.y + 40, 32, '#111');
+  }
+}
+
 function fit() {
   const a = innerWidth / Math.max(1, innerHeight);
   VW = Math.max(W, Math.min(2600, Math.round(H * a)));
@@ -1805,7 +2125,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if (fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open) { vx = 0; vy = 0; }
+  if (fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
@@ -1840,7 +2160,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
-  updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -1853,7 +2173,7 @@ function frame(t) {
   if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: drawBob });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
-  drawJoy(); drawMenu(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawPhone(dt); drawOverlay(dt);
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawPhone(dt); drawSleep(dt); drawOverlay(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
