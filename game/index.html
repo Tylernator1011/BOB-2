@@ -589,6 +589,7 @@ const OUTFITS = {
   blau:   { name: 'Blau',   color: '#26b6f0' },
   orange: { name: 'Orange', color: '#ff7a1a' },
   rot:    { name: 'Rot',    color: '#ff1a1a' },
+  tierladen: { name: 'Tierladen-Uniform', color: '#2f6fe0', apron: 'paw', noText: true },
 };
 function outfitPal(id) {
   const o = OUTFITS[id] || OUTFITS.gruen;
@@ -621,10 +622,17 @@ function drawBobFig(x, y, k, t, hop, sq, outfit, shadow) {
   g.lineWidth = 4.5; g.strokeStyle = '#111'; g.lineJoin = 'round';
   const bx = -BODY.w / 2, by = -BODY.h;
   cube(bx, by, BODY.w, BODY.h, DEPTH, outfitPal(outfit), true, t);
+  const of = OUTFITS[outfit] || {};
+  if (of.apron) {
+    // Schürze mit Pfote (Arbeitskleidung)
+    g.fillStyle = '#fff'; g.fillRect(bx + 50, by + 10, BODY.w - 100, BODY.h - 10); g.strokeRect(bx + 50, by + 10, BODY.w - 100, BODY.h - 10);
+    g.fillStyle = '#8a4316'; g.beginPath(); g.ellipse(0, by + 92, 22, 18, 0, 0, 7); g.fill();
+    for (const [px, py] of [[-24, -24], [-8, -38], [10, -38], [26, -24]]) { g.beginPath(); g.arc(px, by + 92 + py, 9, 0, 7); g.fill(); }
+  }
   const hx = -HEAD.w / 2, hy = by - HEAD.h + 2;
   cube(hx, hy, HEAD.w, HEAD.h, DEPTH, YEL, true, t);
   if (face.complete && face.width) g.drawImage(face, hx + 12, hy + 18);
-  const tc = (OUTFITS[outfit] || {}).textCol, tx = tc ? tinted2(text, tc) : text;
+  const tc = of.textCol, tx = of.noText ? null : tc ? tinted2(text, tc) : text;
   if (tx && text.complete && text.width) g.drawImage(tx, bx + 10, by + 3);
   g.restore();
 }
@@ -1851,7 +1859,7 @@ function drawSleep(dt) {
 }
 
 // ---------- Jobs ----------
-const JOBS = { kasse: { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60 } };
+const JOBS = { kasse: { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60, outfit: 'tierladen' } };
 const MAX_WARN = 3, MAX_SICK = 3, BAN_DAYS = 30, UNEMP_PAY = 40;
 let job = null, unemp = null;
 try { const j = JSON.parse(localStorage.getItem('bob-job') || 'null'); if (j && JOBS[j.id]) job = j; } catch (e) {}
@@ -1889,6 +1897,12 @@ function reportSick() {
 function checkJobs() {
   if (job) {
     const J = JOBS[job.id], last = gMin() >= J.to ? gDay() : gDay() - 1;
+    // nach einer Woche im Job gibt es das Job-Outfit
+    if (J.outfit && !job.outfitGiven && gDay() >= job.start + 7) {
+      job.outfitGiven = true;
+      if (!wear.owned.includes(J.outfit)) { wear.owned.push(J.outfit); saveWear(); }
+      saveJob(); toast = { text: 'Neues Outfit: ' + OUTFITS[J.outfit].name + '! Im Kleiderschrank anziehen.', t: 5 };
+    }
     for (let d = job.checked + 1; d <= last; d++) {
       if (!J.days.includes(d % 7) || d * 1440 + J.from < job.startT) continue;
       if (job.worked.includes(d) || job.sick.includes(d)) continue;
@@ -1943,7 +1957,7 @@ function drawJobsApp(s) {
     txt('📍 ' + J.place, L + 18, y + 98, '500 17px system-ui', '#444');
     txt(J.wage + ' € pro Stunde + Trinkgeld', L + 18, y + 128, '500 17px system-ui', '#444');
     txt(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 18, y + 158, '500 17px system-ui', '#444');
-    txt('Kündigen geht nach 1 Woche', L + 18, y + 188, '500 17px system-ui', '#444');
+    txt('Nach 1 Woche: Uniform 🎁', L + 18, y + 188, '500 17px system-ui', '#444');
     btn(y + 220, banned ? 'Gesperrt bis ' + dayName(unemp.banUntil) : 'Job annehmen', '#7a4ae0', !banned, takeJob, 50);
     return;
   }
