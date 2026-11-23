@@ -1971,8 +1971,7 @@ addEventListener('keydown', e => {
   e.preventDefault(); e.stopImmediatePropagation();
   if (wk.end) { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') finishWork(); return; }
   if (e.code === 'Escape') wk.end = true;
-  else if (e.code === 'Space' && wk.phase === 'scan') { const it = wk.items.find(i => !i.done); if (it) scanItem(it); }
-  else if ((e.code === 'Enter' || e.code === 'Space') && wk.phase === 'pay') payNow();
+
 }, true);
 
 function drawWkItem(it, x, y, s) {
@@ -2082,7 +2081,7 @@ function drawWork(dt) {
   g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40;
   g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(info, XL + 40, 42);
-  const tip = wk.phase === 'pay' ? 'Klick auf „Kassieren“ (oder Enter)' : 'Zieh die Sachen über den Scanner (oder drück Leertaste)';
+  const tip = wk.phase === 'pay' ? 'Klick auf „Kassieren“' : 'Zieh die Sachen mit der Maus über den Scanner';
   g.font = '600 22px system-ui'; const tw2 = g.measureText(tip).width + 40;
   g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(W / 2 - tw2 / 2, H - 70, tw2, 46, 23); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(tip, W / 2, H - 46);
