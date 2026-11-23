@@ -1,0 +1,28 @@
+name: BOB 2 bauen und veröffentlichen
+
+# Startet, wenn ein Versions-Tag wie v1.0.1 hochgeladen wird
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pakete installieren
+        run: npm install
+
+      - name: Installer bauen und als Release hochladen
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

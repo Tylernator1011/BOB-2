@@ -1,0 +1,51 @@
+{
+  "name": "bob-2",
+  "productName": "BOB 2",
+  "version": "1.0.0",
+  "description": "BOB 2 – das Spiel mit Bob",
+  "author": "Tylernator1011",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "release": "electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.tylernator1011.bob2",
+    "productName": "BOB 2",
+    "files": [
+      "main.js",
+      "game/**/*",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "BOB 2",
+      "artifactName": "BOB-2-Setup-${version}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Tylernator1011",
+      "repo": "BOB-2",
+      "releaseType": "release"
+    }
+  }
+}
