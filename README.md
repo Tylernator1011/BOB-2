@@ -20,12 +20,10 @@ Das Spiel schaut beim Start (und jede Stunde) nach, ob es eine neue Version gibt
 
 1. Spiel in `game/index.html` ändern.
 2. In `package.json` die `version` erhöhen, z. B. `1.0.0` → `1.0.1`.
-3. Commit machen und einen passenden Tag hochladen:
-   ```
-   git tag v1.0.1
-   git push origin main --tags
-   ```
-4. GitHub baut den Installer automatisch (Reiter **Actions**, dauert ein paar Minuten) und legt ein neues Release an. Alle installierten Spiele bekommen das Update dann von selbst.
+3. Commit machen und auf `main` hochladen.
+4. GitHub baut den Installer automatisch (Reiter **Actions**, dauert ein paar Minuten) und legt das Release `v1.0.1` an. Alle installierten Spiele bekommen das Update dann von selbst.
+
+Wird hochgeladen, ohne die Version zu erhöhen, baut GitHub nichts Neues.
 
 ## Selbst starten (für Entwickler)
 

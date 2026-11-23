@@ -1,10 +1,11 @@
 name: BOB 2 bauen und veröffentlichen
 
-# Startet, wenn ein Versions-Tag wie v1.0.1 hochgeladen wird
+# Läuft bei jedem Hochladen auf main. Neues Release gibt es nur,
+# wenn die Version in package.json neu ist (sonst wird übersprungen).
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,10 +20,27 @@ jobs:
         with:
           node-version: 20
 
+      - name: Version prüfen
+        id: ver
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Version $V gibt es schon – nichts zu tun."
+            echo "neu=nein" >> "$GITHUB_OUTPUT"
+          else
+            echo "neu=ja" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Pakete installieren
+        if: steps.ver.outputs.neu == 'ja'
         run: npm install
 
       - name: Installer bauen und als Release hochladen
+        if: steps.ver.outputs.neu == 'ja'
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
