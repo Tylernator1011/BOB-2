@@ -819,67 +819,124 @@ function furTufts(x, y, w, h, col) {
   for (let i = 0; i < 14; i++) { const fx = x + 14 + (i * 37) % (w - 28), fy = y + 14 + ((i * 53) % (h - 28)); g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + 6, fy + 12); g.stroke(); }
 }
 function drawDemibob(t, k) {
-  const now = performance.now(), pulse = 0.75 + 0.25 * Math.sin(now / 300);
-  // Schein und Dampf
-  const rg = g.createRadialGradient(0, -170, 40, 0, -170, 330);
-  rg.addColorStop(0, `rgba(90,255,90,${0.5 * pulse})`); rg.addColorStop(1, 'rgba(90,255,90,0)');
-  g.fillStyle = rg; g.fillRect(-360, -520, 720, 620);
-  g.lineCap = 'round'; g.lineWidth = 5;
-  for (let i = 0; i < 6; i++) {
-    g.strokeStyle = i % 2 ? 'rgba(255,205,160,.75)' : 'rgba(150,255,150,.75)';
-    const sx = -70 + i * 28, wv = Math.sin(now / 380 + i) * 12;
-    g.beginPath(); g.moveTo(sx, -350); g.quadraticCurveTo(sx + wv, -400, sx - wv, -460); g.stroke();
+  const now = performance.now() / 1000, pulse = 0.75 + 0.25 * Math.sin(now * 3.2);
+  const S = 1.45; g.scale(S, S);
+  // ---- Aura: Flammen um die Figur ----
+  const flame = (rx, ry, cy, col, spd, amp, n) => {
+    g.fillStyle = col; g.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = Math.PI + i / n * Math.PI, wob = 1 + amp * Math.sin(i * 2.7 + now * spd) * Math.sin(i * 1.3 - now * spd * 0.7);
+      const tip = (i % 2 ? 1.12 : 1) * wob;
+      const px = Math.cos(a) * rx * tip, py = cy + Math.sin(a) * ry * tip;
+      i ? g.lineTo(px, py) : g.moveTo(px, py);
+    }
+    g.lineTo(rx * 0.9, 0); g.lineTo(-rx * 0.9, 0); g.closePath(); g.fill();
+  };
+  g.save(); g.shadowColor = '#3cff3c'; g.shadowBlur = 40;
+  flame(300, 430, -10, `rgba(30,230,60,${0.38 * pulse})`, 3, 0.12, 26);
+  flame(260, 385, -10, `rgba(110,255,80,${0.42 * pulse})`, 4.5, 0.1, 22);
+  flame(215, 340, -10, `rgba(220,255,90,${0.35 * pulse})`, 6, 0.08, 18);
+  g.restore();
+  // aufsteigende Funken
+  for (let i = 0; i < 18; i++) {
+    const p = (now * 0.35 + i * 0.137) % 1, x = Math.sin(i * 12.9) * 200 + Math.sin(now * 2 + i) * 14, y = -20 - p * 420;
+    g.fillStyle = i % 3 ? `rgba(140,255,120,${1 - p})` : `rgba(255,190,80,${1 - p})`;
+    g.beginPath(); g.arc(x, y, 3 + (1 - p) * 4, 0, 7); g.fill();
   }
+  // Dampf über dem Kopf
+  g.lineCap = 'round'; g.lineWidth = 6;
+  for (let i = 0; i < 7; i++) {
+    g.strokeStyle = i % 2 ? 'rgba(255,205,160,.7)' : 'rgba(150,255,150,.7)';
+    const sx = -60 + i * 20, wv = Math.sin(now * 2.6 + i) * 14;
+    g.beginPath(); g.moveTo(sx, -425); g.quadraticCurveTo(sx + wv, -470, sx - wv, -525); g.stroke();
+  }
+  // leuchtende Risse im Boden
+  g.save(); g.shadowColor = '#ffa000'; g.shadowBlur = 16; g.strokeStyle = `rgba(255,170,40,${0.6 + 0.4 * pulse})`; g.lineWidth = 4;
+  for (const [x0, d] of [[-120, -1], [-40, -1], [40, 1], [130, 1]]) { g.beginPath(); g.moveTo(x0, 2); g.lineTo(x0 + d * 26, 10); g.lineTo(x0 + d * 18, 16); g.lineTo(x0 + d * 50, 22); g.stroke(); }
+  g.restore();
   g.lineJoin = 'round';
-  const dark = (x0, y0, r) => { const gr = g.createRadialGradient(x0, y0, 4, x0, y0, r); gr.addColorStop(0, '#000'); gr.addColorStop(1, '#0d5a1a'); return gr; };
-  // Arme hinten
+  const darkG = (x0, y0, r, c) => { const gr = g.createRadialGradient(x0 - r * 0.3, y0 - r * 0.3, 4, x0, y0, r); gr.addColorStop(0, c || '#1f8a2e'); gr.addColorStop(0.55, '#0c4d16'); gr.addColorStop(1, '#031a06'); return gr; };
+  const vein = (pts) => { g.save(); g.shadowColor = '#7dff5a'; g.shadowBlur = 10; g.strokeStyle = `rgba(150,255,110,${0.5 + 0.4 * pulse})`; g.lineWidth = 3; g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.stroke(); g.restore(); };
+  // ---- Arme ----
   for (const s of [-1, 1]) {
-    g.fillStyle = dark(s * 170, -150, 90); g.strokeStyle = '#111'; g.lineWidth = 5;
-    g.beginPath(); g.moveTo(s * 120, -230); g.quadraticCurveTo(s * 230, -200, s * 215, -60); g.lineTo(s * 160, -40); g.quadraticCurveTo(s * 150, -150, s * 110, -170); g.closePath(); g.fill(); g.stroke();
+    // Oberarm
+    g.fillStyle = darkG(s * 205, -230, 90); g.strokeStyle = '#061006'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(s * 150, -300); g.bezierCurveTo(s * 270, -300, s * 285, -200, s * 255, -150); g.lineTo(s * 185, -150); g.bezierCurveTo(s * 170, -200, s * 150, -230, s * 140, -260); g.closePath(); g.fill(); g.stroke();
+    // Unterarm
+    g.fillStyle = darkG(s * 230, -100, 80);
+    g.beginPath(); g.moveTo(s * 185, -160); g.bezierCurveTo(s * 280, -170, s * 290, -90, s * 262, -50); g.lineTo(s * 190, -48); g.bezierCurveTo(s * 175, -90, s * 170, -130, s * 185, -160); g.closePath(); g.fill(); g.stroke();
+    vein([[s * 200, -140], [s * 225, -110], [s * 218, -88], [s * 240, -66]]);
+    vein([[s * 180, -270], [s * 210, -240], [s * 205, -205]]);
   }
-  // Oberkörper
-  const tg = g.createLinearGradient(0, -260, 0, 0); tg.addColorStop(0, '#1d8a2c'); tg.addColorStop(0.6, '#0c4d16'); tg.addColorStop(1, '#063010');
-  g.fillStyle = tg; g.strokeStyle = '#111'; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(-150, -230); g.quadraticCurveTo(0, -275, 150, -230); g.quadraticCurveTo(170, -110, 115, 0); g.lineTo(-115, 0); g.quadraticCurveTo(-170, -110, -150, -230); g.closePath(); g.fill(); g.stroke();
-  // Muskel-Linien
-  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(0, -240); g.lineTo(0, -60); g.moveTo(-90, -160); g.quadraticCurveTo(0, -130, 90, -160); g.moveTo(-60, -100); g.lineTo(60, -100); g.moveTo(-50, -60); g.lineTo(50, -60); g.stroke();
-  // Feuer unten mit BOB
-  const fg = g.createLinearGradient(0, -90, 0, 0); fg.addColorStop(0, 'rgba(255,140,0,0)'); fg.addColorStop(1, '#ff8a00');
-  g.fillStyle = fg; g.beginPath(); g.moveTo(-115, 0);
-  for (let i = 0; i <= 8; i++) g.lineTo(-115 + i * 28.75, -60 - (i % 2 ? 0 : 26) - Math.sin(now / 200 + i) * 6);
-  g.lineTo(115, 0); g.closePath(); g.fill();
-  g.fillStyle = 'rgba(0,0,0,.28)'; g.font = '800 44px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BOB', 0, -32);
+  // ---- Oberkörper ----
+  const tg = g.createLinearGradient(0, -340, 0, 0); tg.addColorStop(0, '#2bb53c'); tg.addColorStop(0.5, '#0f5f1c'); tg.addColorStop(1, '#04240a');
+  g.fillStyle = tg; g.strokeStyle = '#061006'; g.lineWidth = 6;
+  g.beginPath(); g.moveTo(-60, -355); g.quadraticCurveTo(-170, -340, -195, -280); g.quadraticCurveTo(-205, -170, -120, -90); g.lineTo(-105, 0);
+  g.lineTo(105, 0); g.lineTo(120, -90); g.quadraticCurveTo(205, -170, 195, -280); g.quadraticCurveTo(170, -340, 60, -355); g.closePath(); g.fill(); g.stroke();
+  // Brustmuskeln
+  for (const s of [-1, 1]) {
+    g.fillStyle = darkG(s * 62, -255, 95, '#36c84a'); g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(s * 4, -318); g.quadraticCurveTo(s * 140, -330, s * 150, -250); g.quadraticCurveTo(s * 120, -200, s * 4, -205); g.closePath(); g.fill(); g.stroke();
+  }
+  // Bauchmuskeln (Sixpack)
+  for (let r = 0; r < 3; r++) for (const s of [-1, 1]) {
+    const ax = s * 36, ay = -180 + r * 46;
+    g.fillStyle = darkG(ax, ay, 40, '#2aa83a'); g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(ax - 30, ay - 19, 60, 38, 14); g.fill(); g.stroke();
+  }
   // Abzeichen mit Auge
-  g.fillStyle = '#07160a'; g.beginPath(); g.arc(0, -190, 26, 0, 7); g.fill();
-  g.fillStyle = '#3a6a3a'; g.beginPath(); g.ellipse(0, -190, 17, 9, 0, 0, 7); g.fill();
-  g.fillStyle = '#07160a'; g.beginPath(); g.arc(0, -190, 5, 0, 7); g.fill();
-  // Schultern
+  g.save(); g.shadowColor = '#7dff5a'; g.shadowBlur = 12 * pulse;
+  g.fillStyle = '#030d05'; g.strokeStyle = '#4cff4c'; g.lineWidth = 3; g.beginPath(); g.arc(0, -262, 30, 0, 7); g.fill(); g.stroke(); g.restore();
+  g.fillStyle = '#4a7a4a'; g.beginPath(); g.ellipse(0, -262, 20, 10, 0, 0, 7); g.fill();
+  g.fillStyle = '#7dff5a'; g.beginPath(); g.arc(0, -262, 6, 0, 7); g.fill();
+  // Feuer unten mit BOB
+  const fg = g.createLinearGradient(0, -110, 0, 0); fg.addColorStop(0, 'rgba(255,140,0,0)'); fg.addColorStop(0.5, 'rgba(255,140,0,.7)'); fg.addColorStop(1, '#ffb000');
+  g.fillStyle = fg; g.beginPath(); g.moveTo(-108, 0);
+  for (let i = 0; i <= 10; i++) g.lineTo(-108 + i * 21.6, -70 - (i % 2 ? 0 : 34) - Math.sin(now * 7 + i * 1.7) * 10);
+  g.lineTo(108, 0); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(40,10,0,.35)'; g.font = '900 46px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BOB', 0, -34);
+  // ---- Schultern (große Kugeln mit Facetten) ----
   for (const s of [-1, 1]) {
-    g.fillStyle = dark(s * 140, -215, 70); g.strokeStyle = '#111'; g.lineWidth = 5;
-    g.beginPath(); g.arc(s * 140, -215, 62, 0, 7); g.fill(); g.stroke();
-    g.strokeStyle = 'rgba(80,140,80,.35)'; g.lineWidth = 2;
-    for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(s * 140, -215); g.lineTo(s * 140 + Math.cos(i * 1.6) * 60, -215 + Math.sin(i * 1.6) * 60); g.stroke(); }
+    const cx = s * 185, cy = -305, r = 78;
+    g.fillStyle = darkG(cx, cy, r, '#1f8a2e'); g.strokeStyle = '#061006'; g.lineWidth = 6;
+    g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(110,200,110,.35)'; g.lineWidth = 2;
+    const pts = [[-40, -50], [10, -60], [55, -25], [50, 30], [0, 60], [-50, 35], [-60, -10], [5, -5]];
+    for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0], [0, 7], [2, 7], [4, 7], [6, 7]]) { g.beginPath(); g.moveTo(cx + pts[a][0], cy + pts[a][1]); g.lineTo(cx + pts[b][0], cy + pts[b][1]); g.stroke(); }
   }
-  // glühende Fäuste
+  // ---- glühende Fäuste ----
   for (const s of [-1, 1]) {
-    const fx = s * 190, fy = -38;
-    const og = g.createRadialGradient(fx, fy, 4, fx, fy, 56); og.addColorStop(0, '#fff0b0'); og.addColorStop(0.5, '#ffa000'); og.addColorStop(1, 'rgba(255,140,0,0)');
-    g.fillStyle = og; g.beginPath(); g.arc(fx, fy, 56, 0, 7); g.fill();
-    g.fillStyle = '#ffb000'; g.strokeStyle = '#8a4a00'; g.lineWidth = 4; g.beginPath(); g.arc(fx, fy, 34, 0, 7); g.fill(); g.stroke();
+    const fx = s * 232, fy = -36;
+    const og = g.createRadialGradient(fx, fy, 6, fx, fy, 80); og.addColorStop(0, '#fff4c0'); og.addColorStop(0.4, `rgba(255,160,0,${0.8 * pulse})`); og.addColorStop(1, 'rgba(255,120,0,0)');
+    g.fillStyle = og; g.beginPath(); g.arc(fx, fy, 80, 0, 7); g.fill();
+    g.save(); g.shadowColor = '#ffa000'; g.shadowBlur = 24;
+    g.fillStyle = '#ffb000'; g.strokeStyle = '#7a3a00'; g.lineWidth = 5; g.beginPath(); g.arc(fx, fy, 44, 0, 7); g.fill(); g.stroke(); g.restore();
+    g.strokeStyle = 'rgba(122,58,0,.7)'; g.lineWidth = 3;
+    for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(fx - 26, fy + i * 13); g.lineTo(fx + 26, fy + i * 13); g.stroke(); }
+    // Blitze
+    if (Math.sin(now * 5 + s) > 0.4) {
+      g.save(); g.shadowColor = '#fff'; g.shadowBlur = 10; g.strokeStyle = '#fff6c0'; g.lineWidth = 3; g.beginPath();
+      let lx = fx, ly = fy; g.moveTo(lx, ly);
+      for (let i = 0; i < 4; i++) { lx += s * (14 + Math.random() * 10); ly += (Math.random() - 0.5) * 40; g.lineTo(lx, ly); }
+      g.stroke(); g.restore();
+    }
   }
-  // kleiner Würfelkopf
-  const hs = 120, hx = -hs / 2, hy = -258 - hs + 20;
-  cube(hx, hy, hs, hs, 22, { front: '#3fbf1a', front2: '#d8ff30', side: '#2a8a12', side2: '#1d6a0c', top: '#9adf20', top2: '#7ac818' }, true, t);
-  for (const ex of [hx + 32, hx + hs - 32]) {
-    const eg = g.createRadialGradient(ex, hy + 46, 2, ex, hy + 46, 20); eg.addColorStop(0, '#fff6a0'); eg.addColorStop(0.55, '#ffb000'); eg.addColorStop(1, 'rgba(255,140,0,.2)');
-    g.fillStyle = eg; g.beginPath(); g.ellipse(ex, hy + 46, 18, 13, 0, 0, 7); g.fill();
-    g.strokeStyle = '#111'; g.lineWidth = 4; g.stroke();
+  // ---- Würfelkopf ----
+  const hs = 128, hx = -hs / 2, hy = -352 - hs + 14;
+  g.save(); g.shadowColor = '#bfff3a'; g.shadowBlur = 30 * pulse;
+  cube(hx, hy, hs, hs, 22, { front: '#43c21a', front2: '#e2ff3a', side: '#2a8a12', side2: '#1d6a0c', top: '#9adf20', top2: '#7ac818' }, true, t);
+  g.restore();
+  g.strokeStyle = '#111'; g.lineWidth = 4; g.strokeRect(hx, hy, hs, hs);
+  for (const ex of [hx + 34, hx + hs - 34]) {
+    g.save(); g.shadowColor = '#ffb000'; g.shadowBlur = 20;
+    const eg = g.createRadialGradient(ex, hy + 48, 2, ex, hy + 48, 22); eg.addColorStop(0, '#fffbe0'); eg.addColorStop(0.55, '#ffb000'); eg.addColorStop(1, 'rgba(255,140,0,.3)');
+    g.fillStyle = eg; g.beginPath(); g.ellipse(ex, hy + 48, 20, 14, 0, 0, 7); g.fill(); g.restore();
+    g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.ellipse(ex, hy + 48, 20, 14, 0, 0, 7); g.stroke();
   }
-  g.strokeStyle = '#111'; g.lineWidth = 7; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(hx + 22, hy + 82); g.quadraticCurveTo(hx + hs / 2, hy + 108, hx + hs - 18, hy + 76); g.stroke();
+  g.strokeStyle = '#111'; g.lineWidth = 6; g.beginPath(); g.moveTo(hx + 20, hy + 30); g.lineTo(hx + 52, hy + 40); g.moveTo(hx + hs - 20, hy + 30); g.lineTo(hx + hs - 52, hy + 40); g.stroke();
+  g.lineWidth = 8; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx + 20, hy + 86); g.quadraticCurveTo(hx + hs / 2, hy + 116, hx + hs - 16, hy + 80); g.stroke();
   g.strokeStyle = '#ff7a00'; g.lineWidth = 4;
-  for (const [fx, fy] of [[hx + hs / 2, hy + 8], [hx + 12, hy + 86], [hx + hs - 12, hy + 92]]) { g.beginPath(); g.moveTo(fx, fy + 22); g.bezierCurveTo(fx - 9, fy + 12, fx + 9, fy + 6, fx, fy - 6); g.stroke(); }
+  for (const [fx, fy] of [[hx + hs / 2, hy + 6], [hx + 12, hy + 92], [hx + hs - 12, hy + 98], [hx + 30, hy + 10]]) { g.beginPath(); g.moveTo(fx, fy + 24); g.bezierCurveTo(fx - 10, fy + 14, fx + 10, fy + 6, fx, fy - 8 - Math.sin(now * 8 + fx) * 3); g.stroke(); }
 }
 Object.assign(OUTFITS, {
   boxer: { name: 'Gorilla-Boxer', hp: mkPal('#2b2724', '#3b3531'), bp: mkPal('#2b2724', '#3b3531'), noFace: true, noText: true,
