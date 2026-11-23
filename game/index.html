@@ -1534,6 +1534,108 @@ function saveBank() { try { localStorage.setItem('bob-bank', JSON.stringify(bank
 
 const phone = { open: false, app: null, a: 0, msg: '' };
 const PH = { w: 390, h: 740 };
+// ---------- Handy-Code und Admin-Menü ----------
+let pin = null;
+try { pin = localStorage.getItem('bob-pin'); } catch (e) {}
+const PIN_LEN = 4, SECRET = 'BOB1011';
+function resetLock() { phone.locked = true; phone.lock = { mode: pin ? 'enter' : 'set', input: '', first: '', err: 0, secret: '' }; }
+function unlock(app) { phone.locked = false; phone.app = app || null; }
+function pinDigit(d) {
+  const L = phone.lock; if (L.input.length >= PIN_LEN) return;
+  L.input += d;
+  if (L.input.length < PIN_LEN) return;
+  setTimeout(() => {
+    if (!phone.lock || phone.lock !== L) return;
+    if (L.mode === 'set') { L.first = L.input; L.input = ''; L.mode = 'confirm'; }
+    else if (L.mode === 'confirm') {
+      if (L.input === L.first) { pin = L.input; try { localStorage.setItem('bob-pin', pin); } catch (e) {} unlock(); }
+      else { L.err = 0.6; L.input = ''; L.first = ''; L.mode = 'set'; L.msg = 'Stimmt nicht überein'; }
+    } else if (L.input === pin) unlock();
+    else { L.err = 0.6; L.input = ''; L.msg = 'Falscher Code'; }
+  }, 160);
+}
+function keypadRect(i) { // 0..11: 1-9, leer, 0, löschen
+  const s = phoneScreen(), cw = 96, ch = 84, x0 = s.x + s.w / 2 - cw * 1.5, y0 = s.y + 330;
+  return { x: x0 + (i % 3) * cw + cw / 2, y: y0 + Math.floor(i / 3) * ch + ch / 2, r: 36 };
+}
+function lockClick(x, y) {
+  for (let i = 0; i < 12; i++) {
+    const k = keypadRect(i); if (Math.hypot(x - k.x, y - k.y) > k.r + 6) continue;
+    if (i < 9) pinDigit(String(i + 1)); else if (i === 10) pinDigit('0'); else if (i === 11) phone.lock.input = phone.lock.input.slice(0, -1);
+    return;
+  }
+}
+// Tastatur: Ziffern tippen; BOB1011 + Enter wird nicht angezeigt und öffnet das Admin-Menü
+addEventListener('keydown', e => {
+  if (!phone.open || !phone.locked) return;
+  const L = phone.lock;
+  let ch = null;
+  if (/^Key[A-Z]$/.test(e.code)) ch = e.code.slice(3);
+  else if (/^(Digit|Numpad)[0-9]$/.test(e.code)) ch = e.code.slice(-1);
+  if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+    if (L.secret === SECRET) { L.secret = ''; unlock('admin'); }
+    else L.secret = '';
+    e.preventDefault(); e.stopImmediatePropagation(); return;
+  }
+  if (e.code === 'Backspace') { L.secret = ''; L.input = L.input.slice(0, -1); e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (!ch || ch === 'H') return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const cand = L.secret + ch;
+  if ((L.secret || ch === 'B') && SECRET.startsWith(cand)) { L.secret = cand; return; }
+  L.secret = '';
+  if (/[0-9]/.test(ch)) pinDigit(ch);
+}, true);
+function drawLock(s, dt) {
+  const L = phone.lock; if (L.err > 0) L.err -= dt;
+  const bg = g.createLinearGradient(0, s.y, 0, s.y + s.h); bg.addColorStop(0, '#2f6fe0'); bg.addColorStop(1, '#1b2f6b');
+  g.fillStyle = bg; g.fillRect(s.x, s.y, s.w, s.h);
+  const sx = L.err > 0 ? Math.sin(L.err * 60) * 10 : 0, cx = s.x + s.w / 2;
+  // Schloss
+  g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.arc(cx, s.y + 112, 16, Math.PI, 0); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.roundRect(cx - 24, s.y + 110, 48, 36, 7); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '600 24px system-ui';
+  g.fillText(L.mode === 'set' ? 'Neuen Code festlegen' : L.mode === 'confirm' ? 'Code wiederholen' : 'Code eingeben', cx, s.y + 190);
+  if (L.err > 0 && L.msg) { g.fillStyle = '#ffb0b0'; g.font = '600 17px system-ui'; g.fillText(L.msg, cx, s.y + 222); }
+  else if (L.mode === 'set') { g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '500 16px system-ui'; g.fillText(PIN_LEN + ' Zahlen, die du dir merkst', cx, s.y + 222); }
+  for (let i = 0; i < PIN_LEN; i++) {
+    const dx = cx + sx + (i - (PIN_LEN - 1) / 2) * 36;
+    g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.beginPath(); g.arc(dx, s.y + 270, 9, 0, 7); g.stroke();
+    if (i < L.input.length) { g.fillStyle = '#fff'; g.fill(); }
+  }
+  for (let i = 0; i < 12; i++) {
+    if (i === 9) continue;
+    const k = keypadRect(i);
+    if (i === 11) { g.fillStyle = '#fff'; g.font = '600 22px system-ui'; g.fillText('⌫', k.x, k.y); continue; }
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(k.x, k.y, k.r, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.font = '400 34px system-ui'; g.fillText(i === 10 ? '0' : String(i + 1), k.x, k.y + 1);
+  }
+}
+const ADMIN = [
+  ['+1.000 €', () => { bank.money += 1000; bank.log.push({ t: 'Admin', v: 1000 }); saveBank(); }],
+  ['+10.000 €', () => { bank.money += 10000; bank.log.push({ t: 'Admin', v: 10000 }); saveBank(); }],
+  ['Alle Tiere', () => { for (const k in PETS) if (!owned.includes(k)) owned.push(k); if (!activePet) activePet = owned[0]; saveOwned(); }],
+  ['Alle Möbel (+3)', () => { for (const k in FURN) if (FURN[k].price || k === 'transportbox') inv[k] = (inv[k] || 0) + 3; saveFurn(); }],
+  ['Alle Wände & Böden', () => { deko.walls = Object.keys(WALLS); deko.floors = Object.keys(FLOORS); saveDeko(); }],
+  ['Alle Outfits', () => { wear.owned = Object.keys(OUTFITS); saveWear(); }],
+  ['Zeit +3 Stunden', () => { gt.T += 180; saveTime(); }],
+  ['Job: Strafen & Sperre weg', () => { if (job) { job.warnings = 0; job.unpaidUntil = -1; job.sickCount = 0; } if (unemp) unemp.banUntil = gDay(); saveJob(); }],
+  ['Job: 1 Woche überspringen', () => { if (job) { job.start -= 7; saveJob(); } }],
+];
+function drawAdminApp(s) {
+  g.fillStyle = '#1b1d22'; g.fillRect(s.x, s.y, s.w, s.h);
+  g.fillStyle = '#e0262b'; g.fillRect(s.x, s.y, s.w, 110);
+  backBtn(s);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 26px system-ui'; g.fillText('ADMIN', s.x + s.w / 2, s.y + 62);
+  const btns = []; phone.ui = { btns };
+  ADMIN.forEach(([label, act], i) => {
+    const b = { x: s.x + 20, y: s.y + 128 + i * 56, w: s.w - 40, h: 46 };
+    g.fillStyle = '#2c3038'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill();
+    g.fillStyle = '#fff'; g.font = '600 18px system-ui'; g.fillText(label, b.x + b.w / 2, b.y + 24);
+    btns.push({ b, act: () => { act(); phone.msg = label + ' ✓'; phone.msgT = 1.5; } });
+  });
+  if (phone.msgT > 0) { g.fillStyle = '#13f000'; g.font = '700 17px system-ui'; g.fillText(phone.msg, s.x + s.w / 2, s.y + s.h - 40); }
+}
+
 function phoneBox() { const y = 70 + (1 - phone.a) * 900; return { x: W / 2 - PH.w / 2, y, w: PH.w, h: PH.h }; }
 function phoneScreen() { const b = phoneBox(); return { x: b.x + 16, y: b.y + 16, w: b.w - 32, h: b.h - 32 }; }
 const APPS = [
@@ -1542,7 +1644,7 @@ const APPS = [
   { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
 ];
 function canPhone() { return !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx; }
-function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; keys.clear(); joy.on = false; }
+function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
   if (id === 'bauen') {
@@ -1554,14 +1656,15 @@ function phoneClick(x, y) {
   const b = phoneBox(), s = phoneScreen();
   if (x < b.x || x > b.x + b.w || y < b.y || y > b.y + b.h) { togglePhone(false); return; }
   // Home-Leiste unten
-  if (y > s.y + s.h - 40) { phone.app = null; return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs') jobsClick(x, y); return; }
+  if (y > s.y + s.h - 40 && !phone.locked) { phone.app = null; return; }
+  if (phone.locked) { lockClick(x, y); return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
   if (e.code === 'KeyH' && (phone.open || canPhone())) { togglePhone(); e.preventDefault(); }
   else if (phone.open && e.code === 'Escape') { if (phone.app) phone.app = null; else togglePhone(false); }
-  else if (phone.open && /^Digit[1-9]$/.test(e.code) && !phone.app) { const ap = APPS[+e.code.slice(5) - 1]; if (ap) openApp(ap.id); }
+  else if (phone.open && !phone.locked && /^Digit[1-9]$/.test(e.code) && !phone.app) { const ap = APPS[+e.code.slice(5) - 1]; if (ap) openApp(ap.id); }
 });
 
 function appIcon(id, x, y, sz) {
@@ -1607,7 +1710,9 @@ function drawPhone(dt) {
   g.fillStyle = '#1b1d22'; g.lineWidth = 6; g.strokeStyle = LINE; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 54); g.fill(); g.stroke();
   g.save(); g.beginPath(); g.roundRect(s.x, s.y, s.w, s.h, 40); g.clip();
   const hhmm = hm(gMin());
-  if (!phone.app) {
+  if (phone.msgT > 0) phone.msgT -= dt;
+  if (phone.locked) drawLock(s, dt);
+  else if (!phone.app) {
     // Startbildschirm
     const bg = g.createLinearGradient(0, s.y, 0, s.y + s.h); bg.addColorStop(0, '#5fb8ff'); bg.addColorStop(1, '#2f6fe0');
     g.fillStyle = bg; g.fillRect(s.x, s.y, s.w, s.h);
@@ -1650,6 +1755,8 @@ function drawPhone(dt) {
       g.fillStyle = l.v >= 0 ? '#0a8a2f' : '#d12'; g.font = '700 18px system-ui'; g.textAlign = 'right';
       g.fillText((l.v >= 0 ? '+' : '') + money(l.v), s.x + s.w - 34, ly + 25);
     });
+  } else if (phone.app === 'admin') {
+    drawAdminApp(s);
   } else if (phone.app === 'jobs') {
     drawJobsApp(s);
   } else if (phone.app === 'bauen') {
