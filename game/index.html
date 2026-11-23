@@ -1852,69 +1852,130 @@ function drawSleep(dt) {
 
 // ---------- Jobs ----------
 const JOBS = { kasse: { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60 } };
-let job = null;
+const MAX_WARN = 3, MAX_SICK = 3, BAN_DAYS = 30, UNEMP_PAY = 40;
+let job = null, unemp = null;
 try { const j = JSON.parse(localStorage.getItem('bob-job') || 'null'); if (j && JOBS[j.id]) job = j; } catch (e) {}
-function saveJob() { try { localStorage.setItem('bob-job', JSON.stringify(job)); } catch (e) {} }
-function onShift(early) { if (!job) return false; const J = JOBS[job.id], m = gMin(); return J.days.includes(gWd()) && m >= J.from - (early ?? 30) && m < J.to; }
+try { unemp = JSON.parse(localStorage.getItem('bob-arbeitslos') || 'null'); } catch (e) {}
+function fixJob() {
+  if (!job) return;
+  job.worked = job.worked || []; job.sick = job.sick || []; job.warnings = job.warnings || 0; job.sickCount = job.sickCount || 0;
+  if (job.checked == null) job.checked = gDay() - 1;
+  if (job.startT == null) job.startT = job.start * 1440;
+  if (job.unpaidUntil == null) job.unpaidUntil = -1;
+}
+fixJob();
+function saveJob() { try { localStorage.setItem('bob-job', JSON.stringify(job)); localStorage.setItem('bob-arbeitslos', JSON.stringify(unemp)); } catch (e) {} }
+function shiftToday() { return job && JOBS[job.id].days.includes(gWd()); }
+function onShift(early) {
+  if (!job) return false; const J = JOBS[job.id], m = gMin();
+  return J.days.includes(gWd()) && !job.sick.includes(gDay()) && m >= J.from - (early ?? 30) && m < J.to;
+}
+function unpaid() { return job && gDay() < job.unpaidUntil; }
 function quitDay() { return job ? job.start + 7 : 0; }
 function canQuit() { return job && gDay() >= quitDay(); }
+function canSick() { return shiftToday() && gMin() < JOBS[job.id].to && !job.worked.includes(gDay()) && !job.sick.includes(gDay()); }
+function takeJob() { job = { id: 'kasse', start: gDay(), startT: gt.T, earned: 0 }; fixJob(); job.checked = gDay() - 1; unemp = null; saveJob(); }
+function fire(reason) {
+  job = null; unemp = { banUntil: gDay() + BAN_DAYS, lastPaid: gDay() }; saveJob();
+  toast = { text: 'Du wurdest gefeuert! ' + reason, t: 5 };
+}
+function reportSick() {
+  if (!canSick()) return;
+  if (job.sickCount >= MAX_SICK) { fire('Zu oft krank gemeldet.'); return; }
+  job.sickCount++; job.sick.push(gDay()); saveJob();
+  toast = { text: 'Krankgemeldet. Gute Besserung!', t: 3 };
+}
+// verpasste Schichten prüfen und Arbeitslosengeld zahlen
+function checkJobs() {
+  if (job) {
+    const J = JOBS[job.id], last = gMin() >= J.to ? gDay() : gDay() - 1;
+    for (let d = job.checked + 1; d <= last; d++) {
+      if (!J.days.includes(d % 7) || d * 1440 + J.from < job.startT) continue;
+      if (job.worked.includes(d) || job.sick.includes(d)) continue;
+      job.warnings++;
+      if (job.warnings >= MAX_WARN) { job.warnings = 0; job.unpaidUntil = gDay() + 7; toast = { text: '3 Verwarnungen! Eine Woche Arbeit ohne Lohn.', t: 5 }; }
+      else toast = { text: 'Verwarnung! Du hast deine Schicht verpasst (' + job.warnings + '/' + MAX_WARN + ').', t: 5 };
+    }
+    if (last > job.checked) { job.checked = last; saveJob(); }
+  } else if (unemp) {
+    while (gDay() >= unemp.lastPaid + 7) {
+      unemp.lastPaid += 7; bank.money += UNEMP_PAY; bank.log.push({ t: 'Arbeitslosengeld', v: UNEMP_PAY }); saveBank(); saveJob();
+      toast = { text: '+' + money(UNEMP_PAY) + ' Arbeitslosengeld', t: 3 };
+    }
+  }
+}
 function nextShiftText() {
   const J = JOBS[job.id];
   for (let d = 0; d < 8; d++) {
     const day = gDay() + d, wd = day % 7;
-    if (!J.days.includes(wd)) continue;
+    if (!J.days.includes(wd) || job.sick.includes(day)) continue;
     if (d === 0 && gMin() >= J.to) continue;
     return (d === 0 ? 'Heute' : d === 1 ? 'Morgen' : WD[wd]) + ', ' + hm(J.from) + '–' + hm(J.to);
   }
   return '';
 }
+function dayName(d) { const diff = d - gDay(); return diff === 0 ? 'heute' : diff === 1 ? 'morgen' : WD[d % 7] + ' (Tag ' + (d + 1) + ')'; }
 function drawJobsApp(s) {
   g.fillStyle = '#f3effb'; g.fillRect(s.x, s.y, s.w, s.h);
   g.fillStyle = '#7a4ae0'; g.fillRect(s.x, s.y, s.w, 150);
   backBtn(s);
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '700 26px system-ui'; g.fillText('Jobs', s.x + s.w / 2, s.y + 62);
   g.font = '500 19px system-ui'; g.fillText(WD[gWd()] + ' · ' + hm(gMin()) + ' Uhr', s.x + s.w / 2, s.y + 112);
-  phone.ui = null;
-  const L = s.x + 22, Wd = s.w - 44;
-  const card = (y, h) => { g.fillStyle = '#fff'; g.beginPath(); g.roundRect(L, y, Wd, h, 16); g.fill(); g.strokeStyle = '#ddd'; g.lineWidth = 2; g.stroke(); };
-  const btn = (y, label, col, on) => { const b = { x: L + 20, y, w: Wd - 40, h: 52 }; g.fillStyle = on ? col : '#cfcfd6'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill(); g.fillStyle = '#fff'; g.font = '700 20px system-ui'; g.textAlign = 'center'; g.fillText(label, b.x + b.w / 2, b.y + 27); return b; };
-  g.textAlign = 'left';
+  const L = s.x + 22, Wd = s.w - 44, btns = []; phone.ui = { btns };
+  const card = (y, h, col) => { g.fillStyle = col || '#fff'; g.beginPath(); g.roundRect(L, y, Wd, h, 16); g.fill(); g.strokeStyle = '#ddd'; g.lineWidth = 2; g.stroke(); };
+  const btn = (y, label, col, on, act, h = 48) => { const b = { x: L + 10, y, w: Wd - 20, h }; g.fillStyle = on ? col : '#cfcfd6'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill(); g.fillStyle = '#fff'; g.font = '700 19px system-ui'; g.textAlign = 'center'; g.fillText(label, b.x + b.w / 2, b.y + h / 2 + 1); if (on) btns.push({ b, act }); };
+  const txt = (t, x, y, f, c, a) => { g.font = f; g.fillStyle = c; g.textAlign = a || 'left'; g.fillText(t, x, y); };
   if (!job) {
-    const J = JOBS.kasse;
-    card(s.y + 175, 300);
-    g.fillStyle = '#7a4ae0'; g.font = '700 15px system-ui'; g.fillText('JOB-ANGEBOT', L + 20, s.y + 205);
-    g.fillStyle = '#111'; g.font = '700 22px system-ui'; g.fillText(J.name, L + 20, s.y + 240);
-    g.fillStyle = '#444'; g.font = '500 18px system-ui';
-    g.fillText('📍 ' + J.place, L + 20, s.y + 280);
-    g.fillText(J.wage + ' € pro Stunde + Trinkgeld', L + 20, s.y + 312);
-    g.fillText(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 20, s.y + 344);
-    g.fillText('Kündigen geht nach 1 Woche', L + 20, s.y + 376);
-    phone.ui = { kind: 'take', btn: btn(s.y + 405, 'Job annehmen', '#7a4ae0', true) };
-  } else {
-    const J = JOBS[job.id];
-    g.fillStyle = '#111'; g.font = '700 21px system-ui'; g.fillText(J.name, L + 4, s.y + 180);
-    g.fillStyle = onShift(0) ? '#0a8a2f' : '#555'; g.font = '600 17px system-ui';
-    g.fillText(onShift(0) ? 'Jetzt ist Schicht – ab zur Kasse!' : 'Nächste Schicht: ' + nextShiftText(), L + 4, s.y + 208);
-    card(s.y + 228, 7 * 40 + 16);
-    for (let i = 0; i < 7; i++) {
-      const day = gDay() - gWd() + i, wd = i, y = s.y + 244 + i * 40, today = wd === gWd(), work = J.days.includes(wd);
-      if (today) { g.fillStyle = '#efe6ff'; g.fillRect(L + 6, y - 4, Wd - 12, 36); }
-      g.fillStyle = today ? '#7a4ae0' : '#111'; g.font = (today ? '700' : '600') + ' 18px system-ui'; g.textAlign = 'left';
-      g.fillText(WD[wd], L + 18, y + 14);
-      g.textAlign = 'right'; g.fillStyle = work ? '#111' : '#999'; g.font = '500 18px system-ui';
-      g.fillText(work ? hm(J.from) + '–' + hm(J.to) : 'frei', L + Wd - 18, y + 14);
+    const banned = unemp && gDay() < unemp.banUntil;
+    let y = s.y + 175;
+    if (unemp) {
+      card(y, banned ? 150 : 110, '#fff0f0');
+      txt(banned ? 'Du wurdest gefeuert' : 'Du bist arbeitslos', L + 18, y + 30, '700 20px system-ui', '#c0392b');
+      if (banned) txt('Wieder arbeiten: ' + dayName(unemp.banUntil), L + 18, y + 62, '500 17px system-ui', '#333');
+      txt('Arbeitslosengeld: ' + money(UNEMP_PAY) + ' / Woche', L + 18, y + (banned ? 92 : 62), '500 17px system-ui', '#333');
+      txt('Nächste Zahlung: ' + dayName(unemp.lastPaid + 7), L + 18, y + (banned ? 122 : 90), '500 17px system-ui', '#333');
+      y += (banned ? 150 : 110) + 18;
     }
-    g.textAlign = 'left'; g.fillStyle = '#444'; g.font = '500 16px system-ui';
-    g.fillText('Verdient bisher: ' + money(job.earned || 0), L + 4, s.y + 552);
-    const left = quitDay() - gDay();
-    phone.ui = { kind: 'quit', btn: btn(s.y + 572, canQuit() ? 'Kündigen' : 'Kündigen in ' + left + (left === 1 ? ' Tag' : ' Tagen'), '#d12f2f', canQuit()) };
+    const J = JOBS.kasse;
+    card(y, 290);
+    txt('JOB-ANGEBOT', L + 18, y + 28, '700 15px system-ui', '#7a4ae0');
+    txt(J.name, L + 18, y + 62, '700 21px system-ui', '#111');
+    txt('📍 ' + J.place, L + 18, y + 98, '500 17px system-ui', '#444');
+    txt(J.wage + ' € pro Stunde + Trinkgeld', L + 18, y + 128, '500 17px system-ui', '#444');
+    txt(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 18, y + 158, '500 17px system-ui', '#444');
+    txt('Kündigen geht nach 1 Woche', L + 18, y + 188, '500 17px system-ui', '#444');
+    btn(y + 220, banned ? 'Gesperrt bis ' + dayName(unemp.banUntil) : 'Job annehmen', '#7a4ae0', !banned, takeJob, 50);
+    return;
   }
+  const J = JOBS[job.id];
+  txt(J.name, L + 4, s.y + 178, '700 20px system-ui', '#111');
+  if (unpaid()) txt('Strafe: ohne Lohn bis ' + dayName(job.unpaidUntil), L + 4, s.y + 204, '700 16px system-ui', '#c0392b');
+  else txt(job.sick.includes(gDay()) ? 'Heute krankgemeldet' : onShift(0) ? 'Jetzt ist Schicht – ab zur Kasse!' : 'Nächste Schicht: ' + nextShiftText(), L + 4, s.y + 204, '600 16px system-ui', onShift(0) ? '#0a8a2f' : '#555');
+  card(s.y + 220, 7 * 31 + 12);
+  for (let i = 0; i < 7; i++) {
+    const day = gDay() - gWd() + i, y = s.y + 240 + i * 31, today = i === gWd(), work = J.days.includes(i);
+    if (today) { g.fillStyle = '#efe6ff'; g.fillRect(L + 6, y - 14, Wd - 12, 29); }
+    txt(WD[i], L + 18, y, (today ? '700' : '600') + ' 17px system-ui', today ? '#7a4ae0' : '#111');
+    const st = !work ? 'frei' : job.sick.includes(day) ? 'krank' : job.worked.includes(day) ? '✓ ' + hm(J.from) + '–' + hm(J.to) : hm(J.from) + '–' + hm(J.to);
+    txt(st, L + Wd - 18, y, '500 17px system-ui', !work ? '#999' : job.sick.includes(day) ? '#c0392b' : job.worked.includes(day) ? '#0a8a2f' : '#111', 'right');
+  }
+  // Verwarnungen und Krankmeldungen
+  let y = s.y + 464;
+  txt('Verwarnungen', L + 4, y, '700 17px system-ui', '#111');
+  for (let i = 0; i < MAX_WARN; i++) { g.fillStyle = i < job.warnings ? '#e0262b' : '#d6d6dc'; g.beginPath(); g.arc(L + Wd - 14 - (MAX_WARN - 1 - i) * 26, y, 10, 0, 7); g.fill(); }
+  txt('Bei 3 Verwarnungen: 1 Woche ohne Lohn', L + 4, y + 22, '500 14px system-ui', '#777');
+  y += 50;
+  const left = MAX_SICK - job.sickCount;
+  txt('Krankmeldungen', L + 4, y, '700 17px system-ui', '#111');
+  txt('noch ' + left, L + Wd - 4, y, '800 17px system-ui', left > 0 ? '#e08a1a' : '#c0392b', 'right');
+  txt(left > 0 ? 'Danach wirst du gefeuert' : 'Die nächste Krankmeldung = gefeuert!', L + 4, y + 22, '500 14px system-ui', left > 0 ? '#777' : '#c0392b');
+  btn(s.y + 562, canSick() ? (left > 0 ? 'Heute krankmelden' : 'Krankmelden (= gefeuert!)') : shiftToday() ? 'Krankmelden geht heute nicht' : 'Heute keine Schicht', '#e08a1a', canSick(), reportSick, 44);
+  const ql = quitDay() - gDay();
+  btn(s.y + 614, canQuit() ? 'Kündigen' : 'Kündigen in ' + ql + (ql === 1 ? ' Tag' : ' Tagen'), '#d12f2f', canQuit(), () => { job = null; saveJob(); toast = { text: 'Du hast gekündigt.', t: 3 }; }, 44);
 }
 function jobsClick(x, y) {
-  const u = phone.ui; if (!u) return;
-  const b = u.btn; if (!(x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h)) return;
-  if (u.kind === 'take') { job = { id: 'kasse', start: gDay(), earned: 0 }; saveJob(); }
-  else if (canQuit()) { job = null; saveJob(); }
+  const u = phone.ui; if (!u || !u.btns) return;
+  for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(); return; }
 }
 
 // ---------- Arbeiten an der Kasse (aus Bobs Sicht) ----------
@@ -1923,6 +1984,7 @@ const CUST_COLS = ['#ff7a1a', '#2f6fe0', '#9b5de5', '#e0262b', '#13c000', '#ff7a
 const ITEM_COL2 = ['#ff4d4d', '#3b82f6', '#ffb000', '#9b5de5', '#13c000', '#ff7ac6', '#00b3b3'];
 const SCAN = { x0: W / 2 - 300, x1: W / 2 - 150, y0: 560, y1: 690 }, BELT_Y = 650;
 function startWork() {
+  if (!job.worked.includes(gDay())) { job.worked.push(gDay()); saveJob(); }
   Object.assign(wk, { on: true, t0: performance.now(), start: gt.T, bonus: 0, items: [], cust: null, phase: 'wait', wait: 0.8, drag: null, flash: 0, end: false, served: 0, bag: [] });
   keys.clear(); joy.on = false;
 }
@@ -1937,19 +1999,19 @@ function newCustomer() {
 function shiftEndT() { return gDay() * 1440 + JOBS[job.id].to; }
 function workedMin() { const J = JOBS[job.id], s = Math.max(wk.start, gDay() * 1440 + J.from); return Math.max(0, Math.min(gt.T, shiftEndT()) - s); }
 function finishWork() {
-  const mins = workedMin(), lohn = Math.round(mins / 60 * JOBS[job.id].wage), sum = lohn + wk.bonus;
+  const free = unpaid(), mins = workedMin(), lohn = free ? 0 : Math.round(mins / 60 * JOBS[job.id].wage), sum = free ? 0 : lohn + wk.bonus;
   if (sum > 0) { bank.money += sum; bank.log.push({ t: 'Lohn Tierladen', v: sum }); saveBank(); }
   job.earned = (job.earned || 0) + sum; saveJob();
   wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' aufs Konto!' : 'Feierabend.', t: 3 };
 }
 function scanItem(it) {
   if (it.done) return;
-  it.done = true; it.fly = 1; wk.total += it.price; wk.flash = 0.35; wk.bonus += 1;
+  it.done = true; it.fly = 1; wk.total += it.price; wk.flash = 0.35; if (!unpaid()) wk.bonus += 1;
 }
 function payNow() {
   if (wk.phase !== 'pay') return;
   wk.served++; wk.cust.say = 'Danke, tschüss!'; wk.cust.sayT = 1.6; wk.phase = 'leave';
-  if (Math.random() < 0.5) { const tip = 1 + Math.floor(Math.random() * 4); wk.bonus += tip; wk.tip = { v: tip, t: 1.8 }; }
+  if (!unpaid() && Math.random() < 0.5) { const tip = 1 + Math.floor(Math.random() * 4); wk.bonus += tip; wk.tip = { v: tip, t: 1.8 }; }
 }
 function wkItemAt(x, y) { return wk.items.slice().reverse().find(it => !it.done && Math.abs(x - it.x) < 50 && y > it.y - 90 && y < it.y + 10); }
 function wkSize() { return { pay: { x: XL + 60, y: 290, w: 340, h: 78 }, close: { x: XR - 70, y: 70, r: 40 }, ok: { x: W / 2 - 150, y: 600, w: 300, h: 76 } }; }
@@ -2077,7 +2139,7 @@ function drawWork(dt) {
   }
   if (wk.tip) { g.globalAlpha = Math.min(1, wk.tip.t); marker('+' + wk.tip.v + ' € Trinkgeld!', W / 2 + 230, 250 - (1.8 - wk.tip.t) * 30, 34, '#0a8a2f'); g.globalAlpha = 1; }
   // Infos oben
-  const J = JOBS[job.id], info = 'Schicht bis ' + hm(J.to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Kunden: ' + wk.served;
+  const J = JOBS[job.id], info = 'Schicht bis ' + hm(J.to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Kunden: ' + wk.served + (unpaid() ? '   ·   Strafe: ohne Lohn' : '');
   g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40;
   g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(info, XL + 40, 42);
@@ -2093,12 +2155,12 @@ function drawWork(dt) {
   if (wk.end) {
     g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(XL, 0, VW, H);
     g.fillStyle = '#fff'; g.lineWidth = 6; g.strokeStyle = LINE; g.beginPath(); g.roundRect(W / 2 - 260, 230, 520, 470, 28); g.fill(); g.stroke();
-    const mins = workedMin(), lohn = Math.round(mins / 60 * J.wage);
+    const mins = workedMin(), lohn = unpaid() ? 0 : Math.round(mins / 60 * J.wage);
     marker(gt.T >= shiftEndT() ? 'Feierabend!' : 'Schicht beendet', W / 2, 290, 48, '#111');
     g.fillStyle = '#333'; g.font = '600 24px system-ui'; g.textAlign = 'left';
-    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], ['Kunden', String(wk.served)], ['Lohn', money(lohn)], ['Trinkgeld & Bonus', money(wk.bonus)]];
+    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], ['Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], ['Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
     rows.forEach(([a, b], i) => { g.textAlign = 'left'; g.fillText(a, W / 2 - 210, 360 + i * 46); g.textAlign = 'right'; g.fillText(b, W / 2 + 210, 360 + i * 46); });
-    g.fillStyle = '#0a8a2f'; g.font = '800 30px system-ui'; g.textAlign = 'left'; g.fillText('Gesamt', W / 2 - 210, 556); g.textAlign = 'right'; g.fillText(money(lohn + wk.bonus), W / 2 + 210, 556);
+    g.fillStyle = '#0a8a2f'; g.font = '800 30px system-ui'; g.textAlign = 'left'; g.fillText('Gesamt', W / 2 - 210, 556); g.textAlign = 'right'; g.fillText(money(unpaid() ? 0 : lohn + wk.bonus), W / 2 + 210, 556);
     const b = u.ok; g.fillStyle = '#13c000'; g.lineWidth = 5; g.strokeStyle = LINE; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 20); g.fill(); g.stroke();
     marker('Geld nehmen', W / 2, b.y + 40, 32, '#111');
   }
@@ -2159,7 +2221,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); checkJobs(); updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
