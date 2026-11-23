@@ -19,7 +19,7 @@ LAYOUT: Titel, darunter das Spielfeld, darunter die Steuerung
 html,body{margin:0;height:100%;background:#0b1a2a;overflow:hidden}
 
 .frame{position:fixed;inset:0;display:grid;place-items:center;touch-action:none;user-select:none;-webkit-user-select:none}
-canvas{display:block;width:min(100vw,calc(100dvh * 1200 / 880));height:auto;touch-action:none}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
 
 
 </style>
@@ -32,12 +32,13 @@ canvas{display:block;width:min(100vw,calc(100dvh * 1200 / 880));height:auto;touc
 {
 const cv = document.getElementById('c'), g = cv.getContext('2d');
 const W = 1200, H = 880, FLOOR = 440;
+let XL = 0, XR = W, VW = W; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
 const LINE = '#111';
 
 // Wandstreifen wie im alten Spawn (helle und dunkle Bahnen)
 const stripes = [];
-{ let x = 0, i = 0; const ws = [150, 120, 160, 120, 140, 130, 150, 140, 130, 150];
-  while (x < W) { const w = ws[i % ws.length]; stripes.push({x, w, light: i % 2 === 1}); x += w; i++; } }
+{ let x = -1800, i = 0; const ws = [150, 120, 160, 120, 140, 130, 150, 140, 130, 150];
+  while (x < W + 1800) { const w = ws[i % ws.length]; stripes.push({x, w, light: i % 2 === 1}); x += w; i++; } }
 
 // Durchgänge: links/rechts (Fuß-Höhe) und unten (Breite)
 const GAP_Y = [590, 790], GAP_X = [480, 720];
@@ -80,22 +81,22 @@ let cur = 'spawn';
 // Straße mit Gehweg und Fahrbahn (vorne)
 const ROAD = H - 150, WALK = ROAD - 110;
 function drawSidewalk(top) {
-  g.fillStyle = '#c9c4bb'; g.fillRect(0, top, W, ROAD - top);
+  g.fillStyle = '#c9c4bb'; g.fillRect(XL, top, VW, ROAD - top);
   g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3;
-  for (let x = 0; x < W + 120; x += 120) { g.beginPath(); g.moveTo(x, top); g.lineTo(x - 30 * (ROAD - top) / 110, ROAD); g.stroke(); }
-  for (let y = top + 85; y < ROAD - 20; y += 85) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-  if (top > FLOOR) { g.fillStyle = '#e8e4dc'; g.fillRect(0, top - 6, W, 10); g.fillStyle = LINE; g.fillRect(0, top - 8, W, 3); }
+  for (let x = Math.floor(XL / 120) * 120; x < XR + 120; x += 120) { g.beginPath(); g.moveTo(x, top); g.lineTo(x - 30 * (ROAD - top) / 110, ROAD); g.stroke(); }
+  for (let y = top + 85; y < ROAD - 20; y += 85) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); }
+  if (top > FLOOR) { g.fillStyle = '#e8e4dc'; g.fillRect(XL, top - 6, VW, 10); g.fillStyle = LINE; g.fillRect(XL, top - 8, VW, 3); }
 }
 function drawRoad() {
-  g.fillStyle = '#e8e4dc'; g.fillRect(0, ROAD, W, 16); g.fillStyle = LINE; g.fillRect(0, ROAD + 14, W, 4);
-  g.fillStyle = '#4a4a4f'; g.fillRect(0, ROAD + 18, W, H - ROAD - 18);
+  g.fillStyle = '#e8e4dc'; g.fillRect(XL, ROAD, VW, 16); g.fillStyle = LINE; g.fillRect(XL, ROAD + 14, VW, 4);
+  g.fillStyle = '#4a4a4f'; g.fillRect(XL, ROAD + 18, VW, H - ROAD - 18);
   g.fillStyle = '#fff';
-  for (let x = 30; x < W; x += 160) g.fillRect(x, ROAD + 80, 90, 10);
+  for (let x = 30 + Math.floor((XL - 30) / 160) * 160; x < XR; x += 160) g.fillRect(x, ROAD + 80, 90, 10);
 }
 function drawStreet(R) {
   const sky = g.createLinearGradient(0, 0, 0, FLOOR);
   sky.addColorStop(0, '#5fb8ff'); sky.addColorStop(1, '#c8ecff');
-  g.fillStyle = sky; g.fillRect(0, 0, W, FLOOR);
+  g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
   g.fillStyle = '#fff';
   for (const [cx, cy] of [[160, 80], [900, 120]]) { g.beginPath(); g.arc(cx, cy, 30, 0, 7); g.arc(cx + 38, cy - 10, 40, 0, 7); g.arc(cx + 80, cy, 30, 0, 7); g.fill(); }
   g.lineWidth = 6; g.strokeStyle = LINE;
@@ -117,7 +118,7 @@ function drawStreet(R) {
     }
   } else {
     // Bäume und Hecke
-    g.fillStyle = '#3fae3a'; g.fillRect(0, FLOOR - 70, W, 70); g.strokeRect(-10, FLOOR - 70, W + 20, 70);
+    g.fillStyle = '#3fae3a'; g.fillRect(XL, FLOOR - 70, VW, 70); g.strokeRect(XL - 10, FLOOR - 70, VW + 20, 70);
     for (const tx of [120, 420, 1080]) {
       g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 170, 28, 120); g.strokeRect(tx - 14, FLOOR - 170, 28, 120);
       g.fillStyle = '#1fa830'; g.beginPath(); g.arc(tx, FLOOR - 210, 70, 0, 7); g.fill(); g.stroke();
@@ -126,10 +127,10 @@ function drawStreet(R) {
   if (R.grass) {
     const gr = g.createLinearGradient(0, FLOOR, 0, WALK);
     gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f');
-    g.fillStyle = gr; g.fillRect(0, FLOOR, W, WALK - FLOOR);
+    g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, WALK - FLOOR);
     drawSidewalk(WALK);
   } else drawSidewalk(FLOOR);
-  g.fillStyle = LINE; g.fillRect(0, FLOOR - 3, W, 6);
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   drawRoad();
 }
 
@@ -241,7 +242,7 @@ function petFor(id) {
 function updatePets(dt) {
   for (const id of owned) {
     const p = petFor(id);
-    if (p.wait > 0) { p.wait -= dt; p.moving = false; if (p.wait <= 0) { p.tx = 140 + Math.random() * 920; p.ty = FLOOR + 80 + Math.random() * (H - FLOOR - 120); } }
+    if (p.wait > 0) { p.wait -= dt; p.moving = false; if (p.wait <= 0) { p.tx = XL + 140 + Math.random() * (VW - 280); p.ty = FLOOR + 80 + Math.random() * (H - FLOOR - 120); } }
     else {
       const ddx = p.tx - p.x, ddy = p.ty - p.y, m = Math.hypot(ddx, ddy), sp = 120;
       if (m < 6) { p.wait = 1 + Math.random() * 3; p.moving = false; }
@@ -402,7 +403,7 @@ function drawDoor(d) {
 function drawOutside() {
   const sky = g.createLinearGradient(0, 0, 0, FLOOR);
   sky.addColorStop(0, '#5fb8ff'); sky.addColorStop(1, '#c8ecff');
-  g.fillStyle = sky; g.fillRect(0, 0, W, FLOOR);
+  g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
   g.fillStyle = '#ffee00'; g.beginPath(); g.arc(140, 110, 55, 0, 7); g.fill();
   g.fillStyle = '#fff';
   for (const [cx, cy] of [[380, 90], [600, 150]]) { g.beginPath(); g.arc(cx, cy, 34, 0, 7); g.arc(cx + 40, cy - 12, 42, 0, 7); g.arc(cx + 85, cy, 32, 0, 7); g.fill(); }
@@ -418,8 +419,8 @@ function drawOutside() {
   }
   const gr = g.createLinearGradient(0, FLOOR, 0, H);
   gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f');
-  g.fillStyle = gr; g.fillRect(0, FLOOR, W, H - FLOOR);
-  g.fillStyle = LINE; g.fillRect(0, FLOOR - 3, W, 6);
+  g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   drawSidewalk(WALK); drawRoad();
 }
 
@@ -431,10 +432,10 @@ function room() {
     // Laden geht nach oben einfach weiter: nur Boden
     const fg = g.createLinearGradient(0, 0, 0, H);
     fg.addColorStop(0, '#c4944a'); fg.addColorStop(1, '#d6ad5d');
-    g.fillStyle = fg; g.fillRect(0, 0, W, H);
+    g.fillStyle = fg; g.fillRect(XL, 0, VW, H);
     g.fillStyle = '#7a3e12'; g.strokeStyle = LINE; g.lineWidth = 4;
-    for (const x of [0, W - 16]) { g.fillRect(x, -10, 16, H + 20); g.strokeRect(x, -10, 16, H + 20); }
-    g.fillRect(-10, H - 16, W + 20, 16); g.strokeRect(-10, H - 16, W + 20, 16);
+    for (const x of [XL, XR - 16]) { g.fillRect(x, -10, 16, H + 20); g.strokeRect(x, -10, 16, H + 20); }
+    g.fillRect(XL - 10, H - 16, VW + 20, 16); g.strokeRect(XL - 10, H - 16, VW + 20, 16);
   }
   else {
     for (const s of stripes) {
@@ -444,22 +445,22 @@ function room() {
     }
     const fg = g.createLinearGradient(0, FLOOR, 0, H);
     fg.addColorStop(0, '#c99a48'); fg.addColorStop(1, '#d6ad5d');
-    g.fillStyle = fg; g.fillRect(0, FLOOR, W, H - FLOOR);
-    g.fillStyle = LINE; g.fillRect(0, FLOOR - 3, W, 6);
+    g.fillStyle = fg; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+    g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
     const sh = g.createLinearGradient(0, FLOOR, 0, FLOOR + 40);
     sh.addColorStop(0, 'rgba(0,0,0,.18)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = sh; g.fillRect(0, FLOOR + 3, W, 40);
+    g.fillStyle = sh; g.fillRect(XL, FLOOR + 3, VW, 40);
     // Wandleisten am Rand, mit Lücken für Durchgänge
     const T = 16, gy0 = GAP_Y[0] - 110, gy1 = GAP_Y[1] + 20;
     g.fillStyle = '#7a3e12'; g.strokeStyle = LINE; g.lineWidth = 4;
     const strip = (x, y, w, h) => { g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h); };
-    if (R.exits.l) { strip(0, FLOOR, T, gy0 - FLOOR); strip(0, gy1, T, H - gy1); } else strip(0, FLOOR, T, H - FLOOR);
-    if (R.exits.r) { strip(W - T, FLOOR, T, gy0 - FLOOR); strip(W - T, gy1, T, H - gy1); } else strip(W - T, FLOOR, T, H - FLOOR);
-    if (R.openBottom) {} else if (R.exits.d) { strip(0, H - T, GAP_X[0] - 40, T); strip(GAP_X[1] + 40, H - T, W, T); } else strip(0, H - T, W, T);
+    if (R.exits.l) { strip(XL, FLOOR, T, gy0 - FLOOR); strip(XL, gy1, T, H - gy1); } else strip(XL, FLOOR, T, H - FLOOR);
+    if (R.exits.r) { strip(XR - T, FLOOR, T, gy0 - FLOOR); strip(XR - T, gy1, T, H - gy1); } else strip(XR - T, FLOOR, T, H - FLOOR);
+    if (R.openBottom) {} else if (R.exits.d) { strip(XL, H - T, GAP_X[0] - 40 - XL, T); strip(GAP_X[1] + 40, H - T, XR - GAP_X[1] - 40, T); } else strip(XL, H - T, VW, T);
     // dunkle Öffnungen
     const open = (x0, y0, x1, y1, w, h, x, y) => { const og = g.createLinearGradient(x0, y0, x1, y1); og.addColorStop(0, 'rgba(0,0,0,.5)'); og.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = og; g.fillRect(x, y, w, h); };
-    if (R.exits.l) open(0, 0, 70, 0, 70, gy1 - gy0, 0, gy0);
-    if (R.exits.r) open(W, 0, W - 70, 0, 70, gy1 - gy0, W - 70, gy0);
+    if (R.exits.l) open(XL, 0, XL + 70, 0, 70, gy1 - gy0, XL, gy0);
+    if (R.exits.r) open(XR, 0, XR - 70, 0, 70, gy1 - gy0, XR - 70, gy0);
     if (R.exits.d && !R.openBottom) open(0, H, 0, H - 60, GAP_X[1] - GAP_X[0] + 80, 60, GAP_X[0] - 40, H - 60);
   }
   if (R.door) drawDoor(R.door);
@@ -486,7 +487,7 @@ function drawOverlay(dt) {
     g.strokeText(banner.text, W / 2, 70); marker(banner.text, W / 2, 70, 56, '#111');
     g.globalAlpha = 1;
   }
-  if (fade.a > 0) { g.fillStyle = `rgba(0,0,0,${fade.a})`; g.fillRect(0, 0, W, H); }
+  if (fade.a > 0) { g.fillStyle = `rgba(0,0,0,${fade.a})`; g.fillRect(XL, 0, VW, H); }
 }
 
 // Bob
@@ -674,10 +675,10 @@ function wrIcon(kind, x, y, sz, rot) {
 function drawWardrobe() {
   if (!wr.open) return;
   // ganzer Bildschirm, blau mit fliegenden Symbolen
-  g.fillStyle = '#4f9de8'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#4f9de8'; g.fillRect(XL, 0, VW, H);
   const t = performance.now() / 1000, sp = 150;
   g.fillStyle = '#62abf0';
-  for (let r = -1; r < H / sp + 2; r++) for (let c = -2; c < W / sp + 2; c++) {
+  for (let r = -1; r < H / sp + 2; r++) for (let c = Math.floor(XL / sp) - 2; c < XR / sp + 2; c++) {
     const ox = ((t * 22) % sp), oy = ((t * 14) % sp);
     const x = c * sp + (r % 2 ? sp / 2 : 0) + ox, y = r * sp + oy;
     const kind = ((r * 7 + c * 3) % 4 + 4) % 4;
@@ -685,8 +686,8 @@ function drawWardrobe() {
   }
   g.lineWidth = 6; g.strokeStyle = LINE; g.lineJoin = 'round';
   // Titel-Schild
-  g.fillStyle = '#ffe066'; g.beginPath(); g.moveTo(60, 22); g.lineTo(560, 22); g.lineTo(540, 122); g.lineTo(80, 122); g.closePath(); g.fill(); g.stroke();
-  marker('Kleiderschrank', 310, 74, 58, '#111');
+  g.fillStyle = '#ffe066'; g.beginPath(); g.moveTo(XL + 60, 22); g.lineTo(XL + 560, 22); g.lineTo(XL + 540, 122); g.lineTo(XL + 80, 122); g.closePath(); g.fill(); g.stroke();
+  marker('Kleiderschrank', XL + 310, 74, 58, '#111');
   // Raster
   g.fillStyle = '#ffe680'; g.lineWidth = 5;
   g.beginPath(); g.roundRect(WR.gx - 16, WR.gy - 16, 3 * (WR.cw + WR.gap) + 78, 4 * (WR.ch + WR.gap) + 22, 12); g.fill(); g.stroke();
@@ -708,7 +709,7 @@ function drawWardrobe() {
   g.fillStyle = '#fff'; g.beginPath(); g.roundRect(WR_TRACK.x - 3, ty, WR_TRACK.w + 6, th, 6); g.fill(); g.stroke();
   // Vorschau
   const pv = items[wr.sel] || wear.on, b1 = Math.sin(t * 1.7) * 3;
-  drawBobFig(930, 770, 1.3, 1, b1, 1, pv, true);
+  drawBobFig((WR_TRACK.x + 40 + XR) / 2, 770, 1.3, 1, b1, 1, pv, true);
   // Schließen
   g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d';
   g.beginPath(); g.arc(WR_CLOSE.x, WR_CLOSE.y, WR_CLOSE.r, 0, 7); g.fill(); g.stroke();
@@ -735,7 +736,7 @@ function openMenu() {
 function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
-  if (it.dest) bus = { x: W + 80, mode: 'arrive', dest: it.dest, t: 0 };
+  if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.pet) {
     owned.push(it.pet); saveOwned(); petFor(it.pet);
     toast = { text: PETS[it.pet].name + ' läuft jetzt bei dir zu Hause herum!', t: 3.5 };
@@ -764,13 +765,34 @@ function menuHit(x, y) {
   }
   return -1;
 }
-const EBTN = { x: W - 110, y: 110, r: 58 };
+// Hinweis über dem Ding, mit dem man interagiert: [E] Was passiert
+let pill = null;
+function interactTarget() {
+  if (!canInteract()) return null;
+  const sch = nearSchrank();
+  if (sch) return { x: sch.x - 20, y: furnBox(sch).top - 16, label: 'Kleiderschrank' };
+  const h = nearHaendler() && haendler();
+  if (h) { const k = BASE_W / BODY.w * scaleAt(h.base) * 0.95; return { x: h.x + h.w / 2, y: h.base - (BODY.h + HEAD.h) * k - 22, label: 'Tiere kaufen' }; }
+  const st = nearStop() && ROOMS[cur].stop;
+  if (st) return { x: st.x, y: STOP_BASE - 352, label: 'Bus nehmen' };
+  return null;
+}
+function drawPill() {
+  const t = interactTarget(); pill = null;
+  if (!t) return;
+  g.font = '600 26px system-ui, sans-serif';
+  const tw = g.measureText(t.label).width, h = 48, w = tw + h + 26;
+  const x = Math.max(XL + 10, Math.min(XR - w - 10, t.x - w / 2)), y = Math.max(8, t.y - h);
+  g.fillStyle = 'rgba(15,20,30,.55)'; g.beginPath(); g.roundRect(x, y, w, h, h / 2); g.fill();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(x + h / 2, y + h / 2, 17, 0, 7); g.fill();
+  g.fillStyle = '#111'; g.font = '800 22px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('E', x + h / 2, y + h / 2 + 1);
+  g.fillStyle = '#fff'; g.font = '600 26px system-ui, sans-serif'; g.textAlign = 'left';
+  g.fillText(t.label, x + h + 6, y + h / 2 + 1);
+  pill = { x, y, w, h };
+}
 function drawMenu() {
-  if (canInteract()) {
-    g.lineWidth = 5; g.strokeStyle = LINE;
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(EBTN.x, EBTN.y, EBTN.r, 0, 7); g.fill(); g.stroke();
-    marker('E', EBTN.x, EBTN.y + 4, 64, '#111');
-  }
+  drawPill();
   if (toast.t > 0) {
     g.globalAlpha = Math.min(1, toast.t);
     g.font = `34px 'Permanent Marker', cursive`;
@@ -782,7 +804,7 @@ function drawMenu() {
   }
   if (!menu.open) return;
   const b = menuBox();
-  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(XL, 0, VW, H);
   g.lineWidth = 6; g.strokeStyle = LINE;
   g.fillStyle = '#ffee00'; g.beginPath(); g.roundRect(b.x, b.y, MENU.w, b.h, 24); g.fill(); g.stroke();
   marker(menu.title, W / 2, b.y + 55, menu.title.length > 14 ? 36 : 48, '#111');
@@ -811,24 +833,24 @@ function updateBus(dt) {
     if (bus.t > 1.1) { bus.mode = 'leave'; bus.t = 0; }
   } else if (bus.mode === 'leave' || bus.mode === 'depart') {
     bus.t += dt; bus.x -= (120 + bus.t * 700) * dt;
-    if (bus.mode === 'leave' && bus.x < -420 && !fade.dir) {
+    if (bus.mode === 'leave' && bus.x < XL - 580 && !fade.dir) {
       const d = bus.dest, ds = ROOMS[d].stop;
       go(d, [ds.x + 120, ROAD - 40]);
       bus = { pending: true, x: ds.x - 300, mode: 'depart', t: 0 };
     }
-    if (bus && bus.mode === 'depart' && bus.x < -700) bus = null;
+    if (bus && bus.mode === 'depart' && bus.x < XL - 700) bus = null;
   }
 }
 
 // Touch-/Maus-Joystick
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
-function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; }
+function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (wr.open) { wardrobeClick(x, y); return; }
   if (build.on) { build.px = x; build.py = y; if (Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) toggleBuild(false); else buildClick(x, y); return; }
   if (canBuildHere() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBuild(true); return; }
   if (menu.open) { const i = menuHit(x, y); if (i >= 0) { menu.sel = i; choose(i); } return; }
-  if (canInteract() && Math.hypot(x - EBTN.x, y - EBTN.y) < EBTN.r + 10) { openMenu(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
+  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => { if (!joy.on) return; const [x, y] = toCanvas(e); let dx = x - joy.ox, dy = y - joy.oy; const m = Math.hypot(dx, dy), R = 90; if (m > R) { dx = dx / m * R; dy = dy / m * R; } joy.dx = dx / R; joy.dy = dy / R; });
 const stop = () => { joy.on = false; joy.dx = joy.dy = 0; };
 cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
@@ -1000,7 +1022,7 @@ function slotAt(x, y) {
 }
 function canBuildHere() { return BUILD_ROOMS.includes(cur) && !menu.open && !bus && !fade.dir && !wr.open; }
 function freeSpot(x, y, hw) {
-  const ok = (a, b) => b > FLOOR + 40 && b < H - 20 && a > hw + 20 && a < W - hw - 20 && !blocked(a, b, hw);
+  const ok = (a, b) => b > FLOOR + 40 && b < H - 20 && a > XL + hw + 20 && a < XR - hw - 20 && !blocked(a, b, hw);
   if (ok(x, y)) return [x, y];
   for (let r = 20; r < 900; r += 20) for (let a = 0; a < 6.28; a += 0.4) {
     const nx = x + Math.cos(a) * r, ny = y + Math.sin(a) * r * 0.6;
@@ -1016,7 +1038,7 @@ function toggleBuild(on) { if (build.on && !(on ?? !build.on)) unstick(); build.
 function rotate() { build.rot = (build.rot + 1) % 4; }
 function placeOk(t, x, y, r) {
   const f = { t, x, y, r }, b = furnBox(f);
-  if (y < FLOOR + 30 || y > H - 18 || b.left < 16 || b.x + b.w > W - 16) return false;
+  if (y < FLOOR + 30 || y > H - 18 || b.left < XL + 16 || b.x + b.w > XR - 16) return false;
   if (FURN[t].flat) return true;
   const hit = o => b.x < o.x + o.w && b.x + b.w > o.x && b.base - b.depth - 4 < o.base && b.base + 4 > o.base - o.depth;
   if (solids(cur).some(hit)) return false;
@@ -1106,9 +1128,22 @@ function drawBuildUI() {
   marker(tip, tx, H - 39, 24, '#111');
 }
 
+function fit() {
+  const a = innerWidth / Math.max(1, innerHeight);
+  VW = Math.max(W, Math.min(2600, Math.round(H * a)));
+  XL = -(VW - W) / 2; XR = W + (VW - W) / 2;
+  if (cv.width !== VW) cv.width = VW;
+  cv.style.width = a >= W / H ? '100vw' : '100vw';
+  cv.style.height = a >= W / H ? '100vh' : 'auto';
+  // Knöpfe am Rand mitnehmen
+  BBTN.x = XL + 90; RBTN.x = XL + 220; WR_CLOSE.x = XR - 70;
+  WR.gx = XL + 70; WR_TRACK.x = WR.gx + 3 * 184 + 22;
+}
+addEventListener('resize', fit); fit();
 let last = performance.now(), doorLock = false;
 function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  g.setTransform(1, 0, 0, 1, -XL, 0);
   let vx = (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0);
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
@@ -1132,16 +1167,16 @@ function frame(t) {
   const R = ROOMS[cur], ex = R.exits;
   const s = scaleAt(Math.min(bob.y, H)), half = BASE_W * s / 2 + 20 * s;
   const cl = (v, a, b) => Math.max(a, Math.min(b, v));
-  const inSideL = bob.x < half + 4, inSideR = bob.x > W - half - 4, inBottom = bob.y > H - 14;
+  const inSideL = bob.x < XL + half + 4, inSideR = bob.x > XR - half - 4, inBottom = bob.y > H - 14;
   const maxY = R.maxY || H - 14, GY = R.outside ? [FLOOR + 40, maxY] : GAP_Y;
   if ((inSideL && ex.l) || (inSideR && ex.r)) bob.y = cl(bob.y, GY[0], GY[1]);
   if (inBottom && ex.d && !R.openBottom) bob.x = cl(bob.x, GAP_X[0], GAP_X[1]);
   const gy = bob.y >= GY[0] && bob.y <= GY[1], gx = bob.x >= GAP_X[0] && bob.x <= GAP_X[1];
-  bob.x = cl(bob.x, ex.l && gy ? -100 : half + 4, ex.r && gy ? W + 100 : W - half - 4);
+  bob.x = cl(bob.x, ex.l && gy ? XL - 100 : XL + half + 4, ex.r && gy ? XR + 100 : XR - half - 4);
   bob.y = cl(bob.y, R.openTop ? R.top : FLOOR + 40, (ex.d && gx) || R.openBottom ? H + 100 : maxY);
 
-  if (bob.x < 10 && ex.l) go(ex.l, [W - 40, bob.y]);
-  else if (bob.x > W - 10 && ex.r) go(ex.r, [40, bob.y]);
+  if (bob.x < XL + 10 && ex.l) go(ex.l, [XR - 40, bob.y]);
+  else if (bob.x > XR - 10 && ex.r) go(ex.r, [XL + 40, bob.y]);
   else if (bob.y > H + 40 && ex.d) go(ex.d, ROOMS[ex.d].openTop ? [bob.x, ROOMS[ex.d].top + 70] : ROOMS[ex.d].door ? [ROOMS[ex.d].door.x + ROOMS[ex.d].door.w / 2, FLOOR + 70] : [W / 2, FLOOR + 70]);
   if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
