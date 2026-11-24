@@ -3054,8 +3054,9 @@ function drawPetPanel() {
     softShadow(hov ? 16 : 8, hov ? 6 : 3);
     const bg = g.createLinearGradient(0, b.y, 0, b.y + b.h); bg.addColorStop(0, shade(col, 0.15)); bg.addColorStop(1, col);
     g.fillStyle = bg; g.beginPath(); g.roundRect(b.x, b.y - (hov ? 2 : 0), b.w, b.h, 18); g.fill(); noShadow();
-    uiIcon(ic, b.x + 34, b.y + b.h / 2 - (hov ? 2 : 0), 26, '#fff');
-    g.fillStyle = '#fff'; g.font = '800 ' + (label.length > 10 ? 15 : 19) + 'px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(label, b.x + 58, b.y + b.h / 2 + 1 - (hov ? 2 : 0));
+    uiIcon(ic, b.x + 30, b.y + b.h / 2 - (hov ? 2 : 0), 24, '#fff');
+    let fs = 19; g.font = '800 19px system-ui'; while (g.measureText(label).width > b.w - 68 && fs > 11) { fs--; g.font = '800 ' + fs + 'px system-ui'; }
+    g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(label, b.x + 54, b.y + b.h / 2 + 1 - (hov ? 2 : 0));
     g.globalAlpha = e;
     pp.btns.push({ b, act, on });
   });
