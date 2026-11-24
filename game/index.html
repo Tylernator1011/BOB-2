@@ -52,6 +52,7 @@ const ROOMS = {
   pink:     { name: 'Pinker Raum', wall: ['#6ad9fb', '#c4f0fc'], exits: {},
               door: { x: 510, w: 180, to: 'spawn', label: 'Spawn', at: [600, H - 60] } },
   draussen: { name: 'Draußen', outside: true, kind: 'house', exits: { r: 'haltestelle' }, maxY: H - 175,
+              objs: [{ type: 'muell', x: 650, w: 120, base: 530, depth: 40, h: 190 }],
               door: { x: 880, w: 180, to: 'spawn', label: 'Für BoB', at: [970, FLOOR + 70] } },
   haltestelle: { name: 'Bushaltestelle', outside: true, kind: 'street', grass: true, exits: { l: 'draussen' }, maxY: H - 175,
               stop: { x: 760, name: 'Zuhause', dests: ['tierladen', 'moebelhaus'] } },
@@ -296,6 +297,7 @@ function petFor(id) {
 // gefüllten Napf im Raum suchen
 function fullNapf(room) { return (furn[room] || []).find(f => f.t === 'napf' && f.food); }
 function updatePets(dt) {
+  if (muellShake > 0) muellShake = Math.max(0, muellShake - dt);
   tickPetStats(dt);
   for (const id of activeList()) {
     const p = petFor(id); p.mode = p.mode || 'home';
@@ -406,6 +408,58 @@ function drawObj(o) {
   if (o.type === 'shelf') drawShelf(o); else if (o.type === 'kasse') drawKasse(o);
   else if (o.type === 'cage') drawCage(o); else if (o.type === 'haendler') drawHaendler(o);
   else if (o.type === 'moebel') drawFurn(o.t, o.fx, o.base, scaleAt(o.base), 1, o.r);
+  else if (o.type === 'muell') drawMuell(o);
+}
+// ---------- Mülltonne: 1x pro Tag 25 % Chance auf das Müll-Kostüm ----------
+let muell = { day: -1, full: false, done: false }, muellShake = 0;
+try { const m = JSON.parse(localStorage.getItem('bob-muell') || 'null'); if (m) muell = m; } catch (e) {}
+function muellToday() {
+  if (muell.day !== gDay()) { muell = { day: gDay(), full: Math.random() < 0.25, done: false }; try { localStorage.setItem('bob-muell', JSON.stringify(muell)); } catch (e) {} }
+  return muell;
+}
+function muellObj() { return (ROOMS[cur].objs || []).find(o => o.type === 'muell'); }
+function nearMuell() { const o = muellObj(); return o && !fade.dir && Math.abs(bob.x - (o.x + o.w / 2)) < 170 && Math.abs(bob.y - o.base) < 150; }
+function wuehlen() {
+  const m = muellToday(); muellShake = 0.7;
+  if (m.done) { toast = { text: 'Hier hast du heute schon gewühlt. Morgen wieder!', t: 3 }; return; }
+  m.done = true; try { localStorage.setItem('bob-muell', JSON.stringify(m)); } catch (e) {}
+  if (!m.full) { toast = { text: 'Nur leere Dosen … Die Tonne ist heute leer. Schlaf drüber und schau morgen wieder.', t: 4 }; return; }
+  if (!wear.owned.includes('muell')) { wear.owned.push('muell'); saveWear(); toast = { text: 'Igitt! Du hast das Müll-Kostüm gefunden! Im Kleiderschrank anziehen.', t: 5 }; }
+  else { const v = 5 + Math.floor(Math.random() * 16); bank.money += v; bank.log.push({ t: 'Im Müll gefunden', v }); saveBank(); toast = { text: 'Die Tonne war voll – du findest ' + v + ' € zwischen Bananenschalen!', t: 4 }; }
+}
+function drawMuell(o) {
+  const m = muellToday(), full = m.full && !m.done, s = scaleAt(o.base), cx = o.x + o.w / 2;
+  const sh = muellShake > 0 ? Math.sin(performance.now() / 30) * 4 * muellShake : 0;
+  g.save(); g.translate(cx + sh, o.base); g.scale(s * 1.3, s * 1.3); g.lineWidth = 5; g.strokeStyle = '#111'; g.lineJoin = 'round';
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(6, 2, 66, 14, 0, 0, 7); g.fill();
+  const w = 104, h = 150, d = 30;
+  // Seite
+  g.fillStyle = '#5d646c'; g.beginPath(); g.moveTo(w / 2 - 6, 0); g.lineTo(w / 2 + d * 0.6 - 6, -d * 0.5); g.lineTo(w / 2 + d * 0.6, -h - d * 0.5); g.lineTo(w / 2, -h); g.closePath(); g.fill(); g.stroke();
+  // Front (leicht konisch)
+  const fr = g.createLinearGradient(-w / 2, 0, w / 2, 0); fr.addColorStop(0, '#9aa3ac'); fr.addColorStop(1, '#7d868f');
+  g.fillStyle = fr; g.beginPath(); g.moveTo(-w / 2 + 6, 0); g.lineTo(w / 2 - 6, 0); g.lineTo(w / 2, -h); g.lineTo(-w / 2, -h); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3;
+  for (const rx of [-26, 0, 26]) { g.beginPath(); g.moveTo(rx, -h + 22); g.lineTo(rx * 0.95, -14); g.stroke(); }
+  g.fillStyle = '#111'; g.fillRect(-w / 2 + 4, -12, 16, 12); g.fillRect(w / 2 - 20, -12, 16, 12); // Räder
+  g.lineWidth = 5; g.strokeStyle = '#111';
+  if (full) {
+    // Müll quillt raus
+    for (const [bx, by, r, c] of [[-28, -h - 8, 24, '#2a8a3a'], [8, -h - 18, 28, '#1f6e2f'], [36, -h - 6, 20, '#2a8a3a']]) { g.fillStyle = c; g.beginPath(); g.arc(bx, by, r, 0, 7); g.fill(); g.stroke(); }
+    g.fillStyle = '#b5f000'; g.beginPath(); g.ellipse(-40, -h + 26, 10, 18, 0.2, 0, 7); g.fill(); g.beginPath(); g.ellipse(30, -h + 40, 9, 14, -0.3, 0, 7); g.fill();
+    // Bananenschale
+    g.save(); g.translate(6, -h - 46); g.fillStyle = '#f2e600';
+    g.beginPath(); g.moveTo(-4, 0); g.quadraticCurveTo(-30, 8, -34, 22); g.quadraticCurveTo(-16, 14, -2, 10); g.quadraticCurveTo(12, 16, 30, 22); g.quadraticCurveTo(24, 6, 4, 0); g.quadraticCurveTo(6, -20, 0, -34); g.quadraticCurveTo(-8, -18, -4, 0); g.fill(); g.stroke();
+    g.fillStyle = '#7a6a10'; g.fillRect(-3, -42, 6, 10); g.restore();
+    // Deckel schräg offen
+    g.save(); g.translate(w / 2 + 4, -h - 4); g.rotate(0.5); g.fillStyle = '#4c535a'; g.beginPath(); g.roundRect(-w - 8, -14, w + 16, 16, 6); g.fill(); g.stroke(); g.restore();
+    // Fliegen
+    const t = performance.now() / 300; g.fillStyle = '#111';
+    for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(Math.sin(t + i * 2) * 40, -h - 70 + Math.cos(t * 1.3 + i) * 16, 3, 0, 7); g.fill(); }
+  } else {
+    g.fillStyle = '#4c535a'; g.beginPath(); g.roundRect(-w / 2 - 8, -h - 16, w + 16 + d * 0.5, 18, 6); g.fill(); g.stroke();
+    g.fillRect(-18, -h - 24, 36, 8);
+  }
+  g.restore();
 }
 function blocked(x, y, hw, room) {
   const objs = solids(room || cur); if (!objs.length) return false;
@@ -1049,6 +1103,36 @@ Object.assign(OUTFITS, {
       g.restore();
     } },
   mutant: { name: 'Demibob', custom: drawDemibob },
+  muell: { name: 'Müll-Bob', bp: mkPal('#b9b9b9', '#cfcfcf'), noText: true,
+    headFront: (x, y, w, h) => {
+      bobFace(x, y);
+      g.fillStyle = '#b5f000'; g.strokeStyle = 'rgba(70,110,0,.5)'; g.lineWidth = 3; // Schleim auf der Stirn
+      g.beginPath(); g.ellipse(x + 118, y + 22, 26, 22, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(x + 124, y + 48, 13, 20, 0.1, 0, 7); g.fill();
+    },
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#2a2a2a'; g.lineWidth = 2.5; g.lineCap = 'round';
+      for (const [a, b, c, d] of [[70, 28, 64, 118], [100, 30, 92, 104], [146, 34, 150, 88], [190, 28, 198, 112], [230, 50, 250, 140]]) { g.beginPath(); g.moveTo(x + a, y + b); g.lineTo(x + c, y + d); g.stroke(); }
+      g.fillStyle = '#b5f000';
+      g.beginPath(); g.ellipse(x + 20, y + 30, 24, 28, 0.2, 0, 7); g.fill();
+      g.beginPath(); g.ellipse(x + 152, y + 12, 26, 18, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(x + 140, y + 46, 16, 32, 0.15, 0, 7); g.fill();
+      g.save(); g.translate(x + 206, y + 96); g.rotate(0.6); g.beginPath(); g.ellipse(0, 0, 17, 42, 0, 0, 7); g.fill(); g.restore();
+    },
+    front: (bx, by, hx, hy) => {
+      // Tonnendeckel als Hut, leicht schief
+      g.save(); g.translate(0, hy + 8); g.rotate(-0.04);
+      g.fillStyle = '#b9b9b9'; g.strokeStyle = '#111'; g.lineWidth = 4.5;
+      g.beginPath(); g.moveTo(-HEAD.w / 2 - 14, 14); g.lineTo(HEAD.w / 2 + 16, 10); g.lineTo(HEAD.w / 2 + 12, -34); g.lineTo(-HEAD.w / 2 - 10, -26); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#9d9d9d'; g.beginPath(); g.moveTo(HEAD.w / 2 + 12, -34); g.lineTo(HEAD.w / 2 + 30, -44); g.lineTo(HEAD.w / 2 + 34, 0); g.lineTo(HEAD.w / 2 + 16, 10); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#b9b9b9'; g.beginPath(); g.moveTo(-2, -28); g.lineTo(48, -32); g.lineTo(54, -68); g.lineTo(4, -64); g.closePath(); g.fill(); g.stroke(); // Griff
+      g.strokeStyle = '#2a2a2a'; g.lineWidth = 2;
+      for (const [a, b, c, d] of [[-80, -16, -70, 2], [-20, -18, 20, -8], [60, -22, 90, -10], [100, -24, 112, -4]]) { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); }
+      // Bananenschale
+      g.translate(-78, -26); g.fillStyle = '#f2e600'; g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(-6, 0); g.quadraticCurveTo(-38, 6, -44, 22); g.quadraticCurveTo(-20, 18, -4, 12); g.quadraticCurveTo(14, 18, 40, 22); g.quadraticCurveTo(30, 4, 6, 0);
+      g.quadraticCurveTo(14, -40, 6, -86); g.quadraticCurveTo(-14, -40, -6, 0); g.fill(); g.stroke();
+      g.fillStyle = '#7a7010'; g.beginPath(); g.roundRect(0, -104, 12, 22, 5); g.fill(); g.stroke();
+      g.restore();
+    } },
 });
 function outfitPal(id) {
   const o = OUTFITS[id] || OUTFITS.gruen;
@@ -1137,7 +1221,7 @@ function nearBox() {
 }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf')); }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -1290,6 +1374,7 @@ function openMenu() {
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
   if (nearKasse()) { startWork(); return; }
+  if (nearMuell()) { wuehlen(); return; }
   const nap = nearFurn('napf');
   if (nap) {
     menu.kind = 'napf'; menu.napf = nap; menu.title = 'Napf – ' + (nap.food ? FOODS[nap.food].name + ' liegt drin' : 'leer');
@@ -1401,6 +1486,8 @@ function interactTarget() {
   if (h) { const k = BASE_W / BODY.w * scaleAt(h.base) * 0.95; return { x: h.x + h.w / 2, y: h.base - (BODY.h + HEAD.h) * k - 22, label: h.shop === 'moebel' ? 'Möbel kaufen' : 'Tiere kaufen' }; }
   const st = nearStop() && ROOMS[cur].stop;
   if (st) return { x: st.x, y: STOP_BASE - 352, label: 'Bus nehmen' };
+  const mo = nearMuell() && muellObj();
+  if (mo) return { x: mo.x + mo.w / 2, y: mo.base - 290 * scaleAt(mo.base), label: 'Im Müll wühlen' };
   return null;
 }
 function drawPill() {
