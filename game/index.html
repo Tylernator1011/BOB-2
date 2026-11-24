@@ -1775,36 +1775,38 @@ const FACES = ['front', 'left', 'back', 'right'];
 const modelCache = {};
 function model(t, r) {
   const key = t + r; if (modelCache[key]) return modelCache[key];
-  const d = FURN[t];
+  const d = FURN[t], L = r >= 4 ? -1 : 1, rot = r % 4; // L = -1: gespiegelt, ragt nach rechts oben (für die linke Wand)
   let boxes = d.boxes.map(b => {
     let { x0, x1, z0, z1 } = b;
-    for (let i = 0; i < r; i++) [x0, x1, z0, z1] = [z0, z1, -x1, -x0];
-    return { ...b, x0, x1, z0, z1, decoFace: b.deco ? FACES[r % 4] : null };
+    for (let i = 0; i < rot; i++) [x0, x1, z0, z1] = [z0, z1, -x1, -x0];
+    return { ...b, x0, x1, z0, z1, decoFace: b.deco ? FACES[rot] : null };
   });
   let mnx = 0, mxx = 0, mnz = 0, mxz = 0, mxy = 0;
-  if (d.flat) { const fw = r % 2 ? d.flat.d : d.flat.w, fd = r % 2 ? d.flat.w : d.flat.d; mnx = -fw / 2; mxx = fw / 2; mxz = fd; }
+  if (d.flat) { const fw = rot % 2 ? d.flat.d : d.flat.w, fd = rot % 2 ? d.flat.w : d.flat.d; mnx = -fw / 2; mxx = fw / 2; mxz = fd; }
   else {
     mnx = Math.min(...boxes.map(b => b.x0)); mxx = Math.max(...boxes.map(b => b.x1));
     mnz = Math.min(...boxes.map(b => b.z0)); mxz = Math.max(...boxes.map(b => b.z1)); mxy = Math.max(...boxes.map(b => b.y1));
     if (d.leaves) mxy += 125;
   }
   // so verschieben, dass die Vorderkante vorne liegt und das Bild mittig ist
-  const sx = -(mnx + mxx) / 2 + (mxz - mnz) * KX / 2;
+  const sx = -(mnx + mxx) / 2 + L * (mxz - mnz) * KX / 2;
   boxes = boxes.map(b => ({ ...b, x0: b.x0 + sx, x1: b.x1 + sx, z0: b.z0 - mnz, z1: b.z1 - mnz }));
   const ext = { w: mxx - mnx, d: mxz - mnz, h: mxy, fx0: mnx + sx, fx1: mxx + sx };
   // Reihenfolge zum Malen: rechts vor links, hinten vor vorne, unten vor oben
   boxes.sort((a, b) => {
-    if (a.x0 >= b.x1 - 0.5) return -1; if (b.x0 >= a.x1 - 0.5) return 1;
+    if (L > 0) { if (a.x0 >= b.x1 - 0.5) return -1; if (b.x0 >= a.x1 - 0.5) return 1; }
+    else { if (a.x1 <= b.x0 + 0.5) return -1; if (b.x1 <= a.x0 + 0.5) return 1; }
     if (a.z0 >= b.z1 - 0.5) return -1; if (b.z0 >= a.z1 - 0.5) return 1;
     return a.y0 - b.y0;
   });
-  return modelCache[key] = { boxes, ext, sx };
+  return modelCache[key] = { boxes, ext, sx, L };
 }
 const FOOT = 0.55; // Tiefe auf dem Boden (für Laufen und Ebenen)
 function furnBox(f) {
   const m = model(f.t, f.r || 0), s = scaleAt(f.y);
   return { x: f.x + m.ext.fx0 * s, w: m.ext.w * s, base: f.y, depth: m.ext.d * FOOT * s,
-           top: f.y - (m.ext.h + m.ext.d * KY) * s, left: f.x + (m.ext.fx0 - m.ext.d * KX) * s };
+           top: f.y - (m.ext.h + m.ext.d * KY) * s,
+           left: f.x + (m.ext.fx0 - (m.L > 0 ? m.ext.d * KX : 0)) * s, right: f.x + (m.ext.fx1 + (m.L < 0 ? m.ext.d * KX : 0)) * s };
 }
 function solids(room) {
   const list = (ROOMS[room].objs || []).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o);
@@ -1822,7 +1824,7 @@ function drawFurn(t, x, y, s, alpha, r) {
   const d = FURN[t], m = model(t, r);
   g.save(); g.globalAlpha = alpha ?? 1; g.translate(x, y); g.scale(s, s);
   g.lineWidth = 4; g.strokeStyle = LINE; g.lineJoin = 'round';
-  const P = (X, Y, Z) => [X - Z * KX, -Y - Z * KY];
+  const LL = m.L, P = (X, Y, Z) => [X - LL * Z * KX, -Y - Z * KY];
   const poly = (pts, c) => { g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.closePath(); g.fillStyle = c; g.fill(); g.stroke(); };
   if (d.flat) {
     const fw = m.ext.w, fd = m.ext.d, [cx, cy] = P(0, 0, fd / 2);
@@ -1845,12 +1847,12 @@ function drawFurn(t, x, y, s, alpha, r) {
   for (const b of m.boxes) {
     const { x0, x1, z0, z1, y0, y1, c } = b;
     g.lineWidth = Math.min(4, (x1 - x0) / 4, (y1 - y0) / 3) + 1;
-    poly([P(x0, y1, z0), P(x0, y1, z1), P(x0, y0, z1), P(x0, y0, z0)], shade(c, -0.3)); // links
+    const sxx = LL > 0 ? x0 : x1; poly([P(sxx, y1, z0), P(sxx, y1, z1), P(sxx, y0, z1), P(sxx, y0, z0)], shade(c, -0.3)); // Seite
     poly([P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], shade(c, 0.2));  // oben
     poly([P(x0, y1, z0), P(x1, y1, z0), P(x1, y0, z0), P(x0, y0, z0)], c);              // vorne
-    if (b.deco && (b.decoFace === 'front' || b.decoFace === 'left')) {
+    if (b.deco && (b.decoFace === 'front' || b.decoFace === (LL > 0 ? 'left' : 'right'))) {
       const front = b.decoFace === 'front';
-      const at = (u, v) => front ? P(x0 + (x1 - x0) * u, y1 - (y1 - y0) * v, z0) : P(x0, y1 - (y1 - y0) * v, z1 - (z1 - z0) * u);
+      const at = (u, v) => front ? P(x0 + (x1 - x0) * u, y1 - (y1 - y0) * v, z0) : LL > 0 ? P(x0, y1 - (y1 - y0) * v, z1 - (z1 - z0) * u) : P(x1, y1 - (y1 - y0) * v, z0 + (z1 - z0) * u);
       const quad = (u0, v0, u1, v1, c) => poly([at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1)], c);
       const line = (u0, v0, u1, v1) => { g.beginPath(); g.moveTo(...at(u0, v0)); g.lineTo(...at(u1, v1)); g.stroke(); };
       const knob = (u, v, r, c) => { const [kx, ky] = at(u, v); g.fillStyle = c || '#ffee00'; g.beginPath(); g.arc(kx, ky, r || 8, 0, 7); g.fill(); g.stroke(); };
@@ -1954,10 +1956,10 @@ function unstick() {
   for (const id of activeList()) { const p = petFor(id); if (p.room === cur) { [p.x, p.y] = freeSpot(p.x, p.y, PETS[id].w * scaleAt(p.y) * 0.4); p.wait = 0.5; } }
 }
 function toggleBuild(on) { if (build.on && !(on ?? !build.on)) unstick(); build.on = on ?? !build.on; build.sel = null; build.rot = 0; keys.clear(); joy.on = false; }
-function rotate() { build.rot = (build.rot + 1) % 4; }
+function rotate() { build.rot = (build.rot + 1) % 8; }
 function placeOk(t, x, y, r) {
   const f = { t, x, y, r }, b = furnBox(f);
-  if (y < FLOOR + 30 || y > H - 18 || b.left < XL + 16 || b.x + b.w > XR - 16) return false;
+  if (y < FLOOR + 30 || y > H - 18 || b.left < XL + 16 || b.right > XR - 16) return false;
   if (FURN[t].flat) return true;
   const hit = o => b.x < o.x + o.w && b.x + b.w > o.x && b.base - b.depth - 4 < o.base && b.base + 4 > o.base - o.depth;
   if (solids(cur).some(hit)) return false;
@@ -1965,7 +1967,7 @@ function placeOk(t, x, y, r) {
 }
 function furnAt(x, y) {
   const list = (furn[cur] || []).slice().sort((a, b) => b.y - a.y);
-  return list.find(f => { const b = furnBox(f); return x > b.left && x < b.x + b.w && y > b.top - 8 && y < f.y + 8; });
+  return list.find(f => { const b = furnBox(f); return x > b.left && x < b.right && y > b.top - 8 && y < f.y + 8; });
 }
 function buildClick(x, y) {
   const k = slotAt(x, y);
@@ -2024,7 +2026,7 @@ function drawBuildUI() {
     drawFurn(k, build.px, build.py, s, ok ? 0.8 : 0.45, build.rot);
   } else if (!k && !inPanel) {
     const f = furnAt(build.px, build.py);
-    if (f) { const b = furnBox(f); g.strokeStyle = '#13f000'; g.lineWidth = 6; g.setLineDash([14, 10]); g.strokeRect(b.left - 6, b.top - 6, b.x + b.w - b.left + 12, f.y - b.top + 12); g.setLineDash([]); }
+    if (f) { const b = furnBox(f); g.strokeStyle = '#13f000'; g.lineWidth = 6; g.setLineDash([14, 10]); g.strokeRect(b.left - 6, b.top - 6, b.right - b.left + 12, f.y - b.top + 12); g.setLineDash([]); }
   }
   // Bau-Leiste oben: Kategorien und Sachen
   const x0 = panelX0(), tabW = PANEL.w / CATS.length, items = buildItems(), pages = Math.max(1, Math.ceil(items.length / PANEL.perPage));
@@ -3124,7 +3126,7 @@ function topfLabel(f) { if (!f.plant) return 'Pflanzen'; const p = plantProgress
 function drawPlant(f) {
   if (!f.plant) return;
   const m = model('topf', f.r || 0), s = scaleAt(f.y), zc = m.ext.d / 2;
-  const bx = f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - zc * KX * s, by = f.y - (56 + zc * KY) * s;
+  const bx = f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - m.L * zc * KX * s, by = f.y - (56 + zc * KY) * s;
   const p = plantProgress(f), st = p >= 1 ? 3 : Math.floor(p * 3), type = f.plant.type, h = [24, 50, 80, 100][st];
   const t = performance.now() / 1000;
   g.save(); g.translate(bx, by); g.scale(s, s); g.rotate(Math.sin(t * 1.5 + f.x) * 0.04);
