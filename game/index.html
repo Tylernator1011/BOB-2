@@ -1530,7 +1530,7 @@ cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (build.on) { build.px = x; build.py = y; if (Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) toggleBuild(false); else buildClick(x, y); return; }
   if (bag.open) { bagDown(x, y); return; }
   if (isTouch() && canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
-  if (canBag() && hotbarVisible()) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
+  if (canBag() && hotbarVisible() && !hbHidden) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
   if (menu.open) { const i = menuHit(x, y); if (i >= 0) { menu.sel = i; choose(i); } return; }
   if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) return; Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => { if (!joy.on) return; const [x, y] = toCanvas(e); let dx = x - joy.ox, dy = y - joy.oy; const m = Math.hypot(dx, dy), R = 90; if (m > R) { dx = dx / m * R; dy = dy / m * R; } joy.dx = dx / R; joy.dy = dy / R; });
@@ -3175,7 +3175,10 @@ function drawInventarApp(s) {
 const bag = { open: false, drag: null, hover: null, t0: 0, px: 0, py: 0 };
 let hotbar = ['phone', null, null, null, null, null];
 try { const hb = JSON.parse(localStorage.getItem('bob-hotbar') || 'null'); if (Array.isArray(hb) && hb.length === 6) hotbar = hb; } catch (e) {}
-function saveHotbar() { try { localStorage.setItem('bob-hotbar', JSON.stringify(hotbar)); } catch (e) {} }
+let hbHidden = false;
+try { hbHidden = localStorage.getItem('bob-hotbar-aus') === '1'; } catch (e) {}
+function saveHotbar() { try { localStorage.setItem('bob-hotbar', JSON.stringify(hotbar)); localStorage.setItem('bob-hotbar-aus', hbHidden ? '1' : '0'); } catch (e) {} }
+function hbToggleRect() { const r0 = hbRect(0), r5 = hbRect(HB.n - 1), w = 230; return { x: (r0.x + r5.x + r5.w) / 2 - w / 2, y: r0.y - 52, w, h: 40 }; }
 function itemInfo(id) {
   if (id === 'phone') return { name: 'Handy', desc: 'Öffnet dein Handy: Bauen, Bank, Jobs', n: 1 };
   if (/^food\d$/.test(id)) { const l = +id[4], F = FOODS[l]; return { name: F.name, desc: 'Tierfutter: +' + F.hunger + ' % satt, +' + F.xp + ' XP' + (F.gold ? ', Tier kackt Geld!' : ''), n: garden.food[l] || 0 }; }
@@ -3260,10 +3263,23 @@ function drawSlot(r, id, hl, num) {
 }
 function drawHotbar() {
   if (!hotbarVisible() && !bag.open) return;
+  if (!bag.open && hbHidden) { drawBagBtn(); return; }
   for (let i = 0; i < HB.n; i++) {
     if (!bag.open && !(hotbar[i] && itemInfo(hotbar[i]).n > 0)) continue;
     drawSlot(hbRect(i), hotbar[i], bag.open && bag.drag && hbAt(bag.px, bag.py) === i, String(i + 1));
   }
+  drawBagBtn();
+  // Schalter über der Hotbar (nur im Inventar)
+  if (bag.open) {
+    const r = hbToggleRect(), hov = bag.px > r.x && bag.px < r.x + r.w && bag.py > r.y && bag.py < r.y + r.h;
+    softShadow(10, 3); g.fillStyle = hov ? '#fff' : 'rgba(255,255,255,.9)'; g.beginPath(); g.roundRect(r.x, r.y, r.w, r.h, 20); g.fill(); noShadow();
+    // Auge
+    g.save(); g.translate(r.x + 28, r.y + r.h / 2); g.strokeStyle = '#1b1d22'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(-12, 0); g.quadraticCurveTo(0, -11, 12, 0); g.quadraticCurveTo(0, 11, -12, 0); g.stroke();
+    g.fillStyle = '#1b1d22'; g.beginPath(); g.arc(0, 0, 4, 0, 7); g.fill(); if (hbHidden) { g.beginPath(); g.moveTo(-12, 9); g.lineTo(12, -9); g.stroke(); } g.restore();
+    g.fillStyle = '#1b1d22'; g.font = '700 16px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(hbHidden ? 'Hotbar einblenden' : 'Hotbar ausblenden', r.x + 50, r.y + r.h / 2 + 1);
+  }
+}
+function drawBagBtn() {
   // Taschen-Knopf (nur im Handy-Modus)
   if (!bag.open && isTouch()) {
     roundBtn(BBTN, '#fff');
@@ -3286,6 +3302,7 @@ function bagDown(x, y) {
   if (Math.hypot(x - (b.x + b.w - 36), y - (b.y + 36)) < 24) { toggleBag(false); return; }
   const ci = bagCellAt(x, y);
   if (ci >= 0) { bag.drag = { id: bagItems()[ci], from: -1, sx: x, sy: y }; return; }
+  { const r = hbToggleRect(); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) { hbHidden = !hbHidden; saveHotbar(); return; } }
   const hi = hbAt(x, y);
   if (hi >= 0 && hotbar[hi]) { bag.drag = { id: hotbar[hi], from: hi, sx: x, sy: y }; return; }
   if (x < b.x || x > b.x + b.w || (y > b.y + b.h && hi < 0)) toggleBag(false);
