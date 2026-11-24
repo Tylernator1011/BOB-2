@@ -297,7 +297,12 @@ function updatePets(dt) {
       if (!e.eating && m > 8) { p.x += ddx / m * 170 * dt; p.y += ddy / m * 140 * dt; p.moving = true; p.face = ddx < 0 ? -1 : 1; }
       else {
         e.eating = true; p.moving = false; p.face = -1; e.t -= dt;
-        if (e.t <= 0) { const st = statsOf(id); st.hunger = Math.min(100, st.hunger + 40); p.eat = null; addXp(id, 20); p.wait = 1.5; savePetStats(); toast = { text: PETS[id].name + ' hat gegessen! +20 XP', t: 3 }; }
+        if (e.t <= 0) {
+          const st = statsOf(id), F = FOODS[e.lvl || 1]; st.hunger = Math.min(100, st.hunger + F.hunger); p.eat = null; addXp(id, F.xp); p.wait = 1.5;
+          if (F.gold) { st.goldUntil = gt.T + GOLD_MIN; st.goldAcc = 0; toast = { text: PETS[id].name + ' ist im Goldmodus und kackt jetzt Geld!', t: 4 }; }
+          else toast = { text: PETS[id].name + ' hat gegessen! +' + F.xp + ' XP', t: 3 };
+          savePetStats();
+        }
       }
     } else {
       if (p.wait > 0) { p.wait -= dt; p.moving = false; if (p.wait <= 0) { p.tx = XL + 140 + Math.random() * (VW - 280); p.ty = FLOOR + 80 + Math.random() * (H - FLOOR - 120); } }
@@ -1112,7 +1117,7 @@ function nearBox() {
 }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet()); }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd')); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -1265,7 +1270,21 @@ function openMenu() {
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
   if (nearKasse()) { startWork(); return; }
-  if (nearBett()) {
+  const tp = nearFurn('topf');
+  if (tp) {
+    if (tp.plant && plantProgress(tp) >= 1) { const k = tp.plant.type; garden.plants[k] = (garden.plants[k] || 0) + 1; tp.plant = null; saveFurn(); saveGarden(); toast = { text: 'Geerntet: ' + SEEDS[k].name + '!', t: 3 }; return; }
+    if (tp.plant) { toast = { text: SEEDS[tp.plant.type].name + ' wächst noch (' + Math.floor(plantProgress(tp) * 100) + ' %)', t: 2.5 }; return; }
+    menu.kind = 'plant'; menu.title = 'Was pflanzen?'; menu.topf = tp;
+    menu.items = Object.keys(SEEDS).filter(k => garden.seeds[k] > 0).map(k => ({ label: SEEDS[k].name, tag: '× ' + garden.seeds[k], seed: k }));
+    if (!menu.items.length) menu.items.push({ label: 'Keine Samen – such im Gras!', disabled: true });
+    menu.items.push({ label: 'Abbrechen' });
+  } else if (nearFurn('herd')) {
+    const ok = (garden.food[3] || 0) > 0 && (garden.plants.geld || 0) > 0;
+    menu.kind = 'cook'; menu.title = 'Kochen';
+    menu.items = [{ label: 'Goldfutter Lv4', tag: 'Lv3 + Geldpflanze', cook: true, disabled: !ok },
+                  { label: 'Du hast: Lv3 × ' + (garden.food[3] || 0) + ', Geldpflanze × ' + (garden.plants.geld || 0), disabled: true },
+                  { label: 'Abbrechen' }];
+  } else if (nearBett()) {
     menu.kind = 'sleep'; menu.title = 'Schlafen – ' + hm(gMin()) + ' Uhr';
     menu.items = [{ label: 'Bis morgen früh', sleep: 'morgen' }];
     if (canSleepNight()) menu.items.push({ label: 'Bis in die Nacht', sleep: 'nacht' });
@@ -1281,13 +1300,14 @@ function openMenu() {
       return { label: PETS[k].name, tag: money(p), tagCol: ok ? '#0a8a1f' : '#c0392b', pet: k, price: p, disabled: !ok };
     }).concat([{ label: 'Transportbox', tag: money(250), tagCol: bank.money >= 250 ? '#0a8a1f' : '#c0392b', furnBuy: 'transportbox', price: 250, disabled: bank.money < 250 },
                { label: 'Napf', tag: money(40), tagCol: bank.money >= 40 ? '#0a8a1f' : '#c0392b', furnBuy: 'napf', price: 40, disabled: bank.money < 40 },
-               { label: 'Tierfutter (5x)', tag: money(25), tagCol: bank.money >= 25 ? '#0a8a1f' : '#c0392b', foodBuy: 5, price: 25, disabled: bank.money < 25 },
+               ...[[1, 5, 20], [2, 5, 45], [3, 3, 60]].map(([l, n, pr]) => ({ label: 'Futter Lv' + l + ' (' + n + 'x)', tag: money(pr), tagCol: bank.money >= pr ? '#0a8a1f' : '#c0392b', foodBuy: n, lvl: l, price: pr, disabled: bank.money < pr })),
                { label: 'Tschüss', tag: '' }]);
   } else {
     const st = ROOMS[cur].stop;
     menu.kind = 'bus'; menu.title = 'Wohin?';
     menu.items = st.dests.map(d => ({ label: ROOMS[d].stop.name, dest: d })).concat([{ label: 'Abbrechen' }]);
   }
+  MENU.row = Math.min(78, Math.floor((H - 150) / menu.items.length));
   menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear();
 }
 function choose(i) {
@@ -1295,14 +1315,16 @@ function choose(i) {
   menu.open = false;
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
+  if (it.seed && menu.topf) { garden.seeds[it.seed]--; menu.topf.plant = { type: it.seed, t0: gt.T }; saveFurn(); saveGarden(); toast = { text: SEEDS[it.seed].name + ' gepflanzt! Wächst in ' + GROW_MIN / 60 + ' Stunden.', t: 3 }; }
+  if (it.cook) { garden.food[3]--; garden.plants.geld--; garden.food[4] = (garden.food[4] || 0) + 1; saveGarden(); toast = { text: 'Goldfutter gekocht! Füttere es deinem Tier.', t: 3.5 }; }
   if (it.pet) {
     if (it.price) { bank.money -= it.price; bank.log.push({ t: PETS[it.pet].name + ' gekauft', v: -it.price }); saveBank(); }
     owned.push(it.pet); activePet = it.pet; saveOwned(); petFor(it.pet);
     toast = { text: PETS[it.pet].name + ' läuft jetzt bei dir zu Hause herum!', t: 3.5 };
   }
   if (it.foodBuy) {
-    bank.money -= it.price; bank.log.push({ t: 'Tierfutter gekauft', v: -it.price }); saveBank();
-    petFood += it.foodBuy; savePetStats(); toast = { text: '+' + it.foodBuy + ' Tierfutter (jetzt ' + petFood + ')', t: 3 };
+    bank.money -= it.price; bank.log.push({ t: 'Futter Lv' + it.lvl + ' gekauft', v: -it.price }); saveBank();
+    garden.food[it.lvl] = (garden.food[it.lvl] || 0) + it.foodBuy; saveGarden(); toast = { text: '+' + it.foodBuy + ' Futter Lv' + it.lvl, t: 3 };
   }
   if (it.furnBuy) {
     bank.money -= it.price; bank.log.push({ t: FURN[it.furnBuy].name === 'Box' ? 'Transportbox gekauft' : FURN[it.furnBuy].name + ' gekauft', v: -it.price }); saveBank();
@@ -1341,6 +1363,10 @@ function interactTarget() {
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  const tp = nearFurn('topf');
+  if (tp) return { x: tp.x, y: furnBox(tp).top - 110 * scaleAt(tp.y), label: topfLabel(tp) };
+  const hd = nearFurn('herd');
+  if (hd) return { x: hd.x, y: furnBox(hd).top - 16, label: 'Kochen' };
   const bt = nearBett();
   if (bt) return { x: bt.x, y: furnBox(bt).top - 16, label: 'Schlafen' };
   const np = nearPet();
@@ -1394,7 +1420,8 @@ function drawMenu() {
       else drawFurn(it.furnBuy, b.x + 42 + (rh - 12) / 2, by + rh - 12, 0.32, 1, 0);
       marker(it.label, b.x + 80 + (MENU.w - 230) / 2, by + rh / 2 + 3, 30, '#111');
       marker(it.tag, b.x + MENU.w - 95, by + rh / 2 + 3, 28, it.tagCol || '#555');
-    } else marker(it.label, W / 2, by + rh / 2 + 3, 34, '#111');
+    } else if (it.tag) { marker(it.label, b.x + 30 + (MENU.w - 200) / 2, by + rh / 2 + 3, 28, '#111'); marker(it.tag, b.x + MENU.w - 110, by + rh / 2 + 3, 20, '#555'); }
+    else marker(it.label, W / 2, by + rh / 2 + 3, it.label.length > 24 ? 22 : 34, '#111');
     g.globalAlpha = 1;
   });
 }
@@ -1608,6 +1635,7 @@ const SHOP_FURN = {
 };
 for (const [k, [c, p]] of Object.entries(SHOP_FURN)) Object.assign(FURN[k], { cat: c, price: p });
 FURN.transportbox.cat = 'deko';
+FURN.topf = { name: 'Blumentopf', cat: 'deko', price: 30, boxes: [ B(-30, 30, 0, 46, 0, 46, '#c8621a'), B(-35, 35, -3, 49, 46, 54, '#b0561a'), B(-28, 28, 5, 41, 54, 56, '#5a3a1a') ] };
 FURN.napf = { name: 'Napf', cat: 'deko', boxes: [ B(-42, 42, 0, 46, 0, 18, '#e0262b'), B(-33, 33, 7, 39, 18, 22, '#9a6a3a') ] };
 FURN.transportbox.name = 'Transportbox';
 
@@ -2068,7 +2096,7 @@ const ADMIN = [
   ['Alle Möbel (+3)', () => { for (const k in FURN) if (FURN[k].price || k === 'transportbox') inv[k] = (inv[k] || 0) + 3; saveFurn(); }],
   ['Alle Wände & Böden', () => { deko.walls = Object.keys(WALLS); deko.floors = Object.keys(FLOORS); saveDeko(); }],
   ['Alle Outfits', () => { wear.owned = Object.keys(OUTFITS); saveWear(); }],
-  ['Tierfutter +10', () => { petFood += 10; savePetStats(); }],
+  ['Futter & Samen', () => { for (const l of [1, 2, 3, 4]) garden.food[l] = (garden.food[l] || 0) + 5; for (const k in SEEDS) garden.seeds[k] = (garden.seeds[k] || 0) + 2; saveGarden(); }],
   ['Zeit +3 Stunden', () => { gt.T += 180; saveTime(); }],
   ['Job: Strafen & Sperre weg', () => { if (job) { job.warnings = 0; job.unpaidUntil = -1; job.sickCount = 0; } if (unemp) unemp.banUntil = gDay(); saveJob(); }],
   ['Job: 1 Woche überspringen', () => { if (job) { job.start -= 7; saveJob(); } }],
@@ -2094,6 +2122,7 @@ const APPS = [
   { id: 'bauen', name: 'Bauen', col: '#ff8a1a' },
   { id: 'bank',  name: 'Bank',  col: '#13b84a' },
   { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
+  { id: 'inventar', name: 'Inventar', col: '#c97a3a' },
 ];
 function canPhone() { return !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
@@ -2122,7 +2151,11 @@ addEventListener('keydown', e => {
 function appIcon(id, x, y, sz) {
   g.save(); g.translate(x + sz / 2, y + sz / 2); g.scale(sz / 92, sz / 92);
   g.lineWidth = 4; g.strokeStyle = LINE; g.lineJoin = 'round';
-  if (id === 'jobs') {
+  if (id === 'inventar') {
+    g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-28, -26, 56, 60, 14); g.fill(); g.stroke();
+    g.beginPath(); g.arc(0, -26, 14, Math.PI, 0); g.stroke();
+    g.fillStyle = '#c97a3a'; g.beginPath(); g.roundRect(-18, 4, 36, 20, 6); g.fill(); g.stroke();
+  } else if (id === 'jobs') {
     g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-34, -18, 68, 48, 8); g.fill(); g.stroke();
     g.beginPath(); g.roundRect(-14, -30, 28, 14, 5); g.stroke();
     g.fillStyle = '#ffd23a'; g.fillRect(-6, -2, 12, 10); g.strokeRect(-6, -2, 12, 10);
@@ -2207,6 +2240,8 @@ function drawPhone(dt) {
       g.fillStyle = l.v >= 0 ? '#0a8a2f' : '#d12'; g.font = '700 18px system-ui'; g.textAlign = 'right';
       g.fillText((l.v >= 0 ? '+' : '') + money(l.v), s.x + s.w - 34, ly + 25);
     });
+  } else if (phone.app === 'inventar') {
+    drawInventarApp(s);
   } else if (phone.app === 'admin') {
     drawAdminApp(s);
   } else if (phone.app === 'jobs') {
@@ -2759,6 +2794,7 @@ function tickPetStats(dt) {
     s.lastT = gt.T; d = Math.min(d, 3000);
     const p = petFor(id);
     s.hunger = Math.max(0, s.hunger - d / 15);
+    goldTick(id, d);
     s.acc = (s.acc || 0) + d * (p.mode === 'gassi' && ROOMS[cur].outside ? 0.5 : p.mode === 'tragen' ? 0.2 : 0.1);
     const n = Math.floor(s.acc); if (n) { s.acc -= n; addXp(id, n); }
   }
@@ -2769,7 +2805,7 @@ function feedRoom(p) { return p.mode === 'home' ? p.room : cur; }
 function feedProblem(id) {
   const p = petFor(id);
   if (p.eat) return 'Frisst gerade';
-  if (petFood <= 0) return 'Kein Futter';
+  if ((garden.food[pp.food] || 0) <= 0) return 'Kein ' + (pp.food === 4 ? 'Goldfutter' : 'Futter Lv' + pp.food);
   if (p.mode === 'tragen') return 'Erst absetzen';
   if (!napfIn(feedRoom(p))) return 'Kein Napf hier';
   return null;
@@ -2777,8 +2813,8 @@ function feedProblem(id) {
 function feedPet(id) {
   if (feedProblem(id)) return;
   const p = petFor(id), f = napfIn(feedRoom(p));
-  petFood--; savePetStats();
-  p.eat = { x: f.x + 80 * scaleAt(f.y), y: f.y + 6, t: 2.5, eating: false };
+  const lvl = pp.food; garden.food[lvl]--; saveGarden();
+  p.eat = { x: f.x + 80 * scaleAt(f.y), y: f.y + 6, t: 2.5, eating: false, lvl };
 }
 function setPetMode(id, mode) {
   const p = petFor(id);
@@ -2793,7 +2829,7 @@ function setPetMode(id, mode) {
 
 // Panel
 const pp = { open: false, id: null, btns: [] };
-function openPetPanel(id) { pp.open = true; pp.id = id; pp.t0 = performance.now(); keys.clear(); joy.on = false; }
+function openPetPanel(id) { pp.food = [1, 2, 3, 4].find(l => garden.food[l] > 0) || 1; pp.open = true; pp.id = id; pp.t0 = performance.now(); keys.clear(); joy.on = false; }
 function nearPet() {
   if (build.on || fade.dir || bob.hidden) return null;
   for (const id of activeList()) {
@@ -2813,6 +2849,7 @@ function petAt(x, y) {
   return null;
 }
 function petPanelClick(x, y) {
+  for (const c of pp.chips || []) if (x > c.x && x < c.x + c.w && y > c.y && y < c.y + c.h) { pp.food = c.lvl; return; }
   for (const { b, act, on } of pp.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { if (on) act(); return; }
   const P = { x: W / 2 - 300, y: 160, w: 600, h: 580 };
   if (x < P.x || x > P.x + P.w || y < P.y || y > P.y + P.h) pp.open = false;
@@ -2833,7 +2870,7 @@ function bar(x, y, w, h, v, col, label, right) {
 }
 function drawPetPanel() {
   if (!pp.open) return;
-  const id = pp.id, p = petFor(id), s = statsOf(id), P = { x: W / 2 - 300, y: 160, w: 600, h: 580 };
+  const id = pp.id, p = petFor(id), s = statsOf(id), P = { x: W / 2 - 300, y: 150, w: 600, h: 590 };
   g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(XL, 0, VW, H);
   g.lineWidth = 6; g.strokeStyle = LINE;
   g.fillStyle = '#fff'; g.beginPath(); g.roundRect(P.x, P.y, P.w, P.h, 26); g.fill(); g.stroke();
@@ -2846,21 +2883,33 @@ function drawPetPanel() {
   g.fillStyle = '#555'; g.font = '600 18px system-ui'; g.fillText(modeTxt, P.x + 480, P.y + 104);
   const hc = s.hunger > 50 ? '#13c000' : s.hunger > 20 ? '#ff9a1a' : '#e0262b';
   bar(P.x + 40, P.y + 190, P.w - 80, 28, s.hunger / 100, hc, 'Hunger', Math.round(s.hunger) + ' %');
-  bar(P.x + 40, P.y + 266, P.w - 80, 28, s.xp / xpNeed(s.lvl), '#2f6fe0', 'Erfahrung', Math.floor(s.xp) + ' / ' + xpNeed(s.lvl) + ' XP');
+  bar(P.x + 40, P.y + 258, P.w - 80, 28, s.xp / xpNeed(s.lvl), '#2f6fe0', 'Erfahrung', Math.floor(s.xp) + ' / ' + xpNeed(s.lvl) + ' XP');
   g.fillStyle = '#333'; g.font = '600 18px system-ui'; g.textAlign = 'left';
-  g.fillText('Futter: ' + petFood + '   ·   Napf hier: ' + (napfIn(feedRoom(p)) ? 'ja' : 'nein'), P.x + 40, P.y + 330);
-  if (s.hunger <= 0) { g.fillStyle = '#e0262b'; g.fillText('Hat Hunger! Bekommt keine XP, bis es gefüttert wird.', P.x + 40, P.y + 356); }
+  // Futter-Auswahl
+  pp.chips = [];
+  const cw = (P.w - 80 - 30) / 4;
+  for (let l = 1; l <= 4; l++) {
+    const c = { x: P.x + 40 + (l - 1) * (cw + 10), y: P.y + 312, w: cw, h: 44, lvl: l }, n = garden.food[l] || 0, on = pp.food === l;
+    g.fillStyle = on ? FOODS[l].col : '#f1f2f4'; g.lineWidth = on ? 4 : 2; g.strokeStyle = on ? LINE : '#ccc';
+    g.beginPath(); g.roundRect(c.x, c.y, c.w, c.h, 12); g.fill(); g.stroke();
+    g.fillStyle = on ? '#111' : n ? '#333' : '#aaa'; g.font = '700 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText((l === 4 ? 'Gold' : 'Lv' + l) + '  × ' + n, c.x + c.w / 2, c.y + c.h / 2 + 1);
+    pp.chips.push(c);
+  }
+  g.textAlign = 'left'; g.font = '600 15px system-ui';
+  if (s.hunger <= 0) { g.fillStyle = '#e0262b'; g.fillText('Hat Hunger! Bekommt keine XP, bis es gefüttert wird.', P.x + 40, P.y + 296); }
+  else if (s.goldUntil > gt.T) { g.fillStyle = '#b08a00'; g.fillText('Goldmodus: kackt Geld bis ' + hm((s.goldUntil) % 1440) + ' Uhr', P.x + 40, P.y + 296); }
   // Knöpfe
   const fp = feedProblem(id);
   const defs = [
-    [fp ? 'Füttern – ' + fp : 'Füttern (+20 XP)', '#13c000', !fp, () => { feedPet(id); pp.open = false; }],
+    [fp ? 'Füttern – ' + fp : 'Füttern (+' + FOODS[pp.food].xp + ' XP)', '#13c000', !fp, () => { feedPet(id); pp.open = false; }],
     [p.mode === 'gassi' ? 'Gassi beenden' : 'Gassi gehen', '#2f6fe0', !p.eat, () => { setPetMode(id, p.mode === 'gassi' ? 'home' : 'gassi'); pp.open = false; }],
     [p.mode === 'tragen' ? 'Absetzen' : 'Tragen', '#9b5de5', !p.eat, () => { setPetMode(id, p.mode === 'tragen' ? (BUILD_ROOMS.includes(cur) ? 'home' : 'gassi') : 'tragen'); pp.open = false; }],
     ['Schließen', '#777', true, () => { pp.open = false; }],
   ];
   pp.btns = [];
   defs.forEach(([label, col, on, act], i) => {
-    const b = { x: P.x + 40 + (i % 2) * ((P.w - 100) / 2 + 20), y: P.y + 380 + Math.floor(i / 2) * 84, w: (P.w - 100) / 2, h: 68 };
+    const b = { x: P.x + 40 + (i % 2) * ((P.w - 100) / 2 + 20), y: P.y + 374 + Math.floor(i / 2) * 84, w: (P.w - 100) / 2, h: 68 };
     g.globalAlpha = on ? 1 : 0.45; g.fillStyle = col; g.lineWidth = 4; g.strokeStyle = LINE;
     g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 18); g.fill(); g.stroke();
     g.fillStyle = '#fff'; g.font = '700 ' + (label.length > 18 ? 17 : 21) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, b.x + b.w / 2, b.y + b.h / 2);
@@ -2876,6 +2925,138 @@ function drawLeash() {
     g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo((bx + p.x) / 2, Math.max(by, py) + 40, p.x, py); g.stroke();
   }
 }
+// ---------- Futter-Stufen, Samen, Pflanzen, Kochen ----------
+const FOODS = {
+  1: { name: 'Futter Lv1', hunger: 30, xp: 10, col: '#c8a060' },
+  2: { name: 'Futter Lv2', hunger: 50, xp: 25, col: '#e07a2a' },
+  3: { name: 'Futter Lv3', hunger: 80, xp: 50, col: '#9b5de5' },
+  4: { name: 'Goldfutter Lv4', hunger: 100, xp: 80, col: '#ffc400', gold: true },
+};
+const SEEDS = {
+  sonne:  { name: 'Sonnenblume', w: 40, col: '#ffd23a' },
+  tomate: { name: 'Tomate',      w: 35, col: '#e0262b' },
+  rose:   { name: 'Rose',        w: 17, col: '#ff4d8a' },
+  geld:   { name: 'Geldpflanze', w: 8,  col: '#ffc400' },
+};
+const GROW_MIN = 8 * 60, GOLD_MIN = 3 * 60;
+let garden = { food: { 1: 0, 2: 0, 3: 0, 4: 0 }, seeds: {}, plants: {}, coins: {}, world: {}, lastSpawn: 0 };
+try { const gd = JSON.parse(localStorage.getItem('bob-garten') || 'null'); if (gd && gd.food) garden = Object.assign(garden, gd); } catch (e) {}
+if (petFood > 0) { garden.food[1] += petFood; petFood = 0; }
+function saveGarden() { try { localStorage.setItem('bob-garten', JSON.stringify(garden)); } catch (e) {} savePetStats(); }
+const GRASS_ROOMS = ['draussen', 'haltestelle'];
+// Samen tauchen selten auf dem Gras auf
+function spawnSeeds() {
+  if (gt.T - garden.lastSpawn < 60) return;
+  garden.lastSpawn = gt.T;
+  for (const r of GRASS_ROOMS) {
+    const list = garden.world[r] = garden.world[r] || [];
+    if (list.length >= 2 || Math.random() > 0.3) continue;
+    let roll = Math.random() * 100, type = 'sonne';
+    for (const [k, v] of Object.entries(SEEDS)) { if (roll < v.w) { type = k; break; } roll -= v.w; }
+    list.push({ type, x: 140 + Math.random() * 920, y: FLOOR + 50 + Math.random() * (WALK - FLOOR - 70) });
+  }
+  saveGarden();
+}
+function pickups() {
+  const near = (o, r) => Math.abs(o.x - bob.x) < r && Math.abs(o.y - bob.y) < r * 0.8;
+  const ws = garden.world[cur] || [];
+  for (let i = ws.length - 1; i >= 0; i--) if (near(ws[i], 70)) {
+    const sd = ws.splice(i, 1)[0]; garden.seeds[sd.type] = (garden.seeds[sd.type] || 0) + 1; saveGarden();
+    toast = { text: 'Gefunden: ' + SEEDS[sd.type].name + '-Samen!', t: 3 };
+  }
+  const cs = garden.coins[cur] || [];
+  for (let i = cs.length - 1; i >= 0; i--) if (near(cs[i], 80)) {
+    const c = cs.splice(i, 1)[0]; bank.money += c.v; bank.log.push({ t: 'Geld vom Tier', v: c.v }); saveBank(); saveGarden();
+    toast = { text: '+' + money(c.v) + ' eingesammelt!', t: 2 };
+  }
+}
+function drawSeed(sd) {
+  const t = performance.now() / 1000, s = scaleAt(sd.y), y = sd.y - 6 + Math.sin(t * 3 + sd.x) * 3;
+  g.save(); g.translate(sd.x, y); g.scale(s, s);
+  g.fillStyle = `rgba(255,255,200,${0.35 + 0.25 * Math.sin(t * 5 + sd.x)})`; g.beginPath(); g.arc(0, -8, 26, 0, 7); g.fill();
+  g.fillStyle = sd.type === 'geld' ? '#ffc400' : '#8a5a2a'; g.strokeStyle = '#111'; g.lineWidth = 3;
+  g.beginPath(); g.ellipse(0, -8, 9, 13, 0.3, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.ellipse(-3, -13, 3, 5, 0.3, 0, 7); g.fill();
+  const sp = (t * 2 + sd.x) % 2; if (sp < 1) { g.strokeStyle = '#fff'; g.lineWidth = 2; const a = 14 + sp * 6; g.beginPath(); g.moveTo(a, -20); g.lineTo(a + 8, -20); g.moveTo(a + 4, -24); g.lineTo(a + 4, -16); g.stroke(); }
+  g.restore();
+}
+function drawCoinPile(c) {
+  const s = scaleAt(c.y), t = performance.now() / 1000;
+  g.save(); g.translate(c.x, c.y); g.scale(s, s);
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(0, 2, 34, 8, 0, 0, 7); g.fill();
+  g.strokeStyle = '#7a5a00'; g.lineWidth = 3;
+  for (const [w, y] of [[30, -8], [22, -22], [14, -34]]) { g.fillStyle = '#ffc400'; g.beginPath(); g.ellipse(0, y, w, 11, 0, 0, 7); g.fill(); g.stroke(); }
+  g.fillStyle = '#ffc400'; g.beginPath(); g.moveTo(-6, -40); g.quadraticCurveTo(0, -56, 6, -40); g.fill(); g.stroke();
+  g.fillStyle = '#7a5a00'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 0, -9);
+  g.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 6 + c.x)})`; g.beginPath(); g.arc(-12, -26, 3, 0, 7); g.fill();
+  g.restore();
+}
+// Geld-Kacken im Goldmodus
+function goldTick(id, d) {
+  const s = statsOf(id); if (!(s.goldUntil > gt.T - d)) return;
+  s.goldAcc = (s.goldAcc || 0) + d;
+  while (s.goldAcc >= 20) {
+    s.goldAcc -= 20;
+    const p = petFor(id), room = p.mode === 'home' ? p.room : cur;
+    const x = p.mode === 'tragen' ? bob.x + 80 : p.x - 40 * p.face, y = p.mode === 'tragen' ? bob.y + 10 : p.y + 4;
+    (garden.coins[room] = garden.coins[room] || []).push({ x, y, v: 10 + Math.floor(Math.random() * 16) });
+    saveGarden();
+  }
+  if (s.goldUntil <= gt.T) { s.goldAcc = 0; toast = { text: 'Der Goldmodus von ' + PETS[id].name + ' ist vorbei.', t: 3 }; s.goldUntil = 0; }
+}
+// Pflanzen im Topf
+function plantProgress(f) { return f.plant ? Math.min(1, (gt.T - f.plant.t0) / GROW_MIN) : 0; }
+function nearFurn(type) { if (build.on || fade.dir) return null; return (furn[cur] || []).find(f => f.t === type && Math.abs(bob.x - f.x) < 170 && Math.abs(bob.y - f.y) < 130); }
+function topfLabel(f) { if (!f.plant) return 'Pflanzen'; const p = plantProgress(f); return p >= 1 ? 'Ernten' : SEEDS[f.plant.type].name + ' ' + Math.floor(p * 100) + ' %'; }
+function drawPlant(f) {
+  if (!f.plant) return;
+  const m = model('topf', f.r || 0), s = scaleAt(f.y), zc = m.ext.d / 2;
+  const bx = f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - zc * KX * s, by = f.y - (56 + zc * KY) * s;
+  const p = plantProgress(f), st = p >= 1 ? 3 : Math.floor(p * 3), type = f.plant.type, h = [24, 50, 80, 100][st];
+  const t = performance.now() / 1000;
+  g.save(); g.translate(bx, by); g.scale(s, s); g.rotate(Math.sin(t * 1.5 + f.x) * 0.04);
+  g.strokeStyle = '#2a8a2a'; g.lineWidth = 6; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -h); g.stroke();
+  g.fillStyle = '#2fb84f'; g.strokeStyle = '#111'; g.lineWidth = 2.5;
+  for (let i = 1; i <= st + 1; i++) for (const sgn of [-1, 1]) {
+    const ly = -h * i / (st + 2);
+    if (type === 'geld') { g.fillStyle = st >= 2 ? '#ffc400' : '#2fb84f'; g.beginPath(); g.arc(sgn * 14, ly, 9, 0, 7); g.fill(); g.stroke(); if (st >= 2) { g.fillStyle = '#7a5a00'; g.font = '800 10px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', sgn * 14, ly + 1); } }
+    else { g.fillStyle = '#2fb84f'; g.beginPath(); g.ellipse(sgn * 13, ly, 13, 6, sgn * 0.5, 0, 7); g.fill(); g.stroke(); }
+  }
+  if (st === 3) {
+    if (type === 'sonne') { g.fillStyle = '#ffd23a'; for (let a = 0; a < 6.28; a += 0.5) { g.beginPath(); g.ellipse(Math.cos(a) * 18, -h + Math.sin(a) * 18, 10, 6, a, 0, 7); g.fill(); g.stroke(); } g.fillStyle = '#6b4226'; g.beginPath(); g.arc(0, -h, 12, 0, 7); g.fill(); g.stroke(); }
+    else if (type === 'tomate') { g.fillStyle = '#e0262b'; for (const [tx, ty] of [[-14, -h + 20], [12, -h + 34], [0, -h + 4]]) { g.beginPath(); g.arc(tx, ty, 10, 0, 7); g.fill(); g.stroke(); } }
+    else if (type === 'rose') { g.fillStyle = '#ff2d55'; g.beginPath(); g.arc(0, -h, 15, 0, 7); g.fill(); g.stroke(); g.strokeStyle = '#a0002a'; g.beginPath(); g.arc(0, -h, 8, 0.5, 5); g.stroke(); }
+    else { g.fillStyle = '#ffc400'; g.beginPath(); g.arc(0, -h, 16, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 0, -h + 1);
+      g.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 6)})`; g.beginPath(); g.arc(-8, -h - 8, 3, 0, 7); g.fill(); }
+  }
+  if (p >= 1) { g.fillStyle = `rgba(255,255,150,${0.3 + 0.3 * Math.sin(t * 4)})`; g.beginPath(); g.arc(0, -h, 28, 0, 7); g.fill(); }
+  g.restore();
+}
+function drawFurnItem(f) { drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r); if (f.t === 'topf') drawPlant(f); }
+function inventoryLines() {
+  const L = [];
+  for (const k of [1, 2, 3, 4]) L.push([FOODS[k].name, garden.food[k] || 0, FOODS[k].col]);
+  for (const k in SEEDS) if (garden.seeds[k]) L.push([SEEDS[k].name + '-Samen', garden.seeds[k], SEEDS[k].col]);
+  for (const k in SEEDS) if (garden.plants[k]) L.push([SEEDS[k].name, garden.plants[k], '#2fb84f']);
+  return L;
+}
+function drawInventarApp(s) {
+  g.fillStyle = '#fbf6ee'; g.fillRect(s.x, s.y, s.w, s.h);
+  g.fillStyle = '#c97a3a'; g.fillRect(s.x, s.y, s.w, 110);
+  backBtn(s);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '700 26px system-ui'; g.fillText('Inventar', s.x + s.w / 2, s.y + 62);
+  inventoryLines().forEach(([n, c, col], i) => {
+    const y = s.y + 140 + i * 46;
+    g.fillStyle = '#fff'; g.beginPath(); g.roundRect(s.x + 18, y - 20, s.w - 36, 40, 12); g.fill();
+    g.fillStyle = col; g.beginPath(); g.arc(s.x + 42, y, 10, 0, 7); g.fill();
+    g.fillStyle = '#222'; g.font = '600 18px system-ui'; g.textAlign = 'left'; g.fillText(n, s.x + 62, y + 1);
+    g.textAlign = 'right'; g.font = '800 18px system-ui'; g.fillText('× ' + c, s.x + s.w - 34, y + 1);
+  });
+  g.fillStyle = '#777'; g.font = '500 14px system-ui'; g.textAlign = 'center';
+  g.fillText('Samen findest du selten draußen im Gras', s.x + s.w / 2, s.y + s.h - 50);
+}
+
 function fit() {
   const a = innerWidth / Math.max(1, innerHeight);
   VW = Math.max(W, Math.min(2600, Math.round(H * a)));
@@ -2931,14 +3112,15 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); checkJobs(); updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); checkJobs(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
     const list = [];
   for (const f of furn[cur] || []) if (FURN[f.t].flat) drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r);
-  for (const f of furn[cur] || []) if (!FURN[f.t].flat) list.push({ y: f.y, f: () => drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r) });
+  for (const f of furn[cur] || []) if (!FURN[f.t].flat) list.push({ y: f.y, f: () => drawFurnItem(f) });
   for (const o of ROOMS[cur].objs || []) list.push({ y: o.base, f: () => drawObj(o) });
+  if (!build.on) { for (const sd of garden.world[cur] || []) list.push({ y: sd.y, f: () => drawSeed(sd) }); for (const c of garden.coins[cur] || []) list.push({ y: c.y, f: () => drawCoinPile(c) }); }
   if (st) list.push({ y: STOP_BASE, f: () => drawStop(st) });
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: drawBob });
