@@ -1527,7 +1527,7 @@ cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (shopCat.open) { catalogClick(x, y); return; }
   if (phone.open) { phoneClick(x, y); return; }
   if (wr.open) { wardrobeClick(x, y); return; }
-  if (build.on) { build.px = x; build.py = y; if (Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) toggleBuild(false); else buildClick(x, y); return; }
+  if (build.on) { build.px = x; build.py = y; if (Math.hypot(x - buildBtns().done.x, y - buildBtns().done.y) < 28) toggleBuild(false); else buildClick(x, y); return; }
   if (bag.open) { bagDown(x, y); return; }
   if (isTouch() && canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
   if (canBag() && hotbarVisible() && !hbHidden) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
@@ -1938,6 +1938,7 @@ function slotAt(x, y) {
   const i = Math.floor((x - x0 - 40) / PANEL.slot) + build.page * PANEL.perPage;
   return items[i] && Math.floor((x - x0 - 40) / PANEL.slot) < PANEL.perPage ? items[i] : { kind: 'empty' };
 }
+function buildBtns() { const x0 = panelX0(), y = PANEL.itemY + PANEL.itemH + 30; return { done: { x: x0 + PANEL.w - 16, y, r: 22 }, rot: { x: x0 + PANEL.w - 70, y, r: 22 } }; }
 function canBuildHere() { return BUILD_ROOMS.includes(cur) && !menu.open && !bus && !fade.dir && !wr.open; }
 function freeSpot(x, y, hw) {
   const ok = (a, b) => b > FLOOR + 40 && b < H - 20 && a > XL + hw + 20 && a < XR - hw - 20 && !blocked(a, b, hw);
@@ -1975,7 +1976,7 @@ function buildClick(x, y) {
     else if (k.kind === 'wall' || k.kind === 'floor') { deko.rooms[cur] = { ...roomStyle(cur), [k.kind]: k.id }; saveDeko(); }
     return;
   }
-  if (Math.hypot(x - RBTN.x, y - RBTN.y) < RBTN.r + 8) { rotate(); return; }
+  if (build.sel && Math.hypot(x - buildBtns().rot.x, y - buildBtns().rot.y) < 28) { rotate(); return; }
   if (build.sel) {
     if (placeOk(build.sel, x, y, build.rot)) {
       (furn[cur] = furn[cur] || []).push({ t: build.sel, x, y, r: build.rot });
@@ -2015,7 +2016,7 @@ function drawBuildUI() {
     return;
   }
   // Vorschau
-  const k = build.sel, inPanel = slotAt(build.px, build.py), onBtn = build.py > H - 130 && build.px < 280;
+  const k = build.sel, inPanel = slotAt(build.px, build.py), onBtn = Math.hypot(build.px - buildBtns().done.x, build.py - buildBtns().done.y) < 30 || Math.hypot(build.px - buildBtns().rot.x, build.py - buildBtns().rot.y) < 30;
   if (k && !inPanel && !onBtn) {
     const ok = placeOk(k, build.px, build.py, build.rot), s = scaleAt(build.py), b = furnBox({ t: k, x: build.px, y: build.py, r: build.rot });
     g.fillStyle = ok ? 'rgba(19,240,0,.35)' : 'rgba(255,40,40,.4)';
@@ -2060,21 +2061,19 @@ function drawBuildUI() {
     g.fillStyle = '#111'; g.beginPath(); g.moveTo(ax - 10 * d, iy + ih / 2 - 22); g.lineTo(ax + 12 * d, iy + ih / 2); g.lineTo(ax - 10 * d, iy + ih / 2 + 22); g.closePath(); g.fill();
     g.globalAlpha = 1;
   }
-  // Fertig-Knopf
-  roundBtn(BBTN, '#13f000');
-  g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.moveTo(BBTN.x - 22, BBTN.y + 2); g.lineTo(BBTN.x - 6, BBTN.y + 18); g.lineTo(BBTN.x + 24, BBTN.y - 16); g.stroke();
-  // Drehen-Knopf
+  // kleine Knöpfe unten rechts am Bau-Menü
+  const D = buildBtns();
+  const small = (c, fill, hov) => { softShadow(hov ? 12 : 6, 2); g.fillStyle = fill; g.beginPath(); g.arc(c.x, c.y, c.r, 0, 7); g.fill(); noShadow(); g.lineWidth = 2.5; g.strokeStyle = LINE; g.stroke(); };
+  const hv = c => Math.hypot(build.px - c.x, build.py - c.y) < c.r + 4;
+  small(D.done, '#13c000', hv(D.done));
+  g.strokeStyle = '#fff'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(D.done.x - 10, D.done.y + 1); g.lineTo(D.done.x - 3, D.done.y + 8); g.lineTo(D.done.x + 10, D.done.y - 7); g.stroke();
   if (k) {
-    roundBtn(RBTN, '#fff');
-    g.lineWidth = 8; g.beginPath(); g.arc(RBTN.x, RBTN.y, 24, -2.6, 1.9); g.stroke();
-    const ax = RBTN.x + 24 * Math.cos(1.9), ay = RBTN.y + 24 * Math.sin(1.9);
-    g.fillStyle = LINE; g.beginPath(); g.moveTo(ax - 14, ay + 2); g.lineTo(ax + 6, ay + 14); g.lineTo(ax + 6, ay - 10); g.closePath(); g.fill();
+    small(D.rot, '#fff', hv(D.rot));
+    g.strokeStyle = LINE; g.lineWidth = 3.5; g.beginPath(); g.arc(D.rot.x, D.rot.y, 11, -2.6, 1.9); g.stroke();
+    const ax = D.rot.x + 11 * Math.cos(1.9), ay = D.rot.y + 11 * Math.sin(1.9);
+    g.fillStyle = LINE; g.beginPath(); g.moveTo(ax - 7, ay + 1); g.lineTo(ax + 3, ay + 7); g.lineTo(ax + 3, ay - 5); g.closePath(); g.fill();
   }
-  // Hinweis
-  const tip = k ? 'Klicken: hinstellen · R oder Pfeil-Knopf: drehen' : build.cat === 'waende' || build.cat === 'boeden' ? 'Anklicken: für diesen Raum benutzen' : 'Möbel oben auswählen oder ein Möbel anklicken zum Verschieben';
-  g.font = `24px 'Permanent Marker', cursive`; const tw = g.measureText(tip).width + 40, tx = W / 2 + 120;
-  g.fillStyle = 'rgba(255,255,255,.92)'; g.lineWidth = 4; g.beginPath(); g.roundRect(tx - tw / 2, H - 64, tw, 48, 14); g.fill(); g.stroke();
-  marker(tip, tx, H - 39, 24, '#111');
+  g.lineCap = 'butt';
 }
 
 // ---------- Handy mit Apps ----------
