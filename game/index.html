@@ -3180,7 +3180,7 @@ function bagItems() {
   const ids = ['phone', 'food1', 'food2', 'food3', 'food4'];
   for (const k in SEEDS) ids.push('seed:' + k);
   for (const k in SEEDS) ids.push('plant:' + k);
-  return ids.filter(id => itemInfo(id).n > 0);
+  return ids.filter(id => itemInfo(id).n > 0 && !hotbar.includes(id));
 }
 function useItem(id) {
   if (!id || itemInfo(id).n <= 0) return;
@@ -3253,7 +3253,10 @@ function drawSlot(r, id, hl, num) {
 }
 function drawHotbar() {
   if (!hotbarVisible() && !bag.open) return;
-  for (let i = 0; i < HB.n; i++) drawSlot(hbRect(i), hotbar[i], bag.open && bag.drag && hbAt(bag.px, bag.py) === i, String(i + 1));
+  for (let i = 0; i < HB.n; i++) {
+    if (!bag.open && !(hotbar[i] && itemInfo(hotbar[i]).n > 0)) continue;
+    drawSlot(hbRect(i), hotbar[i], bag.open && bag.drag && hbAt(bag.px, bag.py) === i, String(i + 1));
+  }
   // Taschen-Knopf
   if (!bag.open) {
     roundBtn(BBTN, '#fff');
@@ -3311,7 +3314,7 @@ function drawBag() {
   g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.arc(b.x + 58, b.y + 52, 32, 0, 7); g.fill();
   g.save(); g.translate(b.x + 58, b.y + 55); g.fillStyle = '#fff'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.roundRect(-16, -12, 32, 28, 8); g.fill(); g.beginPath(); g.arc(0, -12, 8, Math.PI, 0); g.stroke(); g.restore();
   g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '800 30px system-ui'; g.fillText('Inventar', b.x + 108, b.y + 40);
-  g.font = '600 18px system-ui'; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText('Zieh Sachen in die Leiste unten · Klick zum Benutzen', b.x + 108, b.y + 70);
+  g.font = '600 18px system-ui'; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText('Zieh Sachen in die Leiste unten und wieder zurück · Klick zum Benutzen', b.x + 108, b.y + 70);
   g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.arc(b.x + b.w - 36, b.y + 36, 20, 0, 7); g.fill(); uiIcon('x', b.x + b.w - 36, b.y + 36, 22, '#fff');
   const items = bagItems();
   for (let i = 0; i < BG.cols * 3; i++) {
