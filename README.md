@@ -10,7 +10,7 @@ Das Spiel mit Bob – als richtiges Desktop-Spiel für Windows, mit automatische
 
 Danach ist BOB 2 im Startmenü und auf dem Desktop.
 
-**Steuerung:** WASD oder Pfeiltasten laufen · Shift rennen · E reden / Bus nehmen / Kleiderschrank / Schlafen / Arbeiten · H Handy (Bauen, Bank, Jobs) · B bauen (im Haus) · R Möbel drehen · F11 Vollbild
+**Steuerung:** WASD oder Pfeiltasten laufen · Shift rennen · E reden / Bus nehmen / Kleiderschrank / Schlafen / Arbeiten · I Inventar · 1–6 Hotbar · H Handy (Bauen, Bank, Jobs) · B bauen (im Haus) · R Möbel drehen · F11 Vollbild
 
 ## Updates
 
