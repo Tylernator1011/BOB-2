@@ -1519,6 +1519,7 @@ function updateBus(dt) {
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
+  if (!device) { deviceClick(x, y); return; }
   if (wk.on) { workDown(x, y); return; }
   if (pp.open) { petPanelClick(x, y); return; }
   if (!build.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !sleepFx && !bus) { const pt = petAt(x, y); if (pt) { openPetPanel(pt.id); return; } }
@@ -1528,10 +1529,10 @@ cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (wr.open) { wardrobeClick(x, y); return; }
   if (build.on) { build.px = x; build.py = y; if (Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) toggleBuild(false); else buildClick(x, y); return; }
   if (bag.open) { bagDown(x, y); return; }
-  if (canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
+  if (isTouch() && canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
   if (canBag() && hotbarVisible()) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
   if (menu.open) { const i = menuHit(x, y); if (i >= 0) { menu.sel = i; choose(i); } return; }
-  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
+  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) return; Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => { if (!joy.on) return; const [x, y] = toCanvas(e); let dx = x - joy.ox, dy = y - joy.oy; const m = Math.hypot(dx, dy), R = 90; if (m > R) { dx = dx / m * R; dy = dy / m * R; } joy.dx = dx / R; joy.dy = dy / R; });
 const stop = () => { joy.on = false; joy.dx = joy.dy = 0; };
 cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
@@ -2192,6 +2193,7 @@ const APPS = [
   { id: 'bauen', name: 'Bauen', col: '#ff8a1a' },
   { id: 'bank',  name: 'Bank',  col: '#13b84a' },
   { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
+  { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 function canPhone() { return !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
@@ -2208,7 +2210,7 @@ function phoneClick(x, y) {
   // Home-Leiste unten
   if (y > s.y + s.h - 40 && !phone.locked) { phone.app = null; return; }
   if (phone.locked) { lockClick(x, y); return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin') jobsClick(x, y); return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
@@ -2224,6 +2226,9 @@ function appIcon(id, x, y, sz) {
     g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-28, -26, 56, 60, 14); g.fill(); g.stroke();
     g.beginPath(); g.arc(0, -26, 14, Math.PI, 0); g.stroke();
     g.fillStyle = '#c97a3a'; g.beginPath(); g.roundRect(-18, 4, 36, 20, 6); g.fill(); g.stroke();
+  } else if (id === 'einst') {
+    g.fillStyle = '#e5e7eb'; g.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283, r = i % 2 ? 22 : 30; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#4b5563'; g.beginPath(); g.arc(0, 0, 10, 0, 7); g.fill(); g.stroke();
   } else if (id === 'jobs') {
     g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-34, -18, 68, 48, 8); g.fill(); g.stroke();
     g.beginPath(); g.roundRect(-14, -30, 28, 14, 5); g.stroke();
@@ -2310,6 +2315,8 @@ function drawPhone(dt) {
     });
   } else if (phone.app === 'inventar') {
     drawInventarApp(s);
+  } else if (phone.app === 'einst') {
+    drawSettingsApp(s);
   } else if (phone.app === 'admin') {
     drawAdminApp(s);
   } else if (phone.app === 'jobs') {
@@ -3257,8 +3264,8 @@ function drawHotbar() {
     if (!bag.open && !(hotbar[i] && itemInfo(hotbar[i]).n > 0)) continue;
     drawSlot(hbRect(i), hotbar[i], bag.open && bag.drag && hbAt(bag.px, bag.py) === i, String(i + 1));
   }
-  // Taschen-Knopf
-  if (!bag.open) {
+  // Taschen-Knopf (nur im Handy-Modus)
+  if (!bag.open && isTouch()) {
     roundBtn(BBTN, '#fff');
     g.save(); g.translate(BBTN.x, BBTN.y + 4);
     g.fillStyle = '#c97a3a'; g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.roundRect(-24, -20, 48, 42, 12); g.fill(); g.stroke();
@@ -3339,6 +3346,75 @@ function drawBag() {
   drawHotbar();
   if (bag.drag && Math.hypot(bag.px - bag.drag.sx, bag.py - bag.drag.sy) > 8) { g.globalAlpha = 0.9; drawItemIcon(bag.drag.id, bag.px, bag.py, 70); g.globalAlpha = 1; }
 }
+// ---------- Gerät: PC oder Handy ----------
+let device = null;
+try { device = localStorage.getItem('bob-geraet'); } catch (e) {}
+function isTouch() { return device === 'touch'; }
+function setDevice(d) { device = d; try { localStorage.setItem('bob-geraet', d); } catch (e) {} keys.clear(); joy.on = false; }
+const DEV_BTNS = () => [
+  { d: 'pc', x: W / 2 - 290, y: 330, w: 270, h: 300, title: 'PC / Laptop', sub: 'Tastatur und Maus', icon: 'pc' },
+  { d: 'touch', x: W / 2 + 20, y: 330, w: 270, h: 300, title: 'Handy / Tablet', sub: 'Touchscreen', icon: 'touch' },
+];
+function deviceClick(x, y) { for (const b of DEV_BTNS()) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) setDevice(b.d); }
+addEventListener('keydown', e => {
+  if (device) return;
+  if (e.code === 'Digit1') setDevice('pc'); else if (e.code === 'Digit2') setDevice('touch');
+  e.preventDefault(); e.stopImmediatePropagation();
+}, true);
+function drawDevIcon(kind, cx, cy) {
+  g.save(); g.translate(cx, cy); g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = '#1b1d22';
+  if (kind === 'pc') {
+    g.fillStyle = '#2b2f3a'; g.beginPath(); g.roundRect(-62, -58, 124, 80, 10); g.fill(); g.stroke();
+    const sg = g.createLinearGradient(0, -50, 0, 14); sg.addColorStop(0, '#5fb8ff'); sg.addColorStop(1, '#2f6fe0'); g.fillStyle = sg; g.fillRect(-52, -48, 104, 60);
+    g.fillStyle = '#ffee00'; g.fillRect(-12, -36, 24, 18); g.fillStyle = '#13f000'; g.fillRect(-12, -18, 24, 16);
+    g.fillStyle = '#2b2f3a'; g.fillRect(-10, 22, 20, 14); g.beginPath(); g.roundRect(-70, 38, 140, 22, 6); g.fill(); g.stroke();
+    g.fillStyle = '#9aa0a8'; for (let i = 0; i < 8; i++) g.fillRect(-60 + i * 15, 44, 11, 4); for (let i = 0; i < 7; i++) g.fillRect(-52 + i * 15, 51, 11, 4);
+  } else {
+    g.fillStyle = '#2b2f3a'; g.beginPath(); g.roundRect(-38, -66, 76, 132, 14); g.fill(); g.stroke();
+    const sg = g.createLinearGradient(0, -56, 0, 56); sg.addColorStop(0, '#5fb8ff'); sg.addColorStop(1, '#2f6fe0'); g.fillStyle = sg; g.fillRect(-30, -54, 60, 106);
+    g.fillStyle = '#ffee00'; g.fillRect(-12, -24, 24, 18); g.fillStyle = '#13f000'; g.fillRect(-12, -6, 24, 16);
+    g.fillStyle = '#ffd9b0'; g.strokeStyle = '#1b1d22'; g.lineWidth = 4; g.beginPath(); g.ellipse(26, 40, 13, 22, -0.4, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 3; g.beginPath(); g.arc(20, 20, 12, 0, 7); g.stroke();
+  }
+  g.restore();
+}
+function drawDeviceAsk() {
+  if (device) return;
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#5fb8ff'); bg.addColorStop(1, '#2f6fe0');
+  g.fillStyle = bg; g.fillRect(XL, 0, VW, H);
+  g.fillStyle = 'rgba(255,255,255,.12)';
+  for (let i = 0; i < 4; i++) wrIcon(i, XL + 120 + i * (VW - 240) / 3, 790 - (i % 2) * 40, 90, (i - 1.5) * 0.3);
+  drawBobFig(W / 2, 305, 0.4, 1, Math.sin(performance.now() / 400) * 3, 1, 'gruen', true);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 40px system-ui'; g.fillText('Womit spielst du?', W / 2, 60);
+  g.font = '600 20px system-ui'; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText('Das kannst du später im Handy unter „Optionen“ ändern', W / 2, 100);
+  for (const b of DEV_BTNS()) {
+    const hov = bag.px > b.x && bag.px < b.x + b.w && bag.py > b.y && bag.py < b.y + b.h;
+    softShadow(hov ? 30 : 18, hov ? 10 : 6); g.fillStyle = '#fff'; g.beginPath(); g.roundRect(b.x, b.y - (hov ? 6 : 0), b.w, b.h, 28); g.fill(); noShadow();
+    drawDevIcon(b.icon, b.x + b.w / 2, b.y + 110 - (hov ? 6 : 0));
+    g.fillStyle = '#1b1d22'; g.font = '800 26px system-ui'; g.textAlign = 'center'; g.fillText(b.title, b.x + b.w / 2, b.y + 220 - (hov ? 6 : 0));
+    g.fillStyle = '#6b7280'; g.font = '600 18px system-ui'; g.fillText(b.sub, b.x + b.w / 2, b.y + 254 - (hov ? 6 : 0));
+  }
+}
+cv.addEventListener('pointermove', e => { if (device) return; const [x, y] = toCanvas(e); bag.px = x; bag.py = y; });
+function drawSettingsApp(s) {
+  g.fillStyle = '#f2f3f7'; g.fillRect(s.x, s.y, s.w, s.h);
+  g.fillStyle = '#4b5563'; g.fillRect(s.x, s.y, s.w, 110);
+  backBtn(s);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '700 26px system-ui'; g.fillText('Optionen', s.x + s.w / 2, s.y + 62);
+  const btns = []; phone.ui = { btns };
+  g.fillStyle = '#1b1d22'; g.font = '700 19px system-ui'; g.textAlign = 'left'; g.fillText('Gerät', s.x + 26, s.y + 150);
+  [['pc', 'PC / Laptop'], ['touch', 'Handy / Tablet']].forEach(([d, label], i) => {
+    const b = { x: s.x + 20, y: s.y + 172 + i * 62, w: s.w - 40, h: 52 }, on = device === d;
+    g.fillStyle = on ? '#2f6fe0' : '#fff'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill();
+    g.fillStyle = on ? '#fff' : '#1b1d22'; g.font = '700 18px system-ui'; g.textAlign = 'left'; g.fillText(label, b.x + 20, b.y + 27);
+    if (on) { g.textAlign = 'right'; g.fillText('✓', b.x + b.w - 20, b.y + 27); }
+    btns.push({ b, act: () => setDevice(d) });
+  });
+  g.fillStyle = '#6b7280'; g.font = '500 15px system-ui'; g.textAlign = 'left';
+  const info = isTouch() ? ['Touch: Ziehen zum Laufen,', 'Taschen-Knopf für das Inventar.'] : ['Tastatur: WASD laufen, E reden,', 'I Inventar, 1–6 Hotbar, H Handy.'];
+  info.forEach((l, i) => g.fillText(l, s.x + 26, s.y + 320 + i * 22));
+}
+
 function fit() {
   const a = innerWidth / Math.max(1, innerHeight);
   VW = Math.max(W, Math.min(2600, Math.round(H * a)));
@@ -3359,7 +3435,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if (fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open) { vx = 0; vy = 0; }
+  if (fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
@@ -3408,7 +3484,7 @@ function frame(t) {
   if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: drawBob });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
-  drawLeash(); drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawOverlay(dt);
+  drawLeash(); drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
