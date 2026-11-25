@@ -72,6 +72,7 @@ const ROOMS = {
                 { type: 'moebel', t: 'kuehlschrank', fx: 800, base: 520, r: 0 },
                 { type: 'moebel', t: 'kuechenzeile', fx: 990, base: 520, r: 0 },
                 { type: 'moebel', t: 'arcade', fx: 1110, base: 760, r: 1 },
+                { type: 'moebel', t: 'paketstapel', fx: 600, base: 820, r: 0, liefer: true },
               ] },
   laden:    { name: 'Tierladen – Eingang', wall: ['#7fd96b', '#cdf5bf'], exits: { d: 'laden2' }, openBottom: true,
               door: { x: 510, w: 180, to: 'tierladen', at: [850, FLOOR + 70] },
@@ -697,6 +698,18 @@ const OUTFITS = {
   orange: { name: 'Orange', color: '#ff7a1a' },
   rot:    { name: 'Rot',    color: '#ff1a1a' },
   tierladen: { name: 'Tierladen-Uniform', color: '#2f6fe0', apron: 'paw', noText: true },
+  liefer: { name: 'Liefer-Uniform', color: '#e0262b', noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.fillStyle = '#ffd84a'; g.fillRect(x, y + h * 0.55, w, 30); g.lineWidth = 4; g.strokeStyle = '#111'; g.strokeRect(x - 2, y + h * 0.55, w + 4, 30);
+      g.fillStyle = '#c8955a'; g.fillRect(x + w / 2 - 34, y + 22, 68, 54); g.strokeRect(x + w / 2 - 34, y + 22, 68, 54);
+      g.fillStyle = '#e8d28a'; g.fillRect(x + w / 2 - 7, y + 22, 14, 54);
+    },
+    front: (bx, by, hx, hy, t) => {
+      const CP = mkPal('#e0262b', '#ff4a4a');
+      g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx + 8 + 4 * t, hy - 26, HEAD.w - 16, 30, DEPTH - 6, CP, true, t);
+      g.fillStyle = '#ffd84a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('MÖBELHAUS', hx + HEAD.w / 2 + 4 * t, hy - 10);
+    } },
 };
 // ---------- Alte Outfits im neuen Stil ----------
 function mkPal(a, b) { return { front: a, front2: b || shade(a, 0.25), side: shade(a, -0.28), side2: shade(a, -0.45), top: shade(a, -0.1), top2: shade(a, -0.2) }; }
@@ -1231,9 +1244,10 @@ function nearBox() {
   if (build.on || fade.dir) return null;
   return (furn[cur] || []).find(f => f.t === 'transportbox' && Math.abs(bob.x - f.x) < 200 && Math.abs(bob.y - f.y) < 150);
 }
+function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); return job && job.id === 'liefer' && onShift() && o && !fade.dir && Math.abs(bob.x - o.fx) < 200 && Math.abs(bob.y - o.base) < 160 && o; }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
-function nearKasse() { const k = kasse(); return onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal')); }
+function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal')); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -1385,7 +1399,7 @@ function openMenu() {
   { const tg = interactTarget(); if (tg && tg.pet) { openPetPanel(tg.pet); return; } }
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
-  if (nearKasse()) { startWork(); return; }
+  if (nearKasse() || nearPakete()) { startWork(); return; }
   const tr = nearFurn('trophaeenregal');
   if (tr) {
     tr.slots = tr.slots || [null, null, null, null, null];
@@ -1497,6 +1511,8 @@ function interactTarget() {
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  const pk = nearPakete();
+  if (pk) return { x: pk.fx, y: pk.base - 190, label: 'Pakete ausliefern' };
   const trg = nearFurn('trophaeenregal');
   if (trg) return { x: trg.x, y: furnBox(trg).top - 16, label: 'Trophäen' };
   const nap = nearFurn('napf');
@@ -1852,6 +1868,10 @@ Object.assign(FURN, {
   ] },
 });
 const RW = '#7a4520', RD = '#55301a';
+FURN.paketstapel = { name: 'Pakete', boxes: [
+  B(-90, -10, 0, 60, 0, 60, '#c8955a', 'paket'), B(0, 86, 6, 62, 0, 52, '#b98a52', 'paket'),
+  B(-64, 26, 10, 56, 60, 112, '#d4a46a', 'paket'), B(-30, 30, 16, 52, 112, 150, '#c8955a', 'paket'),
+] };
 // hängt an der Wand (Höhe HANG über dem Boden)
 const HANG = 150;
 FURN.trophaeenregal = { name: 'Trophäenregal', wall: true, boxes: [
@@ -2050,7 +2070,8 @@ function drawFurn(t, x, y, s, alpha, r, extra) {
       const knob = (u, v, r, c) => { const [kx, ky] = at(u, v); g.fillStyle = c || '#ffee00'; g.beginPath(); g.arc(kx, ky, r || 8, 0, 7); g.fill(); g.stroke(); };
       g.lineWidth = 4; g.strokeStyle = LINE;
       const dc = b.deco;
-      if (dc === 'schild') { const [cx, cy] = at(0.5, 0.5); g.fillStyle = '#7a4a00'; g.font = '900 13px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TROPHÄEN', cx, cy + 1); }
+      if (dc === 'paket') { quad(0.44, 0, 0.56, 1, '#e8d28a'); quad(0.64, 0.22, 0.9, 0.5, '#fff'); }
+      else if (dc === 'schild') { const [cx, cy] = at(0.5, 0.5); g.fillStyle = '#7a4a00'; g.font = '900 13px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TROPHÄEN', cx, cy + 1); }
       else if (dc === 'glanz') { quad(0.12, 0.12, 0.26, 0.85, 'rgba(255,255,255,.55)'); }
       else if (dc === 'pfote' || dc === 'euro' || dc === 'stern' || dc === 'tonne') {
         quad(0.1, 0.08, 0.9, 0.92, shade(b.c, 0.25));
@@ -2749,7 +2770,10 @@ function drawSleep(dt) {
 }
 
 // ---------- Jobs ----------
-const JOBS = { kasse: { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60, outfit: 'tierladen' } };
+const JOBS = {
+  kasse:  { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60, outfit: 'tierladen', go: 'ab zur Kasse!', extra: '+ Trinkgeld' },
+  liefer: { name: 'Lieferfahrer im Möbelhaus', place: 'Möbelhaus', wage: 18, days: [1, 3, 6], from: 12 * 60, to: 16 * 60, outfit: 'liefer', mode: 'liefer', go: 'ab ins Möbelhaus zu den Paketen!', extra: '+ 4 € pro Paket' },
+};
 const MAX_WARN = 3, MAX_SICK = 3, BAN_DAYS = 30, UNEMP_PAY = 40;
 let job = null, unemp = null;
 try { const j = JSON.parse(localStorage.getItem('bob-job') || 'null'); if (j && JOBS[j.id]) job = j; } catch (e) {}
@@ -2772,7 +2796,7 @@ function unpaid() { return job && gDay() < job.unpaidUntil; }
 function quitDay() { return job ? job.start + 7 : 0; }
 function canQuit() { return job && gDay() >= quitDay(); }
 function canSick() { return shiftToday() && gMin() < JOBS[job.id].to && !job.worked.includes(gDay()) && !job.sick.includes(gDay()); }
-function takeJob() { job = { id: 'kasse', start: gDay(), startT: gt.T, earned: 0 }; fixJob(); job.checked = gDay() - 1; unemp = null; saveJob(); }
+function takeJob(id) { job = { id: id || 'kasse', start: gDay(), startT: gt.T, earned: 0 }; fixJob(); job.checked = gDay() - 1; unemp = null; saveJob(); }
 function fire(reason) {
   job = null; unemp = { banUntil: gDay() + BAN_DAYS, lastPaid: gDay() }; saveJob();
   toast = { text: 'Du wurdest gefeuert! ' + reason, t: 5 };
@@ -2840,21 +2864,22 @@ function drawJobsApp(s) {
       txt('Nächste Zahlung: ' + dayName(unemp.lastPaid + 7), L + 18, y + (banned ? 122 : 90), '500 17px system-ui', '#333');
       y += (banned ? 150 : 110) + 18;
     }
-    const J = JOBS.kasse;
-    card(y, 290);
-    txt('JOB-ANGEBOT', L + 18, y + 28, '700 15px system-ui', '#7a4ae0');
-    txt(J.name, L + 18, y + 62, '700 21px system-ui', '#111');
-    txt('📍 ' + J.place, L + 18, y + 98, '500 17px system-ui', '#444');
-    txt(J.wage + ' € pro Stunde + Trinkgeld', L + 18, y + 128, '500 17px system-ui', '#444');
-    txt(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 18, y + 158, '500 17px system-ui', '#444');
-    txt('Nach 1 Woche: Uniform 🎁', L + 18, y + 188, '500 17px system-ui', '#444');
-    btn(y + 220, banned ? 'Gesperrt bis ' + dayName(unemp.banUntil) : 'Job annehmen', '#7a4ae0', !banned, takeJob, 50);
+    for (const id of Object.keys(JOBS)) {
+      const J = JOBS[id];
+      card(y, 206);
+      txt(J.name, L + 18, y + 30, '700 19px system-ui', '#111');
+      txt('📍 ' + J.place + ' · ' + J.wage + ' €/Std. ' + J.extra, L + 18, y + 60, '500 15px system-ui', '#444');
+      txt(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 18, y + 86, '500 15px system-ui', '#444');
+      txt('Nach 1 Woche: Uniform 🎁', L + 18, y + 112, '500 15px system-ui', '#444');
+      btn(y + 140, banned ? 'Gesperrt bis ' + dayName(unemp.banUntil) : 'Job annehmen', '#7a4ae0', !banned, () => takeJob(id), 50);
+      y += 220;
+    }
     return;
   }
   const J = JOBS[job.id];
   txt(J.name, L + 4, s.y + 178, '700 20px system-ui', '#111');
   if (unpaid()) txt('Strafe: ohne Lohn bis ' + dayName(job.unpaidUntil), L + 4, s.y + 204, '700 16px system-ui', '#c0392b');
-  else txt(job.sick.includes(gDay()) ? 'Heute krankgemeldet' : onShift(0) ? 'Jetzt ist Schicht – ab zur Kasse!' : 'Nächste Schicht: ' + nextShiftText(), L + 4, s.y + 204, '600 16px system-ui', onShift(0) ? '#0a8a2f' : '#555');
+  else txt(job.sick.includes(gDay()) ? 'Heute krankgemeldet' : onShift(0) ? 'Jetzt ist Schicht – ' + J.go : 'Nächste Schicht: ' + nextShiftText(), L + 4, s.y + 204, '600 16px system-ui', onShift(0) ? '#0a8a2f' : '#555');
   card(s.y + 220, 7 * 31 + 12);
   for (let i = 0; i < 7; i++) {
     const day = gDay() - gWd() + i, y = s.y + 240 + i * 31, today = i === gWd(), work = J.days.includes(i);
@@ -2887,9 +2912,250 @@ const wk = { on: false };
 const CUST_COLS = ['#ff7a1a', '#2f6fe0', '#9b5de5', '#e0262b', '#13c000', '#ff7ac6', '#00b3b3', '#8a4316', '#555555'];
 const ITEM_COL2 = ['#ff4d4d', '#3b82f6', '#ffb000', '#9b5de5', '#13c000', '#ff7ac6', '#00b3b3'];
 const SCAN = { x0: W / 2 - 300, x1: W / 2 - 150, y0: 560, y1: 690 }, BELT_Y = 650;
+// ---------- Lieferfahrer: LKW fahren und Pakete liefern ----------
+const LF = { f: 600, camH: 5, HY: 330, speed: 13 };
+function lfStart() {
+  Object.assign(wk, { ph: 'drive', dist: 0, houses: [], nextZ: 18, lastMark: 0, lane: 0, tx: 0, v: LF.speed, msg: null, target: null, missed: 0, door: null, fadeT: 0, btns: null });
+  lfSpawn();
+}
+function lfSpawn() {
+  const cols = ['#ff9ccf', '#7fd0ff', '#ffd84a', '#9be36a', '#f6a35b', '#c6a0ff', '#f0f0f0', '#ff6b6b'];
+  while (wk.nextZ < wk.dist + 220) {
+    for (const side of [-1, 1]) {
+      const z = wk.nextZ + (side > 0 ? 7 : 0), canMark = z - wk.lastMark > 45;
+      const marked = canMark && (Math.random() < 0.22 || z - wk.lastMark > 110);
+      if (marked) wk.lastMark = z;
+      wk.houses.push({ z, side, col: cols[Math.floor(Math.random() * cols.length)], roof: Math.random() < 0.5 ? '#c0392b' : '#5a4a42', w: 8 + Math.random() * 2, marked, done: false });
+    }
+    wk.nextZ += 15;
+  }
+  wk.houses = wk.houses.filter(h => h.z - wk.dist > -12);
+}
+function lfP(X, h, rel) { const camX = wk.tx * 0.5; return [W / 2 + LF.f * (X - camX) / rel, LF.HY + LF.f * (LF.camH - h) / rel]; }
+function lfMsg(text, col) { wk.msg = { text, col: col || '#fff', t: 1.8 }; }
+function lfPress(k) {
+  if (wk.ph !== 'drive') return;
+  if (k === 'l') wk.lane = wk.lane === 1 ? 0 : -1;
+  else if (k === 'r') wk.lane = wk.lane === -1 ? 0 : 1;
+  else if (k === 'stop') {
+    const near = wk.houses.filter(h => h.marked && !h.done && h.z + 4 - wk.dist > 4 && h.z + 4 - wk.dist < 26);
+    if (!near.length) { lfMsg('Hier ist keine Lieferung!', '#ffd84a'); return; }
+    const h = near.find(h => h.side === wk.lane);
+    if (!h) { lfMsg(wk.lane === 0 ? 'Fahr erst nach links oder rechts!' : 'Falsche Seite!', '#ffd84a'); return; }
+    wk.ph = 'stop'; wk.target = h;
+  }
+}
+function updateLiefer(dt) {
+  if (wk.msg) { wk.msg.t -= dt; if (wk.msg.t <= 0) wk.msg = null; }
+  if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
+  wk.tx += (wk.lane * 3.1 - wk.tx) * Math.min(1, dt * 5);
+  if (wk.ph === 'drive') {
+    wk.v += (LF.speed - wk.v) * Math.min(1, dt * 2);
+    wk.dist += wk.v * dt; lfSpawn();
+    for (const h of wk.houses) if (h.marked && !h.done && !h.missed && h.z + 4 - wk.dist < 3) { h.missed = true; wk.missed++; lfMsg('Lieferung verpasst!', '#ff6b6b'); }
+  } else if (wk.ph === 'stop') {
+    // sanft bremsen, sodass die Tür neben dem LKW steht
+    const want = wk.target.z + 4 - 9, left = want - wk.dist;
+    wk.v = Math.max(0, Math.min(wk.v, left * 2.2)); wk.dist += wk.v * dt;
+    if (left < 0.4 || wk.v < 0.3) { wk.ph = 'fade'; wk.fadeT = 0; }
+  } else if (wk.ph === 'fade') {
+    wk.fadeT += dt * 2.5;
+    if (wk.fadeT >= 1 && !wk.door) wk.door = { placed: false, rung: false, t: 0, drag: null, px: W / 2, py: 790, cust: newPersonPal(), say: null };
+    if (wk.fadeT >= 2) wk.ph = 'door';
+  } else if (wk.ph === 'door') {
+    const d = wk.door;
+    if (d.rung) {
+      d.t += dt;
+      if (d.t > 1.1 && !d.say) {
+        d.say = 'Danke schön!'; wk.served++; bump('paket'); wk.target.done = true;
+        if (!unpaid()) { wk.bonus += 4; if (Math.random() < 0.5) { const tip = 1 + Math.floor(Math.random() * 5); wk.bonus += tip; wk.tip = { v: tip, t: 1.8 }; } }
+      }
+      if (d.t > 2.8) { wk.ph = 'back'; wk.fadeT = 0; }
+    }
+  } else if (wk.ph === 'back') {
+    wk.fadeT += dt * 2.5;
+    if (wk.fadeT >= 1 && wk.door) { wk.door = null; wk.lane = 0; wk.v = 0; }
+    if (wk.fadeT >= 2) wk.ph = 'drive';
+  }
+}
+function newPersonPal() { const c = CUST_COLS[Math.floor(Math.random() * CUST_COLS.length)]; return { front: c, front2: shade(c, 0.25), side: shade(c, -0.25), side2: shade(c, -0.42), top: shade(c, -0.12), top2: shade(c, -0.22) }; }
+function lfPoly(pts, fill, lw) { g.fillStyle = fill; g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.closePath(); g.fill(); if (lw !== 0) { g.lineWidth = lw || 3; g.strokeStyle = LINE; g.stroke(); } }
+function lfHouse(h) {
+  const rel0 = h.z - wk.dist, rel1 = rel0 + 9; if (rel1 < 1.2 || rel0 > 200) return;
+  const r0 = Math.max(rel0, 1.2), s = h.side, xa = s * 8.5, xb = s * (8.5 + h.w), hw = 5.5, hr = 8.5, xr = s * (8.5 + h.w / 2);
+  const lw = Math.max(1, Math.min(4, 18 / r0));
+  // Seite zur Straße (Fassade)
+  lfPoly([lfP(xa, 0, r0), lfP(xa, 0, rel1), lfP(xa, hw, rel1), lfP(xa, hw, r0)], shade(h.col, -0.12), lw);
+  // Tür und Fenster auf der Fassade
+  if (rel0 + 3.5 > 1.2) {
+    const d0 = Math.max(1.2, rel0 + 3.4), d1 = rel0 + 5.2;
+    lfPoly([lfP(xa, 0, d0), lfP(xa, 0, d1), lfP(xa, 3.1, d1), lfP(xa, 3.1, d0)], '#8b4a1e', lw);
+    for (const [w0, w1] of [[1, 2.6], [6.3, 7.9]]) if (rel0 + w0 > 1.2) lfPoly([lfP(xa, 2.2, rel0 + w0), lfP(xa, 2.2, rel0 + w1), lfP(xa, 4, rel0 + w1), lfP(xa, 4, rel0 + w0)], '#bfe9ff', lw);
+  }
+  // Dach zur Straße
+  lfPoly([lfP(xa, hw, r0), lfP(xa, hw, rel1), lfP(xr, hr, rel1), lfP(xr, hr, r0)], h.roof, lw);
+  // Vorderseite (zur Kamera)
+  if (rel0 > 1.2) {
+    lfPoly([lfP(xa, 0, rel0), lfP(xb, 0, rel0), lfP(xb, hw, rel0), lfP(xr, hr, rel0), lfP(xa, hw, rel0)], h.col, lw);
+    const wx = s * (8.5 + h.w / 2);
+    lfPoly([lfP(wx - 1, 2.2, rel0), lfP(wx + 1, 2.2, rel0), lfP(wx + 1, 4, rel0), lfP(wx - 1, 4, rel0)], '#bfe9ff', lw);
+  }
+  // Paket-Markierung
+  if (h.marked && !h.done && !h.missed && rel0 + 4 > 3) {
+    const [mx, my] = lfP(xa + s * 0.5, 10.5 + Math.sin(performance.now() / 250) * 0.4, rel0 + 4), k = Math.min(2.2, 26 / (rel0 + 4));
+    g.save(); g.translate(mx, my); g.scale(k, k);
+    g.fillStyle = '#e0262b'; g.strokeStyle = LINE; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(0, 26); g.lineTo(-14, 8); g.arc(0, 0, 18, Math.PI * 0.8, Math.PI * 0.2); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#c8955a'; g.fillRect(-9, -9, 18, 16); g.strokeRect(-9, -9, 18, 16); g.fillStyle = '#7a5530'; g.fillRect(-2, -9, 4, 16);
+    g.restore();
+  }
+}
+function lfTruck() {
+  const X0 = wk.tx - 1.3, X1 = wk.tx + 1.3, r0 = 5, r1 = 12, h0 = 0.7, h1 = 3.7, camX = wk.tx * 0.5;
+  const Y = '#ffd84a', R = '#e0262b';
+  // Räder
+  for (const xw of [X0 + 0.1, X1 - 0.7]) lfPoly([lfP(xw, 0, r0 + 0.6), lfP(xw + 0.6, 0, r0 + 0.6), lfP(xw + 0.6, 0.9, r0 + 0.6), lfP(xw, 0.9, r0 + 0.6)], '#1b1b1b');
+  // Seite
+  if (camX < X0) lfPoly([lfP(X0, h0, r0), lfP(X0, h0, r1), lfP(X0, h1, r1), lfP(X0, h1, r0)], shade(Y, -0.3));
+  if (camX > X1) lfPoly([lfP(X1, h0, r0), lfP(X1, h0, r1), lfP(X1, h1, r1), lfP(X1, h1, r0)], shade(Y, -0.3));
+  // Dach
+  lfPoly([lfP(X0, h1, r0), lfP(X1, h1, r0), lfP(X1, h1, r1), lfP(X0, h1, r1)], shade(Y, 0.2));
+  // Rückseite
+  const [ax, ay] = lfP(X0, h1, r0), [bx, by] = lfP(X1, h0, r0), w = bx - ax, h = by - ay;
+  g.fillStyle = Y; g.fillRect(ax, ay, w, h);
+  g.fillStyle = R; g.fillRect(ax, ay + h * 0.62, w, h * 0.14);
+  g.lineWidth = 4; g.strokeStyle = LINE; g.strokeRect(ax, ay, w, h);
+  g.beginPath(); g.moveTo(ax + w / 2, ay); g.lineTo(ax + w / 2, by); g.stroke();
+  g.fillStyle = '#555'; g.fillRect(ax + w / 2 - 16, ay + h * 0.45, 8, 26); g.fillRect(ax + w / 2 + 8, ay + h * 0.45, 8, 26);
+  g.fillStyle = R; g.font = '900 ' + Math.round(w * 0.12) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('MÖBEL', ax + w * 0.25, ay + h * 0.3); g.fillText('HAUS', ax + w * 0.75, ay + h * 0.3);
+  const brake = wk.ph === 'stop' || wk.v < 2;
+  for (const lx of [ax + 8, bx - 30]) { g.fillStyle = brake ? '#ff2020' : '#9a1010'; g.fillRect(lx, by - 34, 22, 22); g.strokeRect(lx, by - 34, 22, 22); if (brake) { g.save(); g.shadowColor = '#ff2020'; g.shadowBlur = 20; g.fillRect(lx, by - 34, 22, 22); g.restore(); } }
+  g.fillStyle = '#333'; g.fillRect(ax - 6, by, w + 12, 14); g.strokeRect(ax - 6, by, w + 12, 14);
+}
+function lfBtns() { return isTouch() ? { l: { x: XL + 90, y: H - 120, r: 60 }, r: { x: XR - 90, y: H - 120, r: 60 }, stop: { x: XR - 240, y: H - 110, r: 52 } } : null; }
+function drawLieferDrive() {
+  // Himmel und Hügel
+  const sk = g.createLinearGradient(0, 0, 0, LF.HY); sk.addColorStop(0, '#5ec3ff'); sk.addColorStop(1, '#c4ecff');
+  g.fillStyle = sk; g.fillRect(XL, 0, VW, LF.HY + 2);
+  g.fillStyle = '#7fd96b'; g.beginPath(); g.moveTo(XL, LF.HY); for (let x = XL; x <= XR; x += 40) g.lineTo(x, LF.HY - 26 - 18 * Math.sin(x / 140 + wk.dist / 400)); g.lineTo(XR, LF.HY); g.fill();
+  g.fillStyle = '#6cc35a'; g.fillRect(XL, LF.HY, VW, H - LF.HY);
+  // Gehweg und Straße
+  lfPoly([lfP(-8.5, 0, 1.2), lfP(8.5, 0, 1.2), lfP(8.5, 0, 400), lfP(-8.5, 0, 400)], '#c9c2b6', 0);
+  lfPoly([lfP(-5.5, 0, 1.2), lfP(5.5, 0, 1.2), lfP(5.5, 0, 400), lfP(-5.5, 0, 400)], '#4a4d52', 0);
+  g.lineWidth = 3; g.strokeStyle = LINE;
+  for (const x of [-5.5, 5.5, -8.5, 8.5]) { const a = lfP(x, 0, 1.2), b = lfP(x, 0, 400); g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); }
+  // Mittelstreifen
+  g.fillStyle = '#fff';
+  for (let z = Math.floor(wk.dist / 8) * 8; z < wk.dist + 160; z += 8) {
+    const r0 = z - wk.dist, r1 = r0 + 4; if (r1 < 1.3) continue;
+    lfPoly([lfP(-0.15, 0, Math.max(1.3, r0)), lfP(0.15, 0, Math.max(1.3, r0)), lfP(0.15, 0, r1), lfP(-0.15, 0, r1)], '#fff', 0);
+  }
+  // Häuser von hinten nach vorne
+  wk.houses.slice().sort((a, b) => b.z - a.z).forEach(lfHouse);
+  lfTruck();
+  // Touch-Knöpfe
+  const B = lfBtns();
+  if (B) for (const [k, b] of Object.entries(B)) {
+    g.fillStyle = k === 'stop' ? 'rgba(224,38,43,.85)' : (wk.lane === (k === 'l' ? -1 : 1) ? 'rgba(255,216,74,.95)' : 'rgba(255,255,255,.75)');
+    g.lineWidth = 4; g.strokeStyle = LINE; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = k === 'stop' ? '#fff' : '#111'; g.font = '900 ' + (k === 'stop' ? 22 : 40) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(k === 'l' ? '◀' : k === 'r' ? '▶' : 'STOP', b.x, b.y + 2);
+  }
+}
+function lfDoorRects() { return { mat: { x: W / 2 - 190, y: 660, w: 380, h: 70 }, bell: { x: W / 2 + 205, y: 440, r: 26 } }; }
+function drawLieferDoor() {
+  const d = wk.door, h = wk.target, R = lfDoorRects(), t = performance.now() / 1000;
+  g.fillStyle = '#c4ecff'; g.fillRect(XL, 0, VW, H);
+  // Hauswand
+  g.fillStyle = h.col; g.fillRect(XL, 0, VW, 650);
+  g.fillStyle = shade(h.col, -0.08); for (let y = 40; y < 650; y += 60) g.fillRect(XL, y, VW, 3);
+  g.fillStyle = h.roof; g.fillRect(XL, 0, VW, 60); g.fillStyle = LINE; g.fillRect(XL, 58, VW, 5);
+  // Fenster
+  for (const wx of [W / 2 - 470, W / 2 + 300]) { g.fillStyle = '#bfe9ff'; g.fillRect(wx, 190, 170, 170); g.lineWidth = 6; g.strokeStyle = LINE; g.strokeRect(wx, 190, 170, 170); g.beginPath(); g.moveTo(wx + 85, 190); g.lineTo(wx + 85, 360); g.moveTo(wx, 275); g.lineTo(wx + 170, 275); g.stroke(); }
+  // Boden und Weg
+  g.fillStyle = '#6cc35a'; g.fillRect(XL, 650, VW, H - 650);
+  g.fillStyle = '#c9c2b6'; g.beginPath(); g.moveTo(W / 2 - 200, 650); g.lineTo(W / 2 + 200, 650); g.lineTo(W / 2 + 330, H); g.lineTo(W / 2 - 330, H); g.fill();
+  g.fillStyle = LINE; g.fillRect(XL, 646, VW, 6);
+  // Tür
+  const open = d.rung && d.t > 0.7;
+  g.lineWidth = 6; g.strokeStyle = LINE;
+  g.fillStyle = '#ffffff'; g.fillRect(W / 2 - 140, 230, 280, 420); g.strokeRect(W / 2 - 140, 230, 280, 420);
+  if (open) {
+    g.fillStyle = '#2b2118'; g.fillRect(W / 2 - 120, 250, 240, 400);
+    drawPerson(d.cust, W / 2, 650, 0.62);
+    g.fillStyle = '#8b4a1e'; g.beginPath(); g.moveTo(W / 2 - 120, 250); g.lineTo(W / 2 - 60, 270); g.lineTo(W / 2 - 60, 630); g.lineTo(W / 2 - 120, 650); g.closePath(); g.fill(); g.stroke();
+  } else {
+    g.fillStyle = '#8b4a1e'; g.fillRect(W / 2 - 120, 250, 240, 400); g.strokeRect(W / 2 - 120, 250, 240, 400);
+    g.strokeRect(W / 2 - 90, 290, 180, 140); g.strokeRect(W / 2 - 90, 460, 180, 150);
+    g.fillStyle = '#ffd84a'; g.beginPath(); g.arc(W / 2 + 85, 460, 12, 0, 7); g.fill(); g.stroke();
+  }
+  // Klingel
+  const bl = R.bell, pulse = d.placed && !d.rung ? 1 + 0.12 * Math.sin(t * 8) : 1;
+  g.fillStyle = '#d9d9d9'; g.beginPath(); g.roundRect(bl.x - 34, bl.y - 52, 68, 104, 12); g.fill(); g.lineWidth = 4; g.stroke();
+  if (d.placed && !d.rung) { g.save(); g.shadowColor = '#ffd84a'; g.shadowBlur = 30; }
+  g.fillStyle = d.rung ? '#13c000' : '#ffd84a'; g.beginPath(); g.arc(bl.x, bl.y, bl.r * pulse, 0, 7); g.fill(); g.stroke();
+  if (d.placed && !d.rung) g.restore();
+  // Fußmatte
+  const m = R.mat;
+  g.fillStyle = '#8a5a2b'; g.beginPath(); g.moveTo(m.x + 30, m.y); g.lineTo(m.x + m.w - 30, m.y); g.lineTo(m.x + m.w, m.y + m.h); g.lineTo(m.x, m.y + m.h); g.closePath(); g.fill(); g.lineWidth = 4; g.stroke();
+  g.fillStyle = '#5a3a1a'; g.font = '800 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('WILLKOMMEN', W / 2, m.y + m.h / 2 + 2);
+  if (!d.placed && !d.drag) { g.save(); g.setLineDash([12, 10]); g.strokeStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(t * 5)})`; g.lineWidth = 5; g.strokeRect(m.x - 8, m.y - 70, m.w + 16, m.h + 78); g.restore(); }
+  // Paket
+  const box = (x, y, k) => {
+    g.save(); g.translate(x, y); g.scale(k, k); g.lineWidth = 5; g.strokeStyle = LINE;
+    g.fillStyle = '#b07c45'; g.beginPath(); g.moveTo(-90, -100); g.lineTo(-60, -130); g.lineTo(120, -130); g.lineTo(90, -100); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#9a6a3a'; g.beginPath(); g.moveTo(90, -100); g.lineTo(120, -130); g.lineTo(120, -30); g.lineTo(90, 0); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#c8955a'; g.fillRect(-90, -100, 180, 100); g.strokeRect(-90, -100, 180, 100);
+    g.fillStyle = '#e8d28a'; g.fillRect(-14, -100, 28, 100); g.fillStyle = '#fff'; g.fillRect(28, -78, 48, 30); g.lineWidth = 2; g.strokeRect(28, -78, 48, 30);
+    g.fillStyle = '#e0262b'; g.font = '900 12px system-ui'; g.textAlign = 'center'; g.fillText('MÖBEL', 52, -63);
+    g.restore();
+  };
+  if (d.placed) box(W / 2, m.y + m.h - 18, 0.55);
+  else box(d.px, d.py, d.drag ? 0.95 : 1.15);
+  if (d.say) {
+    g.font = '700 26px system-ui'; const tw = g.measureText(d.say).width + 40, bx = W / 2 + 60, by = 170;
+    g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 54, 18); g.fill(); g.stroke();
+    g.fillStyle = '#111'; g.textAlign = 'center'; g.fillText(d.say, bx + tw / 2, by + 28);
+  }
+  if (d.rung && d.t < 0.9) { g.save(); g.translate(bl.x + 40, bl.y - 90); g.rotate(-0.1); marker('Ding Dong!', 0, 0, 40, '#111'); g.restore(); }
+}
+function drawLiefer() {
+  if (wk.door && (wk.ph === 'door' || (wk.ph === 'fade' && wk.fadeT >= 1) || (wk.ph === 'back' && wk.fadeT < 1))) drawLieferDoor();
+  else drawLieferDrive();
+  if (wk.ph === 'fade' || wk.ph === 'back') { const a = 1 - Math.abs(1 - wk.fadeT); g.fillStyle = `rgba(0,0,0,${Math.max(0, a)})`; g.fillRect(XL, 0, VW, H); }
+  if (wk.msg) { g.globalAlpha = Math.min(1, wk.msg.t * 2); g.font = '800 34px system-ui'; const tw = g.measureText(wk.msg.text).width + 50; g.fillStyle = 'rgba(15,20,30,.75)'; g.beginPath(); g.roundRect(W / 2 - tw / 2, 150, tw, 60, 30); g.fill(); g.fillStyle = wk.msg.col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(wk.msg.text, W / 2, 181); g.globalAlpha = 1; }
+  if (wk.tip) { g.globalAlpha = Math.min(1, wk.tip.t); marker('+' + wk.tip.v + ' € Trinkgeld!', W / 2 - 260, 250 - (1.8 - wk.tip.t) * 30, 34, '#0a8a2f'); g.globalAlpha = 1; }
+  const J = JOBS[job.id], info = 'Schicht bis ' + hm(J.to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Pakete: ' + wk.served + (wk.missed ? '   ·   Verpasst: ' + wk.missed : '') + (unpaid() ? '   ·   Strafe: ohne Lohn' : '');
+  g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40;
+  g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(info, XL + 40, 42);
+  const cb = wkSize().close; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d';
+  g.beginPath(); g.arc(cb.x, cb.y, cb.r, 0, 7); g.fill(); g.stroke();
+  g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cb.x - 15, cb.y - 15); g.lineTo(cb.x + 15, cb.y + 15); g.moveTo(cb.x + 15, cb.y - 15); g.lineTo(cb.x - 15, cb.y + 15); g.stroke(); g.lineCap = 'butt';
+  const d = wk.door;
+  const tip = wk.ph === 'door' ? (!d.placed ? 'Zieh das Paket vor die Tür' : !d.rung ? 'Jetzt klingeln!' : '') : wk.ph === 'drive' ? (isTouch() ? '◀ ▶ Seite wählen  ·  STOP beim Haus mit Paket' : '← → Seite wählen  ·  Leertaste: beim Haus mit Paket anhalten') : '';
+  if (tip) { g.font = '600 22px system-ui'; const tw2 = g.measureText(tip).width + 40; g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(W / 2 - tw2 / 2, H - 70, tw2, 46, 23); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(tip, W / 2, H - 46); }
+}
+function lfDown(x, y) {
+  if (wk.ph === 'drive') { const B = lfBtns(); if (B) for (const [k, b] of Object.entries(B)) if (Math.hypot(x - b.x, y - b.y) < b.r + 6) { lfPress(k); return; } return; }
+  if (!wk.door || !(wk.ph === 'door' || (wk.ph === 'fade' && wk.fadeT >= 1))) return;
+  const d = wk.door, R = lfDoorRects();
+  if (!d.placed && Math.abs(x - d.px) < 130 && y > d.py - 150 && y < d.py + 20) { d.drag = { dx: d.px - x, dy: d.py - y }; return; }
+  if (d.placed && !d.rung && Math.hypot(x - R.bell.x, y - R.bell.y) < R.bell.r + 18) { d.rung = true; d.t = 0; }
+}
+function lfMove(x, y) {
+  const d = wk.door; if (!d || !d.drag) return;
+  d.px = x + d.drag.dx; d.py = y + d.drag.dy;
+  const m = lfDoorRects().mat;
+  if (d.px > m.x && d.px < m.x + m.w && d.py > m.y - 40 && d.py < m.y + m.h + 40) { d.placed = true; d.drag = null; }
+}
+function lfUp() { const d = wk.door; if (d && d.drag) { d.drag = null; d.px = W / 2; d.py = 790; } }
 function startWork() {
   if (!job.worked.includes(gDay())) { job.worked.push(gDay()); bump('work'); saveJob(); }
+  wk.mode = JOBS[job.id].mode || 'kasse';
   Object.assign(wk, { on: true, t0: performance.now(), start: gt.T, bonus: 0, items: [], cust: null, phase: 'wait', wait: 0.8, drag: null, flash: 0, end: false, served: 0, bag: [] });
+  if (wk.mode === 'liefer') lfStart();
   keys.clear(); joy.on = false;
 }
 function newCustomer() {
@@ -2904,7 +3170,7 @@ function shiftEndT() { return gDay() * 1440 + JOBS[job.id].to; }
 function workedMin() { const J = JOBS[job.id], s = Math.max(wk.start, gDay() * 1440 + J.from); return Math.max(0, Math.min(gt.T, shiftEndT()) - s); }
 function finishWork() {
   const free = unpaid(), mins = workedMin(), lohn = free ? 0 : Math.round(mins / 60 * JOBS[job.id].wage), sum = free ? 0 : lohn + wk.bonus;
-  if (sum > 0) { bank.money += sum; bank.log.push({ t: 'Lohn Tierladen', v: sum }); saveBank(); }
+  if (sum > 0) { bank.money += sum; bank.log.push({ t: 'Lohn ' + JOBS[job.id].place, v: sum }); saveBank(); }
   job.earned = (job.earned || 0) + sum; saveJob();
   wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' aufs Konto!' : 'Feierabend.', t: 3 };
 }
@@ -2923,20 +3189,23 @@ function workDown(x, y) {
   const u = wkSize();
   if (wk.end) { if (x > u.ok.x && x < u.ok.x + u.ok.w && y > u.ok.y && y < u.ok.y + u.ok.h) finishWork(); return; }
   if (Math.hypot(x - u.close.x, y - u.close.y) < u.close.r + 8) { wk.end = true; return; }
+  if (wk.mode === 'liefer') { lfDown(x, y); return; }
   if (wk.phase === 'pay' && x > u.pay.x && x < u.pay.x + u.pay.w && y > u.pay.y && y < u.pay.y + u.pay.h) { payNow(); return; }
   const it = wkItemAt(x, y); if (it && wk.phase === 'scan') { wk.drag = { it, dx: it.x - x, dy: it.y - y }; it.held = true; }
 }
 cv.addEventListener('pointermove', e => {
+  if (wk.on && wk.mode === 'liefer') { const [x, y] = toCanvas(e); lfMove(x, y); return; }
   if (!wk.on || !wk.drag) return;
   const [x, y] = toCanvas(e), it = wk.drag.it; it.x = x + wk.drag.dx; it.y = y + wk.drag.dy;
   if (it.x > SCAN.x0 - 20 && it.x < SCAN.x1 + 20 && it.y > SCAN.y0 && it.y < SCAN.y1 + 40) { scanItem(it); it.held = false; wk.drag = null; }
 });
-addEventListener('pointerup', () => { if (wk.drag) { wk.drag.it.held = false; wk.drag.it.y = BELT_Y; wk.drag = null; } });
+addEventListener('pointerup', () => { if (wk.on && wk.mode === 'liefer') lfUp(); if (wk.drag) { wk.drag.it.held = false; wk.drag.it.y = BELT_Y; wk.drag = null; } });
 addEventListener('keydown', e => {
   if (!wk.on || performance.now() - wk.t0 < 150) return;
   e.preventDefault(); e.stopImmediatePropagation();
   if (wk.end) { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') finishWork(); return; }
   if (e.code === 'Escape') wk.end = true;
+  if (wk.mode === 'liefer' && !e.repeat) { if (e.code === 'ArrowLeft' || e.code === 'KeyA') lfPress('l'); else if (e.code === 'ArrowRight' || e.code === 'KeyD') lfPress('r'); else if (e.code === 'Space') lfPress('stop'); }
 
 }, true);
 
@@ -2972,6 +3241,7 @@ function drawPerson(pal, x, y, k) {
 function updateWork(dt) {
   if (!wk.on || wk.end) return;
   if (gt.T >= shiftEndT() || !onShift(60 * 24)) { wk.end = true; return; }
+  if (wk.mode === 'liefer') { updateLiefer(dt); return; }
   wk.flash = Math.max(0, wk.flash - dt);
   if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
   const c = wk.cust;
@@ -2993,6 +3263,7 @@ function drawWork(dt) {
   updateWork(dt);
   if (!wk.on) return;
   const t = performance.now() / 1000, u = wkSize();
+  if (wk.mode === 'liefer') drawLiefer(); else {
   // Laden hinten
   for (const s of stripes) { g.fillStyle = s.light ? '#cdf5bf' : '#7fd96b'; g.fillRect(s.x, 0, s.w, 460); g.fillStyle = LINE; g.fillRect(s.x - 2, 0, 4, 460); }
   drawShelf({ x: XL + 30, w: 360, base: 440, h: 300, seed: 7 });
@@ -3043,7 +3314,7 @@ function drawWork(dt) {
   }
   if (wk.tip) { g.globalAlpha = Math.min(1, wk.tip.t); marker('+' + wk.tip.v + ' € Trinkgeld!', W / 2 + 230, 250 - (1.8 - wk.tip.t) * 30, 34, '#0a8a2f'); g.globalAlpha = 1; }
   // Infos oben
-  const J = JOBS[job.id], info = 'Schicht bis ' + hm(J.to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Kunden: ' + wk.served + (unpaid() ? '   ·   Strafe: ohne Lohn' : '');
+  const info = 'Schicht bis ' + hm(JOBS[job.id].to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Kunden: ' + wk.served + (unpaid() ? '   ·   Strafe: ohne Lohn' : '');
   g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40;
   g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(info, XL + 40, 42);
@@ -3055,6 +3326,7 @@ function drawWork(dt) {
   const cb = u.close; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d';
   g.beginPath(); g.arc(cb.x, cb.y, cb.r, 0, 7); g.fill(); g.stroke();
   g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cb.x - 15, cb.y - 15); g.lineTo(cb.x + 15, cb.y + 15); g.moveTo(cb.x + 15, cb.y - 15); g.lineTo(cb.x - 15, cb.y + 15); g.stroke();
+  }
   // Feierabend
   if (wk.end) {
     g.fillStyle = 'rgba(8,12,24,.55)'; g.fillRect(XL, 0, VW, H);
@@ -3064,10 +3336,10 @@ function drawWork(dt) {
     const hg = g.createLinearGradient(P.x, P.y, P.x + P.w, P.y + 110); hg.addColorStop(0, '#13b84a'); hg.addColorStop(1, '#0a7a34');
     g.fillStyle = hg; g.fillRect(P.x, P.y, P.w, 110); g.fillStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.arc(P.x + P.w - 40, P.y + 10, 90, 0, 7); g.fill(); g.restore();
     g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.arc(P.x + 60, P.y + 55, 32, 0, 7); g.fill(); uiIcon('sun', P.x + 60, P.y + 55, 34, '#fff');
-    const mins = workedMin(), lohn = unpaid() ? 0 : Math.round(mins / 60 * J.wage);
+    const J = JOBS[job.id], mins = workedMin(), lohn = unpaid() ? 0 : Math.round(mins / 60 * J.wage);
     g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '800 32px system-ui'; g.fillText(gt.T >= shiftEndT() ? 'Feierabend!' : 'Schicht beendet', P.x + 110, P.y + 44);
     g.font = '600 18px system-ui'; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(JOBS[job.id].name, P.x + 110, P.y + 76);
-    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], ['Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], ['Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
+    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], [wk.mode === 'liefer' ? 'Pakete' : 'Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], [wk.mode === 'liefer' ? 'Paket-Bonus & Trinkgeld' : 'Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
     rows.forEach(([a, b], i) => {
       const y = P.y + 140 + i * 56;
       g.fillStyle = '#fff'; g.beginPath(); g.roundRect(P.x + 30, y, P.w - 60, 46, 14); g.fill();
@@ -3142,6 +3414,7 @@ const ACH = [
   { id: 'muell',   name: 'Müllwühler',       desc: 'Find das Müll-Kostüm',        prog: () => [wear.owned.includes('muell') ? 1 : 0, 1], troph: 'tonne' },
   { id: 'mode',    name: 'Modebewusst',      desc: 'Besitze 5 Outfits',           prog: () => [wear.owned.length, 5], money: 80 },
   { id: 'bauen',   name: 'Innenarchitekt',   desc: 'Stell 15 Möbel auf',          prog: () => [Object.values(furn).reduce((a, l) => a + l.length, 0), 15], money: 100 },
+  { id: 'paket',   name: 'Paketbote',        desc: 'Liefere 10 Pakete aus',       prog: () => [cnt('paket'), 10], money: 70 },
   { id: 'bus',     name: 'Busfahrer',        desc: '5x Bus fahren',               prog: () => [cnt('bus'), 5], money: 40 },
   { id: 'schlaf',  name: 'Langschläfer',     desc: '7x schlafen',                 prog: () => [cnt('sleep'), 7], money: 50 },
 ];
