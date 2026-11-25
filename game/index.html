@@ -139,6 +139,8 @@ const ROOMS = {
               arches: [{ x: 200, to: 'apo_markt', ax: 250, ay: H - 90, label: '↑ Supermarkt', gasse: true }],
               objs: [{ type: 'versteck', k: 'haus', hinter: true, x: 1250, w: 220, base: 530 }, { type: 'versteck', k: 'auto', x: -300, w: 300, base: 620 }, { type: 'versteck', k: 'auto', x: 650, w: 300, base: 720 }, { type: 'versteck', k: 'auto', x: 1650, w: 300, base: 660 },
                      { type: 'loot', k: 'auto', x: -300, base: 620 }, { type: 'loot', k: 'auto', x: 650, base: 720 }, { type: 'loot', k: 'auto', x: 1650, base: 660 }, { type: 'loot', k: 'kiste', x: 950, base: 580 }, { type: 'loot', k: 'tonne', x: 400, base: 560 }, { type: 'loot', k: 'kiste', x: 1850, base: 760 }] },
+  garten: { name: 'Garten', outside: true, kind: 'garten', exits: {}, wide: [-450, 1650], maxY: H - 30,
+              arches: [{ x: 600, to: 'pink', ax: W / 2, ay: H - 60, label: 'Ins Haus' }] },
   laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'labor', at: [600, FLOOR + 80], bank: true } },
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
@@ -2338,6 +2340,7 @@ function room() {
   else if (R.kind === 'zellen') drawZellen(R);
   else if (R.kind === 'markt') drawMarkt(R);
   else if (R.kind === 'house') drawOutside();
+  else if (R.kind === 'garten') drawGarten(R);
   else if (R.kind === 'street') drawStreet(R);
   else if (R.openTop) {
     // Laden geht nach oben einfach weiter: nur Boden
@@ -4503,6 +4506,7 @@ const ADMIN = {
     ['Futter & Samen', '#2fa84f', () => { for (const l of [1, 2, 3, 4]) garden.food[l] = (garden.food[l] || 0) + 5; for (const k in SEEDS) garden.seeds[k] = (garden.seeds[k] || 0) + 2; saveGarden(); }],
     ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
+    ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Krypto: Kurse +50 %', '#16a36b', () => { for (const k in COINS) { kr.p[k] *= 1.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
     ['Krypto: Crash −50 %', '#d6334a', () => { for (const k in COINS) { kr.p[k] *= 0.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
     ['Alle Erfolge', '#e0a10f', () => { for (const a of ACH) ach.done[a.id] = true; ach.regal = true; inv.trophaeenregal = (inv.trophaeenregal || 0) + 2; saveFurn(); saveAch(); }],
@@ -4928,16 +4932,24 @@ const WEB_ITEMS = [
   { id: 'tf2',  cat: 'tier', name: 'Futter Lv2',    price: 10,  desc: ['1× Futter Lv2', '+50 % satt, +25 XP'], food: [2, 1] },
   { id: 'tf2x', cat: 'tier', name: 'Futter Lv2 ×10', price: 80,  desc: ['Vorratspack', 'billiger als im Laden'], food: [2, 10] },
   { id: 'tf3',  cat: 'tier', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
+  { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Großer Garten hinterm Haus:', 'im Haus ganz nach unten'], once: true },
   { id: 'tf3x', cat: 'tier', name: 'Futter Lv3 ×6', price: 110, desc: ['Vorratspack', 'billiger als im Laden'], food: [3, 6] },
 ];
-const WEB_FILTERS = [['alle', 'Tierfutter', '#3cff5a']];
-const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
+const WEB_FILTERS = [['tier', 'Tierfutter', '#3cff5a'], ['haus', 'Haus', '#2fb4ff']];
+const web = { open: false, filter: 'tier', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
 let lief = { orders: [], pkgs: [], snacks: {} };
 try { const d = JSON.parse(localStorage.getItem('bob-lieferung') || 'null'); if (d) lief = Object.assign(lief, d); } catch (e) {}
+setTimeout(() => gartenSetup());
 function saveLief() { try { localStorage.setItem('bob-lieferung', JSON.stringify(lief)); } catch (e) {} }
 function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || it.cat === web.filter); }
 function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now(); keys.clear(); joy.on = false; }
 function webOrder(it) {
+  if (it.once) {
+    if (lief[it.id]) return;
+    if (bank.money < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
+    bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank(); lief[it.id] = true; saveLief(); gartenSetup();
+    web.msg = 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).'; web.msgT = 5; return;
+  }
   if (bank.money < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank();
   // kurz nacheinander bestellt -> gleiche Lieferung
@@ -4987,6 +4999,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'garten') { g.fillStyle = '#5fb8ff'; g.fillRect(-50, -50, 100, 60); g.fillStyle = '#45c43a'; g.fillRect(-50, 10, 100, 40); g.fillStyle = '#c98a4a'; for (let x = -48; x < 50; x += 14) { g.fillRect(x, -10, 10, 26); } g.fillRect(-50, -4, 100, 5); g.fillStyle = '#8a4316'; g.fillRect(18, -30, 8, 40); g.fillStyle = '#1fa830'; g.beginPath(); g.arc(22, -36, 22, 0, 7); g.fill(); g.fillStyle = '#e0262b'; for (const [a, b] of [[14, -40], [28, -30], [24, -48]]) { g.beginPath(); g.arc(a, b, 4, 0, 7); g.fill(); } g.fillStyle = '#2f9be0'; g.beginPath(); g.ellipse(-20, 30, 24, 8, 0, 0, 7); g.fill(); for (const [a, c] of [[-40, '#ff3b3b'], [-30, '#ffd23a'], [40, '#ff7ac6']]) { g.fillStyle = c; g.beginPath(); g.arc(a, 22, 5, 0, 7); g.fill(); } g.fillStyle = '#ffee00'; g.beginPath(); g.arc(-34, -34, 10, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'pizza') { g.fillStyle = '#e9b04a'; g.beginPath(); g.arc(0, 0, 44, 0, 7); g.fill(); g.stroke(); circ(0, 0, 36, '#d8442a'); g.fillStyle = 'rgba(255,230,150,.85)'; for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.cos(i * 2.4) * 22, Math.sin(i * 2.4) * 22, 9, 6, i, 0, 7); g.fill(); } for (const [a, b] of [[-16, -12], [14, -18], [18, 12], [-10, 18], [0, 0]]) circ(a, b, 7, '#a8202a'); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(Math.cos(i * 0.785) * 44, Math.sin(i * 0.785) * 44); g.lineTo(-Math.cos(i * 0.785) * 44, -Math.sin(i * 0.785) * 44); g.stroke(); } }
   else if (id === 'burger') { g.fillStyle = '#e0a040'; g.beginPath(); g.ellipse(0, -14, 44, 26, 0, Math.PI, 0); g.fill(); g.stroke(); g.fillStyle = '#fff6d0'; for (const [a, b] of [[-18, -28], [0, -32], [16, -26], [-6, -22]]) { g.beginPath(); g.ellipse(a, b, 3, 2, 0.4, 0, 7); g.fill(); } g.fillStyle = '#4bc040'; g.fillRect(-46, -14, 92, 8); g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(-44, -6); g.lineTo(44, -6); g.lineTo(30, 6); g.lineTo(-30, 6); g.closePath(); g.fill(); g.fillStyle = '#6a3a1a'; g.beginPath(); g.roundRect(-44, 0, 88, 16, 8); g.fill(); g.stroke(); g.fillStyle = '#e0a040'; g.beginPath(); g.roundRect(-42, 16, 84, 18, 9); g.fill(); g.stroke(); }
   else if (id === 'doener') { g.fillStyle = '#f0d9a0'; g.beginPath(); g.moveTo(-40, -36); g.lineTo(40, -36); g.lineTo(0, 46); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#9a5a2a'; g.beginPath(); g.ellipse(0, -34, 38, 12, 0, 0, 7); g.fill(); g.fillStyle = '#4bc040'; for (const a of [-24, -8, 10, 26]) { g.beginPath(); g.ellipse(a, -40, 8, 5, 0.3, 0, 7); g.fill(); } g.fillStyle = '#e0262b'; for (const a of [-16, 4, 20]) { g.beginPath(); g.arc(a, -44, 5, 0, 7); g.fill(); } g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-2, -30, 20, 4, 0, 0, 7); g.fill(); }
@@ -5026,14 +5039,14 @@ function drawWeb(dt) {
   its.forEach((it, i) => {
     const r = Math.floor(i / L.cols) - web.scroll, c = i % L.cols, x = P.x + 25 + c * (L.cw + L.gap), y = L.gy + r * (L.ch + 14);
     if (y > P.y + P.h || y + L.ch < L.gy) return;
-    const ok = bank.money >= it.price, hov = web.hover === it.id;
+    const own = it.once && lief[it.id], ok = !own && bank.money >= it.price, hov = web.hover === it.id;
     g.fillStyle = '#fff'; g.fillRect(x, y, L.cw, 132); webPic(it.id, x + L.cw / 2, y + 66, 110);
     outl(it.name, x + L.cw / 2, y + 160, '800 25px "Trebuchet MS", system-ui', '#fff', 5);
     outl('Preis: ' + it.price + ' €', x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', '#5aff3a', 5);
     it.desc.forEach((d, k) => outl(d, x + L.cw / 2, y + 224 + k * 24, '700 17px "Trebuchet MS", system-ui', '#e8e8e8', 4));
     const b = { x, y: L.ch - 56 + y, w: L.cw, h: 56 };
     g.fillStyle = ok ? (hov ? '#3cff2a' : '#1fd81a') : '#1a7a1a'; g.fillRect(b.x, b.y, b.w, b.h); g.strokeStyle = '#0a3a0a'; g.lineWidth = 3; g.strokeRect(b.x, b.y, b.w, b.h);
-    outl(ok ? 'Bestellen' : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
+    outl(own ? 'Gekauft' : ok ? (it.once ? 'Kaufen' : 'Bestellen') : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
     btns.push({ b, id: it.id, act: () => webOrder(it) });
   });
   g.restore();
@@ -5059,6 +5072,67 @@ addEventListener('keydown', e => {
   else if (e.code === 'ArrowDown' || e.code === 'KeyS') { web.scroll++; e.preventDefault(); e.stopImmediatePropagation(); }
   else if (e.code === 'ArrowUp' || e.code === 'KeyW') { web.scroll = Math.max(0, web.scroll - 1); e.preventDefault(); e.stopImmediatePropagation(); }
 }, true);
+// ---------- Garten (in bobnet kaufen, im Haus ganz nach unten) ----------
+function gartenOwned() { return !!lief.garten; }
+function gartenSetup() {
+  if (!gartenOwned()) return;
+  ROOMS.pink.exits.d = 'garten';
+  if (!furn.garten) { furn.garten = [{ t: 'topf', x: -150, y: 590, r: 0 }, { t: 'topf', x: 0, y: 590, r: 0 }, { t: 'topf', x: 150, y: 590, r: 0 }, { t: 'topf', x: 1200, y: 600, r: 0 }, { t: 'topf', x: 1350, y: 600, r: 0 }]; saveFurn(); }
+}
+function gartenTree(x, s, apples) {
+  g.lineWidth = 6; g.strokeStyle = LINE;
+  g.fillStyle = '#8a4316'; g.fillRect(x - 18 * s, FLOOR - 170 * s, 36 * s, 170 * s); g.strokeRect(x - 18 * s, FLOOR - 170 * s, 36 * s, 170 * s);
+  g.fillStyle = '#1fa830'; g.beginPath(); g.arc(x - 60 * s, FLOOR - 220 * s, 80 * s, 0, 7); g.arc(x + 60 * s, FLOOR - 230 * s, 85 * s, 0, 7); g.arc(x, FLOOR - 300 * s, 95 * s, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#1fa830'; g.beginPath(); g.arc(x - 60 * s, FLOOR - 220 * s, 76 * s, 0, 7); g.arc(x + 60 * s, FLOOR - 230 * s, 81 * s, 0, 7); g.arc(x, FLOOR - 300 * s, 91 * s, 0, 7); g.fill();
+  if (apples) { g.fillStyle = '#e0262b'; for (const [a, b] of [[-70, -230], [40, -270], [80, -200], [-20, -330], [-100, -190], [20, -210]]) { g.beginPath(); g.arc(x + a * s, FLOOR + b * s, 11 * s, 0, 7); g.fill(); g.lineWidth = 2; g.stroke(); } }
+}
+function drawGarten(R) {
+  const t = performance.now() / 1000;
+  const sky = g.createLinearGradient(0, 0, 0, FLOOR); sky.addColorStop(0, '#5fb8ff'); sky.addColorStop(1, '#c8ecff'); g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
+  g.fillStyle = '#ffee00'; g.beginPath(); g.arc(XL + 200 + camX * 0.6, 100, 55, 0, 7); g.fill();
+  g.fillStyle = '#fff'; for (const [cx, cy] of [[-200, 80], [500, 120], [1250, 70]]) { const x = cx + ((t * 8) % 2400) - 300; g.beginPath(); g.arc(x, cy, 30, 0, 7); g.arc(x + 38, cy - 12, 40, 0, 7); g.arc(x + 80, cy, 30, 0, 7); g.fill(); }
+  // Hecke hinten
+  g.fillStyle = '#2a8a2a'; g.beginPath(); g.moveTo(XL, FLOOR); for (let x = XL; x <= XR + 60; x += 60) g.arc(x, FLOOR - 170, 40, Math.PI, 0); g.lineTo(XR, FLOOR); g.closePath(); g.fill();
+  g.fillStyle = '#237a23'; g.fillRect(XL, FLOOR - 170, VW, 170);
+  // Rückseite von Bobs Haus mit Hintertür
+  g.lineWidth = 6; g.strokeStyle = LINE;
+  g.fillStyle = '#6ad9fb'; g.fillRect(280, 60, 640, FLOOR - 60); g.strokeRect(280, 60, 640, FLOOR - 60);
+  g.fillStyle = '#ff1a1a'; g.beginPath(); g.moveTo(250, 66); g.lineTo(600, -60); g.lineTo(950, 66); g.closePath(); g.fill(); g.stroke();
+  for (const wx of [330, 760]) { g.fillStyle = '#c8ecff'; g.fillRect(wx, 140, 110, 100); g.strokeRect(wx, 140, 110, 100); g.beginPath(); g.moveTo(wx + 55, 140); g.lineTo(wx + 55, 240); g.moveTo(wx, 190); g.lineTo(wx + 110, 190); g.lineWidth = 4; g.stroke(); g.lineWidth = 6; g.fillStyle = '#ff7ac6'; g.fillRect(wx - 6, 240, 122, 22); g.strokeRect(wx - 6, 240, 122, 22); g.fillStyle = '#ffd23a'; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(wx + 8 + k * 24, 236, 8, 0, 7); g.fill(); } }
+  g.fillStyle = '#8a4316'; g.fillRect(510, FLOOR - 220, 180, 220); g.strokeRect(510, FLOOR - 220, 180, 220);
+  g.fillStyle = '#a85a22'; g.fillRect(526, FLOOR - 204, 148, 90); g.fillRect(526, FLOOR - 100, 148, 90); g.lineWidth = 3; g.strokeRect(526, FLOOR - 204, 148, 90); g.strokeRect(526, FLOOR - 100, 148, 90); g.lineWidth = 6;
+  g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(660, FLOOR - 110, 10, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(530, FLOOR - 270, 140, 36, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ins Haus', 600, FLOOR - 251);
+  // Holzzaun links und rechts
+  g.lineWidth = 4; g.strokeStyle = LINE;
+  for (const [a, b] of [[XL, 270], [930, XR]]) { g.fillStyle = '#c98a4a'; g.fillRect(a, FLOOR - 110, b - a, 16); g.fillRect(a, FLOOR - 60, b - a, 16); for (let x = a + 8; x < b - 20; x += 46) { g.fillStyle = '#d99a5a'; g.beginPath(); g.moveTo(x, FLOOR); g.lineTo(x, FLOOR - 130); g.lineTo(x + 16, FLOOR - 146); g.lineTo(x + 32, FLOOR - 130); g.lineTo(x + 32, FLOOR); g.closePath(); g.fill(); g.stroke(); } }
+  // Gartenhaus
+  g.lineWidth = 6; g.fillStyle = '#9a6a3a'; g.fillRect(-380, 200, 300, FLOOR - 200); g.strokeRect(-380, 200, 300, FLOOR - 200);
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let x = -360; x < -90; x += 30) { g.beginPath(); g.moveTo(x, 206); g.lineTo(x, FLOOR); g.stroke(); }
+  g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#5a3a1a'; g.beginPath(); g.moveTo(-400, 206); g.lineTo(-230, 110); g.lineTo(-60, 206); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#3a2410'; g.fillRect(-280, FLOOR - 170, 100, 170); g.strokeRect(-280, FLOOR - 170, 100, 170);
+  g.fillStyle = '#c8ecff'; g.fillRect(-160, 260, 60, 50); g.strokeRect(-160, 260, 60, 50);
+  // Bäume
+  gartenTree(1150, 1, true); gartenTree(1480, 0.8, false); gartenTree(40, 0.75, false);
+  // Rasen mit Mähstreifen
+  const gr = g.createLinearGradient(0, FLOOR, 0, H); gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f'); g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+  g.fillStyle = 'rgba(255,255,255,.07)'; for (let x = Math.floor(XL / 160) * 160; x < XR; x += 160) g.fillRect(x, FLOOR, 80, H - FLOOR);
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  // Steinweg von der Tür
+  g.fillStyle = '#c9c3b8'; g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3;
+  for (let i = 0; i < 6; i++) { const y = FLOOR + 30 + i * 62, w = 70 + i * 10; g.beginPath(); g.ellipse(600 + Math.sin(i * 1.3) * 20, y, w / 2, 20 + i * 2, 0, 0, 7); g.fill(); g.stroke(); }
+  // Teich
+  g.fillStyle = '#7a6a5a'; g.beginPath(); g.ellipse(900, 740, 190, 62, 0, 0, 7); g.fill();
+  g.fillStyle = '#2f9be0'; g.beginPath(); g.ellipse(900, 740, 172, 52, 0, 0, 7); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 3; for (let k = 0; k < 3; k++) { const r = ((t * 30 + k * 40) % 120); g.globalAlpha = 1 - r / 120; g.beginPath(); g.ellipse(860 + k * 40, 740, r * 0.8, r * 0.25, 0, 0, 7); g.stroke(); } g.globalAlpha = 1;
+  g.fillStyle = '#3aa03a'; for (const [a, b] of [[800, 725], [980, 755]]) { g.beginPath(); g.ellipse(a, b, 26, 12, 0, 0, 7); g.fill(); }
+  g.fillStyle = '#ff7ac6'; g.beginPath(); g.arc(805, 720, 7, 0, 7); g.fill();
+  // Blumenbeete
+  for (const [bx, by, bw] of [[-330, 520, 220], [1250, 790, 300], [-100, 800, 260]]) {
+    g.fillStyle = '#6a4a2a'; g.beginPath(); g.roundRect(bx, by, bw, 46, 20); g.fill(); g.lineWidth = 4; g.strokeStyle = LINE; g.stroke();
+    for (let k = 0; k < bw / 30; k++) { const fx = bx + 18 + k * 30, sw = Math.sin(t * 2 + k) * 2; g.strokeStyle = '#2f7a22'; g.lineWidth = 4; g.beginPath(); g.moveTo(fx, by + 20); g.lineTo(fx + sw, by - 8); g.stroke(); g.fillStyle = ['#ff3b3b', '#ffd23a', '#ff7ac6', '#9b5de5', '#ffffff'][k % 5]; g.beginPath(); g.arc(fx + sw, by - 12, 9, 0, 7); g.fill(); g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(fx + sw, by - 12, 3, 0, 7); g.fill(); }
+  }
+}
 // ---------- Krypto-App ----------
 const COINS = {
   btb:  { name: 'BitBob',      sym: 'BTB',  col: '#f7931a', start: 31000, vol: 0.012, drift: 0.0002 },
