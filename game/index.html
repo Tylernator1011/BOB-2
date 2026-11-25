@@ -670,7 +670,7 @@ const DW_SHOP = {
   dietrich: { name: 'Dietrich (Tresor leichter)', price: 80 },
   gold3:    { name: 'Goldfutter-Paket (3x Lv4)', price: 220 },
   geld3:    { name: 'Geldsamen-Paket (3x)', price: 300 },
-  einbrecher: { name: 'Outfit: Einbrecher', price: 260 },
+  einbrecher: { name: 'Outfit: Einbrecher (Sturmmaske)', price: 260 },
 };
 function dwTime(a) { const d = Math.floor(a.t0 / 1440); return (d === gDay() ? 'heute' : d === gDay() + 1 ? 'morgen' : WD[d % 7]) + ' ' + hm(a.t0 % 1440) + '–' + hm(a.t1 % 1440); }
 function dwSlot(len) {
@@ -756,7 +756,7 @@ function tresEnd() {
   const ok = tres.done === 'ok', p = ok ? 0.15 + tres.strikes * 0.25 + (tres.t < 15 ? 0.2 : 0) : 1, drv = !!tres.a.driver;
   const loot = ok ? Math.round(tres.a.reward * (drv ? 0.7 : 1)) : 0;
   if (Math.random() < p) { startChase(loot, drv); return; }
-  if (ok) { earn(loot); bump('dw'); toast = { text: 'Tresor geknackt! Keiner hat was gemerkt. +' + money(loot) + ' Bargeld' + (drv ? ' (30 % gingen an den Fahrer)' : ''), t: 4.5 }; }
+  if (ok) { earn(loot); bump('dw'); giveOutfit('einbrecher', 'Neues Outfit: Einbrecher'); toast = { text: 'Tresor geknackt! Keiner hat was gemerkt. +' + money(loot) + ' Bargeld' + (drv ? ' (30 % gingen an den Fahrer)' : ''), t: 4.5 }; }
 }
 function tresBtns() { return { l: { x: W / 2 - 300, y: 700, r: 52 }, r: { x: W / 2 + 300, y: 700, r: 52 }, lock: { x: W / 2 - 130, y: 760, w: 260, h: 70 } }; }
 let tresHold = 0;
@@ -816,6 +816,7 @@ function drawTresorGame(dt) {
 }
 // ---------- Verfolgungsjagd nach dem Tresor ----------
 const chase = { on: false };
+function giveOutfit(k, text) { if (!wear.owned.includes(k)) { wear.owned.push(k); saveWear(); achPops.push({ a: { name: text, money: 0, troph: null, outfit: OUTFITS[k].name }, t: 4.5, extra: '' }); } }
 function startChase(loot, car) {
   Object.assign(chase, { on: true, loot, mode: car ? 'car' : 'run', lane: 1, px: W / 2, t: 0, dur: car ? 20 : 28, gap: 0.75, y: 0, vy: 0, scroll: 0, obs: [], next: 1.2, hit: 0, done: null, dt: 0, t0: performance.now() });
   keys.clear(); joy.on = false;
@@ -830,13 +831,14 @@ addEventListener('keydown', e => {
 function chaseEnd() {
   chase.on = false;
   if (chase.done === 'frei') {
-    if (chase.loot) { earn(chase.loot); bump('dw'); }
+    if (chase.loot) { earn(chase.loot); bump('dw'); giveOutfit('einbrecher', 'Neues Outfit: Einbrecher'); }
     bump('flucht'); go('kanal1', [500, FLOOR + 100]);
     toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
   } else {
     const lost = Math.floor(bank.cash || 0); bank.cash = 0; const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
     gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); go('spawn', [600, 700]);
-    toast = { text: 'Festgenommen! Eine Nacht in der Zelle. Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
+    if (!wear.owned.includes('gefangener')) wear.owned.push('gefangener'); wear.on = 'gefangener'; saveWear();
+    toast = { text: 'Festgenommen! Eine Nacht in der Zelle – du trägst jetzt Orange. Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
   }
 }
 // Flucht im Fluchtwagen (einfacher): von oben, Spur wechseln
@@ -1793,10 +1795,22 @@ Object.assign(OUTFITS, {
       g.restore();
     } },
   mutant: { name: 'Demibob', custom: drawDemibob },
+  gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.fillStyle = '#e0661a'; g.beginPath(); g.moveTo(x + 80, y); g.lineTo(x + w / 2, y + 40); g.lineTo(x + w - 80, y); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#fff'; g.fillRect(x + 30, y + 58, 96, 40); g.strokeRect(x + 30, y + 58, 96, 40);
+      g.fillStyle = '#111'; g.font = '900 20px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1011', x + 78, y + 79);
+      g.fillStyle = '#c85510'; for (const xx of [x + w - 70, x + w - 40]) g.fillRect(xx, y + 50, 12, h - 60);
+    } },
   einbrecher: { name: 'Einbrecher', bp: mkPal('#161616', '#242424'), hp: mkPal('#161616', '#242424'), noText: true,
     headFront: (x, y, w, h) => {
-      g.fillStyle = '#ffee00'; g.beginPath(); g.roundRect(x + 30, y + 26, w - 60, 56, 26); g.fill(); g.beginPath(); g.ellipse(x + w / 2, y + 128, 52, 30, 0, 0, 7); g.fill();
-      bobFace(x, y);
+      // Sturmmaske: Strickrillen, Augenschlitz und Mundloch
+      g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 6; for (let xx = x + 14; xx < x + w; xx += 22) { g.beginPath(); g.moveTo(xx, y); g.lineTo(xx, y + h); g.stroke(); }
+      g.fillStyle = '#ffee00'; g.beginPath(); g.roundRect(x + 36, y + 34, w - 72, 46, 23); g.fill();
+      g.fillStyle = '#111'; g.beginPath(); g.arc(x + 82, y + 57, 8, 0, 7); g.fill(); g.beginPath(); g.arc(x + w - 82, y + 57, 8, 0, 7); g.fill();
+      g.fillStyle = '#ffee00'; g.beginPath(); g.ellipse(x + w / 2, y + 126, 34, 22, 0, 0, 7); g.fill();
+      g.strokeStyle = '#111'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x + w / 2 - 18, y + 122); g.quadraticCurveTo(x + w / 2, y + 138, x + w / 2 + 18, y + 122); g.stroke();
     },
     bodyFront: (x, y, w, h) => {
       g.fillStyle = '#2a2a2a'; g.fillRect(x + w / 2 - 50, y + 30, 100, 60); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(x + w / 2 - 50, y + 30, 100, 60);
@@ -4383,9 +4397,9 @@ function drawAchPop(dt) {
   g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.arc(x + 52, y + 45, 32, 0, 7); g.fill();
   uiIcon('trophy', x + 52, y + 45, 40, '#7a4a00');
   g.fillStyle = '#5a3200'; g.textAlign = 'left'; g.textBaseline = 'middle';
-  g.font = '700 15px system-ui'; g.fillText('ERFOLG GESCHAFFT', x + 100, y + 26);
+  g.font = '700 15px system-ui'; g.fillText(p.a.outfit ? 'BELOHNUNG' : 'ERFOLG GESCHAFFT', x + 100, y + 26);
   g.font = '800 23px system-ui'; g.fillText(p.a.name, x + 100, y + 52);
-  g.font = '600 16px system-ui'; g.fillText('Belohnung: ' + (p.a.money ? money(p.a.money) : TROPHIES[p.a.troph].name), x + 100, y + 76);
+  g.font = '600 16px system-ui'; g.fillText(p.a.outfit ? 'Im Kleiderschrank: ' + p.a.outfit : 'Belohnung: ' + (p.a.money ? money(p.a.money) : TROPHIES[p.a.troph].name), x + 100, y + 76);
   if (p.extra) { g.font = '700 15px system-ui'; g.fillText(p.extra, x + 100, y + 99); }
   g.restore();
 }
