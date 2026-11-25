@@ -4927,15 +4927,15 @@ try { const v = JSON.parse(localStorage.getItem('bob-zeit') || 'null'); if (v &&
 let gtSave = 0;
 // ---------- Computer: Online-Laden „bobnet“ – Essen bestellen, kommt nach einer Weile ----------
 const WEB_ITEMS = [
-  { id: 'tf1',  cat: 'tier', cur: 'bar', name: 'Futter Lv1',    price: 5,   desc: ['1× Futter Lv1', '+30 % satt, +10 XP'], food: [1, 1] },
+  { id: 'tf1',  cat: 'tier', name: 'Futter Lv1',    price: 5,   desc: ['1× Futter Lv1', '+30 % satt, +10 XP'], food: [1, 1] },
   { id: 'tf1x', cat: 'tier', name: 'Futter Lv1 ×10', price: 35,  desc: ['Vorratspack', 'billiger als im Laden'], food: [1, 10] },
-  { id: 'tf2',  cat: 'tier', cur: 'bar', name: 'Futter Lv2',    price: 10,  desc: ['1× Futter Lv2', '+50 % satt, +25 XP'], food: [2, 1] },
+  { id: 'tf2',  cat: 'tier', name: 'Futter Lv2',    price: 10,  desc: ['1× Futter Lv2', '+50 % satt, +25 XP'], food: [2, 1] },
   { id: 'tf2x', cat: 'tier', name: 'Futter Lv2 ×10', price: 80,  desc: ['Vorratspack', 'billiger als im Laden'], food: [2, 10] },
-  { id: 'tf3',  cat: 'tier', cur: 'bar', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
+  { id: 'tf3',  cat: 'tier', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
   { id: 'tf3x', cat: 'tier', name: 'Futter Lv3 ×6', price: 110, desc: ['Vorratspack', 'billiger als im Laden'], food: [3, 6] },
   { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Große Rasenfläche hinterm Haus:', 'im Haus ganz nach unten'], once: true },
 ];
-const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a'], ['bar', 'Bargeld', '#ffd23a']];
+const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
 const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
 let lief = { orders: [], pkgs: [], snacks: {} };
 try { const d = JSON.parse(localStorage.getItem('bob-lieferung') || 'null'); if (d) lief = Object.assign(lief, d); } catch (e) {}
@@ -5034,7 +5034,7 @@ function drawWeb(dt) {
   btns.push({ b: xb, act: () => { web.open = false; } });
   // Status
   const n = lief.orders.length, next = n ? Math.max(1, Math.round(Math.min(...lief.orders.map(o => o.t)) - gt.T)) : 0;
-  const st = web.msgT > 0 ? web.msg : n ? '🛵 ' + n + ' Lieferung' + (n > 1 ? 'en' : '') + ' unterwegs · nächste in ' + next + ' Min.' : lief.pkgs.length ? '📦 Deine Bestellung liegt vor der Haustür!' : 'Konto: ' + money(Math.floor(bank.money)) + ' · Bargeld: ' + money(Math.floor(bank.cash || 0)) + ' · Lieferung vor die Haustür';
+  const st = web.msgT > 0 ? web.msg : n ? '🛵 ' + n + ' Lieferung' + (n > 1 ? 'en' : '') + ' unterwegs · nächste in ' + next + ' Min.' : lief.pkgs.length ? '📦 Deine Bestellung liegt vor der Haustür!' : 'Konto: ' + money(Math.floor(bank.money)) + ' · Lieferung direkt vor die Haustür';
   outl(st, P.x + P.w / 2, P.y + 118, '700 20px "Trebuchet MS", system-ui', web.msgT > 0 ? '#ffe14a' : '#cfd6e4', 4);
   // Raster
   const its = webItems(), rows = Math.ceil(its.length / L.cols), maxS = Math.max(0, rows - 2); web.scroll = Math.max(0, Math.min(maxS, web.scroll));
