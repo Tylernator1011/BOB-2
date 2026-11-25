@@ -89,6 +89,26 @@ const ROOMS = {
                 { type: 'moebel', t: 'pflanze', fx: 1040, base: 520, r: 0 },
                 { type: 'moebel', t: 'sofa', fx: 1250, base: 760, r: 0 },
               ] },
+  // ----- Karte der Apokalypse -----
+  apo_lager: { name: 'Dein Unterschlupf', apo: true, theme: 'lager', exits: { r: 'apo_strasse' }, wide: [-400, 1600], maxY: H - 60,
+              objs: [{ type: 'loot', k: 'tonne', x: 300, base: 560 }, { type: 'loot', k: 'kiste', x: 1200, base: 600 }, { type: 'versteck', k: 'busch', x: 0, w: 240, base: 720 }] },
+  apo_strasse: { name: 'Zerstörte Straße', apo: true, theme: 'strasse', danger: 0.7, maxPat: 2, exits: { l: 'apo_lager', r: 'apo_markt' }, wide: [-800, 2400], maxY: H - 60,
+              arches: [{ x: 1700, to: 'apo_park', ax: 0, label: 'Park' }],
+              objs: [{ type: 'versteck', k: 'auto', x: 200, w: 300, base: 700 }, { type: 'versteck', k: 'auto', x: 1100, w: 300, base: 760 }, { type: 'versteck', k: 'busch', x: -500, w: 260, base: 600 }, { type: 'versteck', k: 'busch', x: 2100, w: 240, base: 620 },
+                     { type: 'loot', k: 'auto', x: 200, base: 700 }, { type: 'loot', k: 'auto', x: 1100, base: 760 }, { type: 'loot', k: 'kiste', x: 600, base: 560 }] },
+  apo_markt: { name: 'Am Supermarkt', apo: true, theme: 'markt', danger: 0.6, maxPat: 1, exits: { l: 'apo_strasse' }, wide: [-600, 2000], maxY: H - 60,
+              arches: [{ x: 750, to: 'apo_laden', ax: 600, label: 'Supermarkt' }],
+              objs: [{ type: 'versteck', k: 'auto', x: 1500, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: -300, w: 240, base: 640 }, { type: 'loot', k: 'auto', x: 1500, base: 720 }, { type: 'loot', k: 'kiste', x: 100, base: 580 }] },
+  apo_laden: { name: 'Im Supermarkt', apo: true, theme: 'laden', danger: 0.45, maxPat: 1, exits: {}, wide: [-400, 1600], maxY: H - 60,
+              arches: [{ x: 600, to: 'apo_markt', ax: 750, label: 'Ausgang' }],
+              objs: [{ type: 'loot', k: 'regal', x: 0, base: 560 }, { type: 'loot', k: 'regal', x: 250, base: 560 }, { type: 'loot', k: 'regal', x: 1000, base: 560 }, { type: 'loot', k: 'kuehl', x: 1300, base: 560 }, { type: 'loot', k: 'kuehl', x: -250, base: 560 }, { type: 'versteck', k: 'busch', x: 1450, w: 200, base: 760 }] },
+  apo_park: { name: 'Dschungel-Park', apo: true, theme: 'park', danger: 0.8, maxPat: 2, exits: {}, wide: [-800, 2400], maxY: H - 110,
+              arches: [{ x: 0, to: 'apo_strasse', ax: 1700, label: 'Straße' }, { x: 2050, to: 'apo_camp', ax: -300, label: 'Affen-Lager' }],
+              objs: [{ type: 'versteck', k: 'gras', x: -450, w: 400, base: 700 }, { type: 'versteck', k: 'gras', x: 650, w: 420, base: 650 }, { type: 'versteck', k: 'gras', x: 1500, w: 400, base: 720 }, { type: 'versteck', k: 'busch', x: 1050, w: 220, base: 560 },
+                     { type: 'loot', k: 'fluss', x: 300, base: 760 }, { type: 'loot', k: 'fluss', x: 1800, base: 760 }, { type: 'loot', k: 'kiste', x: 1250, base: 600 }] },
+  apo_camp: { name: 'Affen-Lager', apo: true, theme: 'camp', danger: 1, maxPat: 3, exits: {}, wide: [-600, 2200], maxY: H - 60,
+              arches: [{ x: -300, to: 'apo_park', ax: 2050, label: 'Park' }],
+              objs: [{ type: 'versteck', k: 'busch', x: 200, w: 240, base: 640 }, { type: 'versteck', k: 'gras', x: 1000, w: 360, base: 720 }, { type: 'loot', k: 'kiste', x: 600, base: 580 }, { type: 'loot', k: 'kiste', x: 1400, base: 600 }, { type: 'loot', k: 'kiste', x: 1900, base: 580 }] },
   laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'labor', at: [600, FLOOR + 80], bank: true } },
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
@@ -469,7 +489,7 @@ let activePet = null;
 try { activePet = localStorage.getItem('bob-tier-aktiv'); } catch (e) {}
 if (!owned.includes(activePet)) activePet = owned[0] || null;
 function saveOwned() { try { localStorage.setItem('bob-tiere', JSON.stringify(owned)); localStorage.setItem('bob-tier-aktiv', activePet || ''); } catch (e) {} }
-function activeList() { return activePet && owned.includes(activePet) && activePet !== labor.pet && activePet !== apo.pet ? [activePet] : []; }
+function activeList() { return !apo.on && activePet && owned.includes(activePet) && activePet !== labor.pet && activePet !== apo.pet ? [activePet] : []; }
 // Kleidung pro Tier (bis jetzt nur „Normal“)
 const PET_OUTFITS = { normal: { name: 'Normal' } };
 let petWear = {};
@@ -618,6 +638,8 @@ function drawObj(o) {
   else if (o.type === 'gulli') drawGulli(o);
   else if (o.type === 'schatz') drawSchatz(o);
   else if (o.type === 'npc') drawNpc(o);
+  else if (o.type === 'versteck') drawVersteck(o);
+  else if (o.type === 'loot') drawLootSpot(o);
   else if (o.type === 'theke') drawTheke(o);
   else if (o.type === 'gitter') { if (!o.jailDoor || jailed()) drawGitter(o); }
   else if (o.type === 'zwand') drawZwand(o);
@@ -1156,28 +1178,72 @@ function drawLaborInnen() {
   g.fillStyle = '#3cff5a'; g.font = '700 13px ui-monospace, monospace'; g.textAlign = 'left';
   ['> PRIMA-LAB', labor.pet ? '> TAG ' + labDays() + '/' + LAB_DAYS : '> FREI', labor.pet && labDays() > 20 ? '> !! SPRACHE' : '> OK'].forEach((l, i) => g.fillText(l, 250, 498 + i * 20));
 }
-// ---------- Apokalypse ----------
-let apo = { on: false, pet: null, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 0 };
+// ---------- Apokalypse: eigene Karte, Verstecke, Patrouillen, Looten ----------
+let apo = { on: false, pet: null, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 0, ammo: 12, bag: { dose: 0, wasser: 0, medi: 0 }, looted: {} };
 try { const a = JSON.parse(localStorage.getItem('bob-apo') || 'null'); if (a) apo = Object.assign(apo, a); } catch (e) {}
-const AP = { en: [], bul: [], items: [], room: null, spawn: 2, itemT: 4, cd: 0, saveT: 0, dead: 0, bossE: null, shock: [] };
-const APO_DAY = 60;
+const AP = { en: [], bul: [], room: null, patT: 50, cd: 0, saveT: 0, dead: 0, bossE: null, shock: [], noise: 0 };
+const APO_DAY = 90;
 function saveApo() { try { localStorage.setItem('bob-apo', JSON.stringify(apo)); } catch (e) {} }
 function apoDay() { return Math.min(7, Math.floor(apo.t / APO_DAY) + 1); }
 function apoNight() { const p = (apo.t % APO_DAY) / APO_DAY; return p > 0.62 ? Math.min(1, (p - 0.62) / 0.1) : 0; }
+function apoFresh(id) { return { on: true, pet: id, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 8, ammo: 12, bag: { dose: 1, wasser: 1, medi: 0 }, looted: {} }; }
 function startApo(id) {
   labor = { pet: null, since: 0, paid: 0, baseLvl: 1 }; saveLabor();
   if (activePet === id) { activePet = owned.find(k => k !== id) || null; saveOwned(); }
-  apo = { on: true, pet: id, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 7 }; saveApo();
-  AP.en = []; AP.bul = []; AP.items = []; AP.room = null; AP.bossE = null;
-  togglePhone(false); menu.open = false; go('draussen', [600, 650]);
+  apo = apoFresh(id); saveApo(); AP.en = []; AP.bul = []; AP.room = null; AP.bossE = null;
+  togglePhone(false); menu.open = false; go('apo_lager', [600, 640]);
 }
-function apoReset() { AP.en = []; AP.bul = []; AP.items = []; AP.shock = []; AP.room = cur; AP.spawn = 2; }
+function apoReset() {
+  AP.en = []; AP.bul = []; AP.shock = []; AP.room = cur; AP.patT = 40 + Math.random() * 40;
+  const R = ROOMS[cur]; if (!R.apo || apo.boss) return;
+  // beim Betreten: manchmal ist eine Patrouille da
+  const chance = (R.danger || 0) * (0.35 + apoDay() * 0.08);
+  for (let i = 0; i < (R.maxPat || 0); i++) if (Math.random() < chance) apoPatrol(true);
+}
+function apoPatrol(inside) {
+  const R = ROOMS[cur], y0 = FLOOR + 80, y1 = (R.maxY || H - 20) - 20, w = XR - XL;
+  const x0 = XL + 150 + Math.random() * (w - 700), y = y0 + Math.random() * (y1 - y0);
+  const e = { x: inside ? x0 + Math.random() * 400 : (Math.random() < 0.5 ? XL + 40 : XR - 40), y, x0, x1: x0 + 400 + Math.random() * 300, dir: Math.random() < 0.5 ? 1 : -1, st: 'patrol', hp: 3, id: Math.random() < 0.5 ? 'orangutan' : 'monke', fire: 1.5, lost: 0, hit: 0, wait: 0 };
+  if (!inside) { e.x0 = Math.min(e.x0, e.x); e.x1 = Math.max(e.x1, e.x); e.dir = e.x < (XL + XR) / 2 ? 1 : -1; }
+  AP.en.push(e);
+}
+// Verstecke und Beute aus der Karte
+function apoObjs(type) { return (ROOMS[cur].objs || []).filter(o => o.type === type); }
+function apoHidden() { return apoObjs('versteck').some(o => Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
+function nearLoot() { if (!apo.on || fade.dir) return null; return apoObjs('loot').find(o => Math.abs(bob.x - o.x) < 110 && Math.abs(bob.y - o.base) < 90); }
+function lootKey(o) { return cur + ':' + o.x; }
+function lootEmpty(o) { return o.k !== 'fluss' && apo.looted[lootKey(o)] === apoDay(); }
+function doLoot(o) {
+  if (lootEmpty(o)) { toast = { text: 'Schon durchsucht – vielleicht liegt morgen wieder was hier.', t: 3 }; return; }
+  const r = Math.random(), got = [];
+  const add = (k, n) => { apo.bag[k] = (apo.bag[k] || 0) + n; got.push(n + 'x ' + { dose: 'Dose', wasser: 'Wasser', medi: 'Verband' }[k]); };
+  if (o.k === 'fluss') { apo.water = 100; toast = { text: 'Du trinkst aus dem Fluss. Durst gestillt!', t: 3 }; saveApo(); return; }
+  if (o.k === 'regal') { if (r < 0.75) add('dose', 1 + (r < 0.3 ? 1 : 0)); }
+  else if (o.k === 'kuehl') { if (r < 0.8) add('wasser', 1 + (r < 0.3 ? 1 : 0)); }
+  else if (o.k === 'tonne') { add('wasser', 1); }
+  else if (o.k === 'kiste') { if (r < 0.5) { const a = 4 + Math.floor(Math.random() * 6); apo.ammo += a; got.push(a + ' Patronen'); } if (Math.random() < 0.35) add('medi', 1); if (Math.random() < 0.35) add('dose', 1); }
+  else if (o.k === 'auto') { if (r < 0.4) { const a = 2 + Math.floor(Math.random() * 4); apo.ammo += a; got.push(a + ' Patronen'); } else if (r < 0.7) add('wasser', 1); }
+  apo.looted[lootKey(o)] = apoDay(); saveApo();
+  toast = { text: got.length ? 'Gefunden: ' + got.join(', ') : 'Nichts Brauchbares …', t: 3 };
+}
+function useBag(k) {
+  if (!apo.on || !(apo.bag[k] > 0)) return;
+  apo.bag[k]--; if (k === 'dose') apo.food = Math.min(100, apo.food + 40); else if (k === 'wasser') apo.water = Math.min(100, apo.water + 45); else apo.hp = Math.min(100, apo.hp + 40); saveApo();
+}
+// Von hinten überwältigen
+function nearTakedown() {
+  if (!apo.on || fade.dir) return null;
+  return AP.en.find(e => e.st !== 'alert' && Math.sign(bob.x - e.x) === -e.dir && Math.abs(bob.x - e.x) < 160 && Math.abs(bob.y - e.y) < 70);
+}
+function doTakedown(e) { e.hp = 0; e.silent = true; bump('affen'); toast = { text: 'Lautlos überwältigt!', t: 2 }; }
+function apoAlertAll() { for (const e of AP.en) { e.st = 'alert'; e.lost = 0; } }
 function apoShoot(tx, ty) {
   if (!apo.on || AP.cd > 0 || AP.dead) return;
-  AP.cd = 0.28;
+  if (apo.ammo <= 0) { toast = { text: 'Keine Munition! Durchsuch Kisten – oder schleich dich von hinten an.', t: 2.5 }; AP.cd = 0.5; return; }
+  apo.ammo--; AP.cd = 0.28;
   const sx = bob.x, sy = bob.y - 120 * scaleAt(bob.y), d = Math.hypot(tx - sx, ty - sy) || 1;
   AP.bul.push({ x: sx, y: sy, vx: (tx - sx) / d * 900, vy: (ty - sy) / d * 900, me: true, t: 1.2 });
-  bob.face = tx < bob.x ? -1 : 1; AP.flash = 0.08;
+  bob.face = tx < bob.x ? -1 : 1; AP.flash = 0.08; apoAlertAll();
 }
 function apoShootNearest() {
   const list = AP.bossE ? [AP.bossE] : AP.en;
@@ -1185,38 +1251,46 @@ function apoShootNearest() {
   if (best) apoShoot(best.x, best.y - (best.boss ? 140 : 60) * scaleAt(best.y)); else apoShoot(bob.x + bob.face * 400, bob.y - 120 * scaleAt(bob.y));
 }
 function apoBossCfg() { return apo.pet === 'orangutan' ? { hp: 60, sp: 75, w: 320, dmg: 25 } : { hp: 32, sp: 240, w: 200, dmg: 12 }; }
+function apoSees(e) {
+  if (apoHidden()) return false;
+  const dx = bob.x - e.x, range = apoNight() > 0.5 ? 300 : 430;
+  return Math.sign(dx) === e.dir && Math.abs(dx) < range && Math.abs(bob.y - e.y) < 140;
+}
 function apoTick(dt) {
   if (!apo.on) return;
   if (apo.intro > 0) { apo.intro -= dt; return; }
-  if (AP.dead) { AP.dead -= dt; if (AP.dead <= 0) { AP.dead = 0; apo.hp = 100; apo.food = 100; apo.water = 100; apo.t = 0; apo.boss = false; AP.bossE = null; apoReset(); saveApo(); go('draussen', [600, 650]); } return; }
-  if (AP.room !== cur || fade.dir) { apoReset(); if (fade.dir) return; }
-  if (AP.cd > 0) AP.cd -= dt; if (AP.flash > 0) AP.flash -= dt;
-  const busy = menu.open || phone.open || wr.open || bag.open || pp.open || sleepFx;
-  if (busy) return;
-  // Zeit, Hunger und Durst
-  if (!apo.boss) { apo.t += dt; if (apo.t >= 7 * APO_DAY) { apo.boss = true; apo.t = 7 * APO_DAY; toast = { text: 'Tag 7 überstanden … da kommt ' + PETS[apo.pet].name + '!', t: 4 }; go('draussen', [260, 650]); saveApo(); return; } }
-  apo.food = Math.max(0, apo.food - dt * 100 / (APO_DAY * 1.3)); apo.water = Math.max(0, apo.water - dt * 100 / (APO_DAY * 0.95));
-  if (apo.food <= 0 || apo.water <= 0) apo.hp -= dt * 4;
+  if (!ROOMS[cur].apo) { if (!fade.dir) go('apo_lager', [600, 640]); return; }
+  if (AP.dead) { AP.dead -= dt; if (AP.dead <= 0) { AP.dead = 0; const id = apo.pet; apo = apoFresh(id); apo.intro = 0; saveApo(); AP.bossE = null; go('apo_lager', [600, 640]); } return; }
+  if (AP.room !== cur || fade.dir) { if (fade.dir) return; apoReset(); }
+  if (AP.cd > 0) AP.cd -= dt; if (AP.flash > 0) AP.flash -= dt; if (AP.hurt > 0) AP.hurt -= dt;
+  if (menu.open || phone.open || wr.open || bag.open || pp.open || sleepFx) return;
+  if (!apo.boss) { apo.t += dt; if (apo.t >= 7 * APO_DAY) { apo.boss = true; apo.t = 7 * APO_DAY; toast = { text: 'Tag 7 überstanden! ' + PETS[apo.pet].name + ' wartet im Affen-Lager auf dich …', t: 5 }; saveApo(); } }
+  apo.food = Math.max(0, apo.food - dt * 100 / (APO_DAY * 1.6)); apo.water = Math.max(0, apo.water - dt * 100 / (APO_DAY * 1.15));
+  if (apo.food <= 0 || apo.water <= 0) apo.hp -= dt * 3;
   AP.saveT -= dt; if (AP.saveT <= 0) { AP.saveT = 3; saveApo(); }
-  const R = ROOMS[cur], y0 = R.openTop ? R.top + 60 : FLOOR + 60, y1 = (R.maxY || H - 20) - 10;
-  // Gegner kommen von den Rändern
-  if (!apo.boss) {
-    AP.spawn -= dt;
-    const maxE = 2 + Math.floor(apoDay() / 2) + (apoNight() > 0.5 ? 2 : 0);
-    if (AP.spawn <= 0 && AP.en.length < maxE) { AP.spawn = Math.max(1.2, 4 - apoDay() * 0.35) * (apoNight() > 0.5 ? 0.6 : 1); const side = Math.random() < 0.5; AP.en.push({ x: side ? XL + 30 : XR - 30, y: y0 + Math.random() * (y1 - y0), hp: 3, id: Math.random() < 0.5 ? 'orangutan' : 'monke', fire: 1.5 + Math.random() * 2, hit: 0 }); }
-  } else if (!AP.bossE && cur === 'draussen') {
-    const c = apoBossCfg(); AP.bossE = { boss: true, x: XR - 250, y: 640, hp: c.hp, max: c.hp, id: apo.pet, fire: 2, slam: 3, dash: 0, hit: 0 };
-  }
-  // Sachen zum Aufsammeln
-  AP.itemT -= dt;
-  if (AP.itemT <= 0 && AP.items.length < 4) { AP.itemT = 5 + Math.random() * 4; const r = Math.random(); AP.items.push({ k: r < 0.42 ? 'banane' : r < 0.84 ? 'wasser' : 'medi', x: XL + 120 + Math.random() * (XR - XL - 240), y: y0 + 30 + Math.random() * (y1 - y0 - 30) }); }
-  AP.items = AP.items.filter(it => { if (Math.abs(it.x - bob.x) < 70 && Math.abs(it.y - bob.y) < 50) { if (it.k === 'banane') apo.food = Math.min(100, apo.food + 35); else if (it.k === 'wasser') apo.water = Math.min(100, apo.water + 40); else apo.hp = Math.min(100, apo.hp + 35); return false; } return true; });
-  // Gegner bewegen und schießen
+  const R = ROOMS[cur], y0 = FLOOR + 60, y1 = (R.maxY || H - 20) - 10;
+  // ab und zu kommt eine Patrouille vorbei
+  if (!apo.boss && R.danger) { AP.patT -= dt * (apoNight() > 0.5 ? 1.5 : 1); if (AP.patT <= 0) { AP.patT = 45 + Math.random() * 45; if (AP.en.length < (R.maxPat || 1) + 1 && Math.random() < 0.6) apoPatrol(false); } }
+  if (apo.boss && !AP.bossE && cur === 'apo_camp') { const c = apoBossCfg(); AP.bossE = { boss: true, x: XR - 300, y: 640, hp: c.hp, max: c.hp, id: apo.pet, fire: 2, slam: 3, dash: 0, hit: 0 }; AP.en = []; }
+  // Patrouillen
   for (const e of AP.en) {
-    const dx = bob.x - e.x, dy = bob.y - e.y, d = Math.hypot(dx, dy) || 1, sp = (e.id === 'monke' ? 130 : 85) * scaleAt(e.y);
-    if (d > 220) { e.x += dx / d * sp * dt; e.y += dy / d * sp * dt * 0.8; } else if (d < 90) apo.hp -= dt * 14;
-    e.y = Math.max(y0, Math.min(y1, e.y)); e.hit = Math.max(0, e.hit - dt);
-    e.fire -= dt; if (e.fire <= 0 && d < 700) { e.fire = 1.8 + Math.random() * 1.5; const ex = e.x, ey = e.y - 60 * scaleAt(e.y), tx = bob.x, ty = bob.y - 100 * scaleAt(bob.y), dd = Math.hypot(tx - ex, ty - ey) || 1; AP.bul.push({ x: ex, y: ey, vx: (tx - ex) / dd * 420, vy: (ty - ey) / dd * 420, me: false, t: 2.5, dmg: 8 }); }
+    e.hit = Math.max(0, e.hit - dt);
+    const dx = bob.x - e.x, dy = bob.y - e.y, d = Math.hypot(dx, dy) || 1;
+    if (e.st !== 'alert' && (apoSees(e) || (d < 90 && !apoHidden()))) { e.st = 'alert'; e.lost = 0; e.say = '!'; e.sayT = 1.5; }
+    if (e.st === 'patrol' || e.st === 'search') {
+      if (e.wait > 0) { e.wait -= dt; if (e.wait <= 0) e.dir *= -1; }
+      else { e.x += e.dir * 70 * scaleAt(e.y) * dt; if ((e.dir > 0 && e.x > e.x1) || (e.dir < 0 && e.x < e.x0)) e.wait = 1.5 + Math.random() * 2; }
+      if (e.st === 'search') { e.lost += dt; if (e.lost > 8) { e.st = 'patrol'; e.say = '…'; e.sayT = 1.2; } }
+    } else {
+      if (apoSees(e) || d < 200) e.lost = 0; else e.lost += dt;
+      if (e.lost > 5) { e.st = 'search'; e.lost = 0; e.say = '?'; e.sayT = 1.5; continue; }
+      e.dir = dx > 0 ? 1 : -1;
+      const sp = (e.id === 'monke' ? 130 : 95) * scaleAt(e.y);
+      if (d > 240) { e.x += dx / d * sp * dt; e.y += dy / d * sp * dt * 0.8; } else if (d < 90) apo.hp -= dt * 14;
+      e.fire -= dt; if (e.fire <= 0 && !apoHidden()) { e.fire = 1.6 + Math.random() * 1.2; const ex = e.x, ey = e.y - 60 * scaleAt(e.y), tx = bob.x, ty = bob.y - 100 * scaleAt(bob.y), dd = Math.hypot(tx - ex, ty - ey) || 1; AP.bul.push({ x: ex, y: ey, vx: (tx - ex) / dd * 420, vy: (ty - ey) / dd * 420, me: false, t: 2.5, dmg: 8 }); }
+    }
+    if (e.sayT > 0) e.sayT -= dt;
+    e.y = Math.max(y0, Math.min(y1, e.y)); e.x = Math.max(XL + 30, Math.min(XR - 30, e.x));
   }
   // Boss
   const B = AP.bossE;
@@ -1237,78 +1311,136 @@ function apoTick(dt) {
   }
   for (const s of AP.shock) { s.r += 380 * dt; if (!s.hit && Math.abs(Math.hypot((bob.x - s.x), (bob.y - s.y) * 2.2) - s.r) < 40) { s.hit = true; apo.hp -= 22; } }
   AP.shock = AP.shock.filter(s => s.r < 700);
-  // Kugeln
   for (const b of AP.bul) {
     b.x += b.vx * dt; b.y += b.vy * dt; b.t -= dt;
-    if (b.me) {
-      for (const e of (B ? [B] : AP.en)) { const sw = (e.boss ? apoBossCfg().w : 100) * scaleAt(e.y); if (Math.abs(b.x - e.x) < sw * 0.6 && b.y < e.y + 20 && b.y > e.y - sw * 1.15) { e.hp--; e.hit = 0.15; b.t = 0; break; } }
-    } else if (Math.abs(b.x - bob.x) < 60 && b.y < bob.y && b.y > bob.y - 230 * scaleAt(bob.y)) { apo.hp -= b.dmg; b.t = 0; AP.hurt = 0.25; }
+    if (b.me) { for (const e of (B ? [B] : AP.en)) { const sw = (e.boss ? apoBossCfg().w : 100) * scaleAt(e.y); if (Math.abs(b.x - e.x) < sw * 0.6 && b.y < e.y + 20 && b.y > e.y - sw * 1.15) { e.hp--; e.hit = 0.15; e.st = 'alert'; b.t = 0; break; } } }
+    else if (Math.abs(b.x - bob.x) < 60 && b.y < bob.y && b.y > bob.y - 230 * scaleAt(bob.y)) { apo.hp -= b.dmg; b.t = 0; AP.hurt = 0.25; }
   }
   AP.bul = AP.bul.filter(b => b.t > 0);
-  AP.en = AP.en.filter(e => { if (e.hp > 0) return true; if (Math.random() < 0.4) AP.items.push({ k: Math.random() < 0.5 ? 'banane' : 'wasser', x: e.x, y: e.y }); bump('affen'); return false; });
-  if (AP.hurt > 0) AP.hurt -= dt;
+  AP.en = AP.en.filter(e => { if (e.hp > 0) return true; if (!e.silent) bump('affen'); if (Math.random() < 0.5) { apo.ammo += 2 + Math.floor(Math.random() * 3); } return false; });
   if (B && B.hp <= 0) { apoWin(); return; }
-  if (apo.hp <= 0) { apo.hp = 0; AP.dead = 3; AP.en = []; AP.bul = []; apo.t = 0; apo.boss = false; saveApo(); }
+  if (apo.hp <= 0) { apo.hp = 0; AP.dead = 3.5; AP.en = []; AP.bul = []; }
 }
-function c0w(e) { return apoBossCfg().w * 0.45; }
 function apoWin() {
-  const id = apo.pet; apo = { on: false, pet: null, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 0 }; saveApo(); AP.bossE = null; AP.en = []; AP.bul = [];
+  const id = apo.pet; apo = { on: false, pet: null, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 0, ammo: 12, bag: { dose: 0, wasser: 0, medi: 0 }, looted: {} }; saveApo(); AP.bossE = null; AP.en = []; AP.bul = [];
   if (!owned.includes(id)) owned.push(id); activePet = id; saveOwned();
-  const p = petFor(id); p.room = cur; p.x = Math.min(XR - 200, bob.x + 200); p.y = bob.y; p.mode = 'home';
+  go('draussen', [500, 650]);
+  const p = petFor(id); p.room = 'draussen'; p.x = 700; p.y = 650; p.mode = 'home';
   earn(3000); bump('apo');
   if (!wear.owned.includes('ueberlebender')) { wear.owned.push('ueberlebender'); saveWear(); }
   achPops.push({ a: { name: 'Die Welt ist gerettet!', outfit: OUTFITS.ueberlebender.name }, t: 6, extra: '+3.000 € Bargeld · ' + PETS[id].name + ' ist wieder lieb' });
   toast = { text: 'Du hast ' + PETS[id].name + ' besiegt – er ist wieder ganz der Alte. Die Welt erholt sich!', t: 6 };
 }
-// Zeichnen
-function drawApoWorld() {
-  if (!apo.on) return;
-  const R = ROOMS[cur], t = performance.now() / 1000;
-  if (R.outside) { const hz = g.createLinearGradient(0, 0, 0, FLOOR); hz.addColorStop(0, 'rgba(120,40,10,.45)'); hz.addColorStop(1, 'rgba(200,120,40,.25)'); g.fillStyle = hz; g.fillRect(XL, 0, VW, FLOOR); }
-  g.fillStyle = 'rgba(40,80,20,.22)'; g.fillRect(XL, 0, VW, H);
-  // Ranken von oben
+// ---------- Karte der Apokalypse zeichnen ----------
+function apoRuin(x, w, h, col) {
+  g.fillStyle = col || '#4a4440'; g.beginPath(); g.moveTo(x, FLOOR); g.lineTo(x, FLOOR - h); g.lineTo(x + w * 0.3, FLOOR - h + 30); g.lineTo(x + w * 0.5, FLOOR - h - 10); g.lineTo(x + w * 0.75, FLOOR - h + 50); g.lineTo(x + w, FLOOR - h + 20); g.lineTo(x + w, FLOOR); g.closePath(); g.fill(); g.lineWidth = 5; g.strokeStyle = LINE; g.stroke();
+  g.fillStyle = '#1b1a1a'; for (let wy = FLOOR - h + 70; wy < FLOOR - 40; wy += 70) for (let wx = x + 25; wx < x + w - 50; wx += 70) if ((wx + wy) % 3) g.fillRect(wx, wy, 34, 40);
+}
+function apoTree(x, s) { g.fillStyle = '#3a2814'; g.fillRect(x - 16 * s, FLOOR - 200 * s, 32 * s, 200 * s); g.fillStyle = '#1f5a1a'; for (const [ox, oy, r] of [[0, -230, 90], [-70, -180, 70], [70, -180, 70]]) { g.beginPath(); g.arc(x + ox * s, FLOOR + oy * s, r * s, 0, 7); g.fill(); } }
+function drawApoRoom(R) {
+  const t = performance.now() / 1000;
+  const sky = g.createLinearGradient(0, 0, 0, FLOOR); sky.addColorStop(0, '#3a1a10'); sky.addColorStop(1, '#a85a28'); g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
+  g.fillStyle = 'rgba(255,200,120,.5)'; g.beginPath(); g.arc(XL + 300 - camX * 0.1, 120, 50, 0, 7); g.fill();
+  const th = R.theme;
+  if (th === 'laden') { g.fillStyle = '#5a5248'; g.fillRect(XL, 0, VW, FLOOR); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; for (let y = 50; y < FLOOR; y += 60) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); } g.fillStyle = '#1b1a1a'; for (const hx of [200, 900]) { g.beginPath(); g.moveTo(hx, 0); g.lineTo(hx + 120, 0); g.lineTo(hx + 80, 90); g.lineTo(hx + 30, 70); g.closePath(); g.fill(); } }
+  else {
+    // Ruinen und Dschungel im Hintergrund
+    for (let i = 0, x = XL + 40; x < XR; i++, x += 360) { if (th === 'park') apoTree(x + 100, 1 + (i % 2) * 0.3); else if (th === 'camp') { g.fillStyle = '#5a3a1a'; for (let k = 0; k < 7; k++) { g.fillRect(x + k * 44, FLOOR - 220 + (k % 2) * 20, 30, 220); } g.lineWidth = 4; g.strokeStyle = LINE; g.strokeRect(x, FLOOR - 220, 300, 220); } else apoRuin(x, 260 + (i % 3) * 40, 230 + (i % 4) * 50, i % 2 ? '#4a4440' : '#3e3a38'); }
+    if (th === 'lager') { // dein kaputtes Haus
+      g.fillStyle = '#4a8ab0'; g.fillRect(500, 130, 420, FLOOR - 130); g.lineWidth = 6; g.strokeStyle = LINE; g.strokeRect(500, 130, 420, FLOOR - 130);
+      g.fillStyle = '#7a1a1a'; g.beginPath(); g.moveTo(475, 135); g.lineTo(640, 40); g.lineTo(700, 80); g.lineTo(760, 60); g.lineTo(945, 135); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#1b1a1a'; g.fillRect(620, 260, 180, FLOOR - 260); g.fillStyle = '#5a3a1a'; g.save(); g.translate(620, FLOOR); g.rotate(-0.35); g.fillRect(0, -170, 90, 170); g.restore();
+      marker('BOB', 710, 200, 54, '#222');
+    }
+    if (th === 'camp') { // Wachturm
+      g.fillStyle = '#5a3a1a'; g.fillRect(1500, 60, 24, FLOOR - 60); g.fillRect(1640, 60, 24, FLOOR - 60); g.fillRect(1480, 40, 204, 60); g.lineWidth = 5; g.strokeStyle = LINE; g.strokeRect(1480, 40, 204, 60);
+      g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(1582, 0); g.lineTo(1582, -60); g.lineTo(1640, -30); g.closePath(); g.fill();
+      marker('AFFEN-LAGER', 600, 120, 60, '#c0392b');
+    }
+    if (th === 'markt') { g.fillStyle = '#6a6058'; g.fillRect(400, 160, 700, FLOOR - 160); g.lineWidth = 6; g.strokeStyle = LINE; g.strokeRect(400, 160, 700, FLOOR - 160); g.fillStyle = '#b02020'; g.fillRect(380, 120, 740, 60); g.strokeRect(380, 120, 740, 60); marker('SUPERM RKT', 750, 152, 48, '#fff'); }
+  }
+  // Durchgänge
+  for (const a of R.arches || []) {
+    g.fillStyle = '#0d0b08'; g.beginPath(); g.moveTo(a.x - 130, FLOOR); g.lineTo(a.x - 130, 260); g.arc(a.x, 260, 130, Math.PI, 0); g.lineTo(a.x + 130, FLOOR); g.closePath(); g.fill(); g.lineWidth = 8; g.strokeStyle = '#3a2814'; g.stroke();
+    g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(a.x - 90, 150, 180, 38, 8); g.fill(); g.lineWidth = 3; g.strokeStyle = LINE; g.stroke();
+    g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(a.label || '?', a.x, 170);
+  }
+  // Boden
+  const fg = g.createLinearGradient(0, FLOOR, 0, H); fg.addColorStop(0, th === 'laden' ? '#6a6258' : '#4a5a2a'); fg.addColorStop(1, th === 'laden' ? '#7a7066' : '#5a6a32'); g.fillStyle = fg; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+  if (th === 'strasse' || th === 'markt') { g.fillStyle = '#3a3a3a'; g.fillRect(XL, 640, VW, 160); g.fillStyle = '#c9b060'; for (let x = Math.floor(XL / 200) * 200; x < XR; x += 200) g.fillRect(x, 715, 100, 10); }
+  if (th === 'park') { g.fillStyle = '#2a6a8a'; g.fillRect(XL, H - 90, VW, 90); g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 3; for (let x = XL + ((t * 60) % 120) - 120; x < XR; x += 120) { g.beginPath(); g.moveTo(x, H - 50); g.quadraticCurveTo(x + 30, H - 60, x + 60, H - 50); g.stroke(); } }
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3; for (let x = Math.floor(XL / 230) * 230 + 40; x < XR; x += 230) { g.beginPath(); g.moveTo(x, FLOOR + 40); g.lineTo(x + 30, FLOOR + 90); g.lineTo(x + 10, FLOOR + 140); g.stroke(); }
+  // Ranken
   for (let x = Math.floor(XL / 90) * 90, i = 0; x < XR; x += 90, i++) {
-    const len = 90 + ((i * 53) % 7) * 30, sw = Math.sin(t + i) * 6;
+    const len = 70 + ((i * 53) % 7) * 26, sw = Math.sin(t + i) * 5;
     g.strokeStyle = '#2f6a1e'; g.lineWidth = 6; g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + 18 + sw, len / 2, x + sw, len); g.stroke();
     g.fillStyle = '#3f8a28'; for (let k = 20; k < len; k += 28) { g.beginPath(); g.ellipse(x + (k % 56 ? 12 : -12) + sw * k / len, k, 12, 7, k % 56 ? 0.5 : -0.5, 0, 7); g.fill(); }
   }
-  // Büsche an der Wand
-  for (let x = Math.floor(XL / 140) * 140, i = 0; x < XR; x += 140, i++) { g.fillStyle = i % 2 ? '#2f7a22' : '#3f8a28'; g.beginPath(); g.arc(x, FLOOR + 4, 46 + (i % 3) * 10, Math.PI, 0); g.fill(); }
-  // Risse
-  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3; for (let x = Math.floor(XL / 260) * 260 + 40; x < XR; x += 260) { g.beginPath(); g.moveTo(x, FLOOR + 40); g.lineTo(x + 30, FLOOR + 90); g.lineTo(x + 10, FLOOR + 140); g.lineTo(x + 50, FLOOR + 200); g.stroke(); }
+  // Enden
+  for (const [side, x] of [['l', XL], ['r', XR]]) {
+    if (R.exits[side]) { const eg = g.createLinearGradient(x, 0, side === 'l' ? x + 200 : x - 200, 0); eg.addColorStop(0, 'rgba(0,0,0,.8)'); eg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = eg; g.fillRect(side === 'l' ? x : x - 200, 0, 200, H); }
+    else { g.fillStyle = '#2a3a1a'; g.fillRect(side === 'l' ? x : x - 50, 0, 50, H); }
+  }
+}
+function drawVersteck(o) {
+  const s = scaleAt(o.base), hid = apo.on && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55;
+  g.save(); if (hid) g.globalAlpha = 0.75;
+  g.lineWidth = 4; g.strokeStyle = LINE;
+  if (o.k === 'auto') {
+    const w = o.w, x = o.x - w / 2, y = o.base;
+    g.fillStyle = '#6a3a2a'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 80); g.lineTo(x + w * 0.22, y - 90); g.lineTo(x + w * 0.32, y - 150); g.lineTo(x + w * 0.7, y - 150); g.lineTo(x + w * 0.82, y - 90); g.lineTo(x + w, y - 80); g.lineTo(x + w, y); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#1b1a1a'; g.fillRect(x + w * 0.36, y - 140, w * 0.14, 46); g.fillRect(x + w * 0.54, y - 140, w * 0.14, 46);
+    g.fillStyle = 'rgba(120,60,20,.6)'; g.beginPath(); g.arc(x + w * 0.2, y - 50, 20, 0, 7); g.fill(); g.beginPath(); g.arc(x + w * 0.7, y - 30, 26, 0, 7); g.fill();
+    g.fillStyle = '#3f8a28'; for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(x + 20 + k * w / 6, y - 10, 26, Math.PI, 0); g.fill(); }
+  } else {
+    const n = Math.max(3, Math.round(o.w / 60));
+    for (let k = 0; k < n; k++) {
+      const bx = o.x - o.w / 2 + 30 + k * (o.w - 60) / (n - 1), sway = Math.sin(performance.now() / 600 + k) * 4;
+      if (o.k === 'gras') { g.strokeStyle = '#2f7a22'; g.lineWidth = 6; for (let j = -3; j <= 3; j++) { g.beginPath(); g.moveTo(bx + j * 8, o.base + 6); g.quadraticCurveTo(bx + j * 10 + sway, o.base - 80, bx + j * 14 + sway * 2, o.base - 150 - (j % 2) * 20); g.stroke(); } }
+      else { g.fillStyle = k % 2 ? '#2f7a22' : '#3f8a28'; g.beginPath(); g.arc(bx + sway, o.base - 60, 62, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = '#1a4a12'; g.stroke(); }
+    }
+  }
+  g.restore();
+}
+function drawLootSpot(o) {
+  const empty = apo.on && lootEmpty(o), x = o.x, y = o.base;
+  g.lineWidth = 4; g.strokeStyle = LINE;
+  if (o.k === 'kiste') { g.fillStyle = empty ? '#5a4a30' : '#7a5a2a'; g.fillRect(x - 50, y - 70, 100, 70); g.strokeRect(x - 50, y - 70, 100, 70); g.strokeRect(x - 50, y - 70, 100, 18); g.fillStyle = '#3a5a2a'; g.font = '900 16px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('MUNI', x, y - 30); }
+  else if (o.k === 'regal') { g.fillStyle = '#5d646c'; g.fillRect(x - 70, y - 180, 140, 180); g.strokeRect(x - 70, y - 180, 140, 180); for (const sy of [-130, -70]) { g.fillStyle = '#3a3f44'; g.fillRect(x - 70, y + sy, 140, 10); if (!empty) { g.fillStyle = '#c0392b'; g.fillRect(x - 50, y + sy - 30, 22, 30); g.fillStyle = '#e0a10f'; g.fillRect(x + 10, y + sy - 26, 22, 26); } } }
+  else if (o.k === 'kuehl') { g.fillStyle = '#d9dde3'; g.fillRect(x - 55, y - 170, 110, 170); g.strokeRect(x - 55, y - 170, 110, 170); g.fillStyle = 'rgba(120,200,255,.5)'; g.fillRect(x - 45, y - 160, 90, 120); if (!empty) { g.fillStyle = '#2f6fe0'; for (let k = 0; k < 3; k++) g.fillRect(x - 35 + k * 25, y - 110, 14, 40); } }
+  else if (o.k === 'tonne') { g.fillStyle = '#3a6a8a'; g.fillRect(x - 40, y - 100, 80, 100); g.strokeRect(x - 40, y - 100, 80, 100); g.fillStyle = empty ? '#2a3a44' : '#6ab6e8'; g.beginPath(); g.ellipse(x, y - 100, 40, 12, 0, 0, 7); g.fill(); g.stroke(); }
+  else if (o.k === 'auto') { /* Auto zum Durchsuchen ist ein Versteck */ }
+  else if (o.k === 'fluss') { g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(x - 70, y - 60, 140, 34, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 16px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('↓ Fluss', x, y - 42); }
+  if (!empty && o.k !== 'fluss' && Math.abs(bob.x - x) < 300) { g.fillStyle = `rgba(255,230,120,${0.5 + 0.4 * Math.sin(performance.now() / 300)})`; g.beginPath(); g.arc(x, y - 200, 7, 0, 7); g.fill(); }
 }
 function apoListItems(list) {
-  if (!apo.on || apo.intro > 0) return;
-  for (const it of AP.items) list.push({ y: it.y, f: () => drawApoItem(it) });
+  if (!apo.on || apo.intro > 0 || !ROOMS[cur].apo) return;
   for (const e of AP.en) list.push({ y: e.y, f: () => drawApe(e) });
   if (AP.bossE) list.push({ y: AP.bossE.y, f: () => drawApe(AP.bossE) });
   list.push({ y: 99999, f: drawApoTop });
 }
-function drawApoItem(it) {
-  const s = scaleAt(it.y), b = Math.sin(performance.now() / 300 + it.x) * 4;
-  g.save(); g.translate(it.x, it.y - 20 + b); g.scale(s, s); g.lineWidth = 3; g.strokeStyle = LINE;
-  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(0, 22 - b, 26, 7, 0, 0, 7); g.fill();
-  if (it.k === 'banane') { g.fillStyle = '#ffe14a'; g.beginPath(); g.moveTo(-24, -6); g.quadraticCurveTo(0, 26, 26, -10); g.quadraticCurveTo(0, 10, -24, -6); g.fill(); g.stroke(); g.fillStyle = '#6b5a10'; g.fillRect(22, -14, 6, 8); }
-  else if (it.k === 'wasser') { g.fillStyle = 'rgba(120,200,255,.85)'; g.beginPath(); g.roundRect(-12, -30, 24, 46, 6); g.fill(); g.stroke(); g.fillStyle = '#2f6fe0'; g.fillRect(-7, -40, 14, 10); g.strokeRect(-7, -40, 14, 10); g.fillStyle = '#fff'; g.fillRect(-12, -12, 24, 10); }
-  else { g.fillStyle = '#fff'; g.beginPath(); g.roundRect(-22, -22, 44, 36, 6); g.fill(); g.stroke(); g.fillStyle = '#e0262b'; g.fillRect(-4, -16, 8, 24); g.fillRect(-12, -8, 24, 8); }
-  g.restore();
-}
 function drawApe(e) {
   const s = scaleAt(e.y), t = performance.now() / 1000, w = (e.boss ? apoBossCfg().w : 100) * s;
+  // Sichtkegel der Patrouille
+  if (!e.boss) {
+    const range = apoNight() > 0.5 ? 300 : 430, col = e.st === 'alert' ? '255,60,60' : e.st === 'search' ? '255,200,60' : '255,255,180';
+    const cg = g.createLinearGradient(e.x, 0, e.x + e.dir * range, 0); cg.addColorStop(0, `rgba(${col},.28)`); cg.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = cg; g.beginPath(); g.moveTo(e.x, e.y - 50 * s); g.lineTo(e.x + e.dir * range, e.y - 140); g.lineTo(e.x + e.dir * range, e.y + 60); g.closePath(); g.fill();
+  }
   if (e.boss) { const au = g.createRadialGradient(e.x, e.y - w * 0.6, 10, e.x, e.y - w * 0.6, w); au.addColorStop(0, 'rgba(255,40,40,.35)'); au.addColorStop(1, 'rgba(255,40,40,0)'); g.fillStyle = au; g.fillRect(e.x - w, e.y - w * 1.6, w * 2, w * 1.8); }
   g.save(); if (e.hit) g.filter = 'brightness(2)';
-  drawPetCube(e.id, e.x, e.y, w, e.x < bob.x ? -1 : 1, -Math.abs(Math.sin(t * (e.boss && apo.pet === 'orangutan' ? 3 : 9) + e.x)) * 6 * s);
+  const dir = e.boss ? (e.x < bob.x ? 1 : -1) : e.dir, mv = e.boss || !(e.wait > 0);
+  drawPetCube(e.id, e.x, e.y, w, -dir, mv ? -Math.abs(Math.sin(t * (e.boss && apo.pet === 'orangutan' ? 3 : 9) + e.x)) * 6 * s : 0);
   g.restore();
-  // Waffe
-  const dir = e.x < bob.x ? 1 : -1, gy = e.y - w * 0.45;
+  const gy = e.y - w * 0.45;
   g.fillStyle = '#222'; g.strokeStyle = LINE; g.lineWidth = 3; g.fillRect(e.x + dir * w * 0.35 - (dir < 0 ? 60 * s : 0), gy, 60 * s, 14 * s); g.strokeRect(e.x + dir * w * 0.35 - (dir < 0 ? 60 * s : 0), gy, 60 * s, 14 * s);
   if (e.boss) {
-    const c = apoBossCfg(), bw = 260; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(e.x - bw / 2, e.y - w * 1.25 - 30, bw, 22); g.fillStyle = '#ff3b3b'; g.fillRect(e.x - bw / 2 + 3, e.y - w * 1.25 - 27, (bw - 6) * Math.max(0, e.hp / e.max), 16);
+    const bw = 260; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(e.x - bw / 2, e.y - w * 1.25 - 30, bw, 22); g.fillStyle = '#ff3b3b'; g.fillRect(e.x - bw / 2 + 3, e.y - w * 1.25 - 27, (bw - 6) * Math.max(0, e.hp / e.max), 16);
     g.fillStyle = '#fff'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(PETS[apo.pet].name.toUpperCase() + ' (MUTIERT)', e.x, e.y - w * 1.25 - 46);
-  } else { g.fillStyle = '#300'; g.fillRect(e.x - 30, e.y - w * 1.05 - 10, 60, 7); g.fillStyle = '#ff3b3b'; g.fillRect(e.x - 30, e.y - w * 1.05 - 10, 60 * e.hp / 3, 7); }
+  } else if (e.sayT > 0) { marker(e.say, e.x, e.y - w * 1.1 - 30, 52, e.say === '!' ? '#ff3b3b' : '#ffcc1a'); }
 }
 function drawApoTop() {
-  // Schockwellen, Kugeln, Waffe von Bob, Nacht
   for (const s of AP.shock) { g.strokeStyle = `rgba(255,140,40,${1 - s.r / 700})`; g.lineWidth = 10; g.beginPath(); g.ellipse(s.x, s.y, s.r, s.r / 2.2, 0, 0, 7); g.stroke(); }
   for (const b of AP.bul) { g.fillStyle = b.me ? '#ffe14a' : '#ff5a3a'; g.beginPath(); g.arc(b.x, b.y, b.big ? 18 : 6, 0, 7); g.fill(); if (b.big) { g.strokeStyle = LINE; g.lineWidth = 3; g.stroke(); } }
   if (!bob.hidden) {
@@ -1318,40 +1450,47 @@ function drawApoTop() {
     if (AP.flash > 0) { g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(80 * s, 0, 16 * s, 0, 7); g.fill(); }
     g.restore();
   }
-  const n = apoNight(); if (n > 0) { g.fillStyle = `rgba(5,10,30,${0.45 * n})`; g.fillRect(XL, 0, VW, H); }
+  const n = apoNight(); if (n > 0) { g.fillStyle = `rgba(5,10,30,${0.5 * n})`; g.fillRect(XL, 0, VW, H); }
 }
+function apoBagRects() { return ['dose', 'wasser', 'medi'].map((k, i) => ({ k, x: XL + 30 + i * 92, y: 214, w: 82, h: 70 })); }
 function drawApoHud() {
   if (!apo.on) return;
-  const t = performance.now() / 1000;
   if (apo.intro > 0) {
-    g.fillStyle = 'rgba(0,0,0,.85)'; g.fillRect(XL, 0, VW, H);
-    g.globalAlpha = Math.min(1, apo.intro); marker('DIE AFFEN ÜBERNEHMEN DIE WELT', W / 2, 300, 64, '#ff4d4d');
-    g.fillStyle = '#fff'; g.font = '600 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(PETS[apo.pet].name + ' war zu lange im Labor. Er hat sprechen gelernt – und ist wütend.', W / 2, 400);
-    g.fillText('Überlebe 7 Tage: iss, trink, wehr dich. Dann kommt der Bosskampf.', W / 2, 444);
-    g.fillText(isTouch() ? 'Schießen: Knopf unten rechts' : 'Schießen: Mausklick (zielen) oder Leertaste (nächster Gegner)', W / 2, 500);
+    g.fillStyle = 'rgba(0,0,0,.88)'; g.fillRect(XL, 0, VW, H);
+    g.globalAlpha = Math.min(1, apo.intro); marker('DIE AFFEN ÜBERNEHMEN DIE WELT', W / 2, 250, 64, '#ff4d4d');
+    g.fillStyle = '#fff'; g.font = '600 23px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    [PETS[apo.pet].name + ' war zu lange im Labor. Er hat sprechen gelernt – und ist wütend.', 'Überlebe 7 Tage in der zerstörten Welt. Dann kommt der Bosskampf.', 'Durchsuch Kisten, Regale und Kühlschränke nach Essen, Wasser und Munition (E).', 'Versteck dich in Büschen, hohem Gras und Autowracks vor Patrouillen.', 'Schleich dich von hinten an und überwältige sie lautlos (E). Schüsse machen Lärm!', isTouch() ? 'Schießen: FEUER-Knopf · Essen/Trinken: Symbole links' : 'Schießen: Mausklick / Leertaste · Essen 1 · Trinken 2 · Verband 3'].forEach((l, i) => g.fillText(l, W / 2, 340 + i * 42));
     g.globalAlpha = 1; return;
   }
-  // Leisten
   const bars = [['Leben', apo.hp, '#ff3b3b'], ['Essen', apo.food, '#ffcc1a'], ['Trinken', apo.water, '#39b6ff']];
-  g.fillStyle = 'rgba(15,20,30,.7)'; g.beginPath(); g.roundRect(XL + 20, 76, 270, 30 + bars.length * 34, 16); g.fill();
-  bars.forEach(([l, v, c], i) => { const y = 96 + i * 34; g.fillStyle = '#fff'; g.font = '700 16px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(l, XL + 36, y + 8); g.fillStyle = '#333'; g.fillRect(XL + 120, y, 150, 16); g.fillStyle = c; g.fillRect(XL + 120, y, 150 * Math.max(0, v) / 100, 16); });
-  const tx = apo.boss ? 'BOSSKAMPF: ' + PETS[apo.pet].name : 'Tag ' + apoDay() + ' von 7' + (apoNight() > 0.5 ? ' · Nacht' : '');
+  g.fillStyle = 'rgba(15,20,30,.75)'; g.beginPath(); g.roundRect(XL + 20, 76, 290, 216, 16); g.fill();
+  bars.forEach(([l, v, c], i) => { const y = 96 + i * 30; g.fillStyle = '#fff'; g.font = '700 16px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(l, XL + 36, y + 8); g.fillStyle = '#333'; g.fillRect(XL + 120, y, 170, 16); g.fillStyle = c; g.fillRect(XL + 120, y, 170 * Math.max(0, v) / 100, 16); });
+  g.fillStyle = '#ffe14a'; g.font = '800 17px system-ui'; g.fillText('Munition: ' + apo.ammo, XL + 36, 196);
+  if (apoHidden()) { g.fillStyle = '#3cff5a'; g.fillText('● versteckt', XL + 190, 196); }
+  for (const b of apoBagRects()) {
+    const n = apo.bag[b.k] || 0; g.fillStyle = n ? '#2a2f38' : '#1b1e24'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill();
+    g.font = '800 15px system-ui'; g.textAlign = 'center'; g.fillStyle = n ? '#fff' : '#666';
+    g.fillText({ dose: 'Dose', wasser: 'Wasser', medi: 'Verband' }[b.k], b.x + b.w / 2, b.y + 22); g.font = '900 24px system-ui'; g.fillText('× ' + n, b.x + b.w / 2, b.y + 50);
+    if (!isTouch()) { g.font = '700 12px system-ui'; g.fillStyle = '#aaa'; g.fillText({ dose: '1', wasser: '2', medi: '3' }[b.k], b.x + 10, b.y + 10); }
+  }
+  const tx = apo.boss ? (cur === 'apo_camp' ? 'BOSSKAMPF: ' + PETS[apo.pet].name : 'Ab ins Affen-Lager – der Boss wartet!') : 'Tag ' + apoDay() + ' von 7' + (apoNight() > 0.5 ? ' · Nacht' : '');
   g.font = '800 24px system-ui'; const w = g.measureText(tx).width + 50; g.fillStyle = apo.boss ? 'rgba(200,30,30,.9)' : 'rgba(40,80,20,.9)'; g.beginPath(); g.roundRect(W / 2 - w / 2, 16, w, 46, 23); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(tx, W / 2, 40);
   if (!apo.boss) { g.fillStyle = '#333'; g.fillRect(W / 2 - 120, 66, 240, 8); g.fillStyle = '#3cff5a'; g.fillRect(W / 2 - 120, 66, 240 * (apo.t / (7 * APO_DAY)), 8); }
-  if (apo.boss && cur !== 'draussen') { g.fillStyle = '#fff'; g.font = '700 20px system-ui'; g.fillText('Der Boss wartet vor deinem Haus!', W / 2, 96); }
   if (isTouch()) { const b = apoBtn(); g.fillStyle = 'rgba(224,38,43,.85)'; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = LINE; g.stroke(); g.fillStyle = '#fff'; g.font = '900 20px system-ui'; g.fillText('FEUER', b.x, b.y + 1); }
   if (AP.hurt > 0) { g.fillStyle = `rgba(255,0,0,${AP.hurt})`; g.fillRect(XL, 0, VW, H); }
-  if (AP.dead) { g.fillStyle = 'rgba(60,0,0,.75)'; g.fillRect(XL, 0, VW, H); marker('DU BIST GESTORBEN', W / 2, 360, 72, '#fff'); g.fillStyle = '#fff'; g.font = '600 24px system-ui'; g.fillText('Alles beginnt wieder bei Tag 1 …', W / 2, 440); }
+  if (AP.dead) { g.fillStyle = 'rgba(60,0,0,.8)'; g.fillRect(XL, 0, VW, H); marker('DU BIST GESTORBEN', W / 2, 360, 72, '#fff'); g.fillStyle = '#fff'; g.font = '600 24px system-ui'; g.textAlign = 'center'; g.fillText('Alles beginnt wieder bei Tag 1 …', W / 2, 440); }
 }
 function apoBtn() { return { x: SXR - 110, y: H - 230, r: 62 }; }
 addEventListener('keydown', e => {
-  if (!apo.on || e.code !== 'Space' || apo.intro > 0 || menu.open || phone.open || wr.open || bag.open || pp.open || stz.on || tres.on || chase.on) return;
-  e.preventDefault(); apoShootNearest();
-});
+  if (!apo.on || apo.intro > 0 || menu.open || phone.open || wr.open || bag.open || pp.open || stz.on || tres.on || chase.on) return;
+  if (e.code === 'Space') { e.preventDefault(); apoShootNearest(); }
+  else if (/^Digit[123]$/.test(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); useBag(['dose', 'wasser', 'medi'][+e.code.slice(5) - 1]); }
+}, true);
 function apoClick(x, y) {
-  if (!apo.on || apo.intro > 0 || menu.open || phone.open || wr.open || bag.open || pp.open || build.on) return false;
+  if (!apo.on || menu.open || phone.open || wr.open || bag.open || pp.open || build.on) return false;
+  if (apo.intro > 0) { apo.intro = 0; return true; }
+  for (const b of apoBagRects()) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { useBag(b.k); return true; }
   if (isTouch()) { const b = apoBtn(); if (Math.hypot(x - b.x, y - b.y) < b.r + 10) { apoShootNearest(); return true; } return false; }
   if (pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) return false;
   apoShoot(x + camX, y); return true;
@@ -1792,7 +1931,8 @@ function drawOutside() {
 
 function room() {
   const R = ROOMS[cur];
-  if (R.kind === 'kanal') drawKanal(R);
+  if (R.apo) drawApoRoom(R);
+  else if (R.kind === 'kanal') drawKanal(R);
   else if (R.kind === 'zellen') drawZellen(R);
   else if (R.kind === 'markt') drawMarkt(R);
   else if (R.kind === 'house') drawOutside();
@@ -1839,7 +1979,6 @@ function room() {
   if (cur === 'wache') drawWacheExtras();
   if (cur === 'polizeiplatz') drawStreifenwagen(1250);
   if (cur === 'labor') drawLaborInnen();
-  drawApoWorld();
 }
 
 // Raumwechsel mit kurzem Abblenden
@@ -2616,7 +2755,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal()); }
+function canInteract() { return !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -2799,6 +2938,8 @@ let toast = { text: '', t: 0 };
 function openMenu() {
   if (nearGuard()) { openBribe(); return; }
   if (nearTerminal()) { openLabor(); return; }
+  { const td = nearTakedown(); if (td) { doTakedown(td); return; } }
+  { const lt = nearLoot(); if (lt) { doLoot(lt); return; } }
   if (nearPritsche()) { if (canSleepNow()) sleepTo('morgen'); else toast = { text: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr. Arbeite doch an der Stanze!', t: 3.5 }; return; }
   if (nearWerkbank()) { startStanze(); return; }
   if (nearDrop()) { dwPickup(nearDrop()); return; }
@@ -2943,6 +3084,8 @@ function interactTarget() {
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
+  { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  { const lt = nearLoot(); if (lt) return { x: lt.x, y: lt.base - 220, label: lt.k === 'fluss' ? 'Trinken' : lootEmpty(lt) ? 'Leer' : 'Durchsuchen' }; }
   if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
   if (nearWerkbank()) return { x: 700, y: FLOOR - 120, label: 'Arbeiten' };
   const dr = nearDrop();
@@ -5438,7 +5581,7 @@ function drawItemIcon(id, x, y, s) {
 const HB = { n: 6, s: 74, gap: 10 };
 function hbRect(i) { const w = HB.n * HB.s + (HB.n - 1) * HB.gap; return { x: W / 2 - w / 2 + i * (HB.s + HB.gap), y: H - HB.s - 16, w: HB.s, h: HB.s }; }
 function hbAt(x, y) { for (let i = 0; i < HB.n; i++) { const r = hbRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) return i; } return -1; }
-function hotbarVisible() { return !build.on && !wr.open && !shopCat.open && !wk.on && !sleepFx && !phone.open && !menu.open && !pp.open; }
+function hotbarVisible() { return !apo.on && !build.on && !wr.open && !shopCat.open && !wk.on && !sleepFx && !phone.open && !menu.open && !pp.open; }
 function drawSlot(r, id, hl, num) {
   g.fillStyle = hl ? 'rgba(255,255,255,.95)' : 'rgba(20,24,34,.6)'; softShadow(10, 3);
   g.beginPath(); g.roundRect(r.x, r.y, r.w, r.h, 16); g.fill(); noShadow();
@@ -5705,7 +5848,7 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
-else if (apo.on) { cur = 'draussen'; bob.x = 600; bob.y = 650; apo.intro = Math.min(apo.intro, 0); }
+else if (apo.on) { cur = 'apo_lager'; bob.x = 600; bob.y = 640; apo.intro = 0; }
 requestAnimationFrame(frame);
 }
 </script>
