@@ -1549,6 +1549,7 @@ function apoSees(e) {
 function apoTick(dt) {
   if (!apo.on) return;
   if (apo.intro > 0) { apo.intro -= dt; return; }
+  if (apo.won) { AP.en = []; AP.storm = null; AP.inside = AP.inside || null; if (AP.flash > 0) AP.flash -= dt; if (AP.rec > 0) AP.rec -= dt * 6; if (AP.fx) gunFxTick(dt); return; }
   if (!ROOMS[cur].apo) { if (!fade.dir) go('apo_lager', [600, 640]); return; }
   if (AP.dead) { AP.dead -= dt; if (AP.dead <= 0) { AP.dead = 0; const id = apo.pet; apo = apoFresh(id); apo.intro = 0; saveApo(); AP.bossE = null; go('apo_lager', [600, 640]); } return; }
   if (AP.room !== cur || fade.dir) { if (fade.dir) return; apoReset(); }
@@ -1630,14 +1631,20 @@ function apoTick(dt) {
   if (apo.hp <= 0) { apo.hp = 0; AP.dead = 3.5; AP.en = []; AP.bul = []; }
 }
 function apoWin() {
-  const id = apo.pet; apo = { on: false, pet: null, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 0, ammo: 12, bag: { dose: 0, wasser: 0, medi: 0 }, looted: {} }; saveApo(); AP.bossE = null; AP.en = []; AP.bul = [];
-  if (!owned.includes(id)) owned.push(id); activePet = id; saveOwned();
-  go('draussen', [500, 650]);
-  const p = petFor(id); p.room = 'draussen'; p.x = 700; p.y = 650; p.mode = 'home';
+  // Boss besiegt: Die Welt bleibt noch kaputt, bis Bob zu Hause ausgeschlafen hat
+  const id = apo.pet; apo.won = true; apo.boss = false; saveApo(); AP.bossE = null; AP.en = []; AP.bul = []; AP.storm = null; AP.drop = null;
   earn(3000); bump('apo');
   if (!wear.owned.includes('ueberlebender')) { wear.owned.push('ueberlebender'); saveWear(); }
   achPops.push({ a: { name: 'Die Welt ist gerettet!', outfit: OUTFITS.ueberlebender.name }, t: 6, extra: '+3.000 € Bargeld · ' + PETS[id].name + ' ist wieder lieb' });
-  toast = { text: 'Du hast ' + PETS[id].name + ' besiegt – er ist wieder ganz der Alte. Die Welt erholt sich!', t: 6 };
+  toast = { text: 'Du hast ' + PETS[id].name + ' besiegt! Geh nach Hause in dein Haus und schlaf dich aus.', t: 7 };
+}
+function apoFloorSleep() { return apo.on && apo.won && !ROOMS[cur].apo && !fade.dir && !sleepFx && !Object.values(furn).some(l => (l || []).some(f => f.t === 'bett' || f.t === 'doppelbett')); }
+function apoFinish() {
+  // nach dem Ausschlafen ist alles wieder wie vorher
+  const id = apo.pet; apo = { on: false, pet: null, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 0, ammo: 12, bag: { dose: 0, wasser: 0, medi: 0 }, looted: {} }; saveApo();
+  AP.en = []; AP.bul = []; AP.inside = null;
+  if (id) { if (!owned.includes(id)) owned.push(id); activePet = id; saveOwned(); const p = petFor(id); p.room = cur; p.x = bob.x + 160; p.y = bob.y; p.mode = 'home'; }
+  toast = { text: 'Guten Morgen! Die Welt ist wieder wie vorher' + (id ? ' – und ' + PETS[id].name + ' liegt friedlich neben dir.' : '.'), t: 6 };
 }
 // ---------- Karte der Apokalypse zeichnen ----------
 function apoRuin(x, w, h, col) {
@@ -1838,6 +1845,12 @@ function drawApoTop() {
 function apoBagRects() { return ['dose', 'wasser', 'medi'].map((k, i) => ({ k, x: XL + 30 + i * 92, y: 214, w: 82, h: 70 })); }
 function drawApoHud() {
   if (!apo.on) return;
+  if (apo.won) {
+    const t = performance.now() / 1000; g.fillStyle = `rgba(30,120,50,${0.85 + 0.1 * Math.sin(t * 3)})`; g.beginPath(); g.roundRect(W / 2 - 330, 150, 660, 66, 18); g.fill();
+    g.fillStyle = '#fff'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Überlebt! 🏆', W / 2, 172);
+    g.font = '700 16px system-ui'; g.fillText(ROOMS[cur].apo ? 'Geh in dein Haus (Tür im Unterschlupf) und schlaf dich aus.' : 'Leg dich ins Bett und schlaf dich aus – dann ist alles wieder wie vorher.', W / 2, 198);
+    return;
+  }
   if (apo.intro > 0) {
     g.fillStyle = 'rgba(0,0,0,.88)'; g.fillRect(XL, 0, VW, H);
     g.globalAlpha = Math.min(1, apo.intro); marker('DIE AFFEN ÜBERNEHMEN DIE WELT', W / 2, 250, 64, '#ff4d4d');
@@ -3188,7 +3201,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside); }
+function canInteract() { return !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3372,8 +3385,9 @@ function openMenu() {
   if (nearGuard()) { openBribe(); return; }
   if (nearTerminal()) { openLabor(); return; }
   { const td = nearTakedown(); if (td) { doTakedown(td); return; } }
+  if (apoFloorSleep()) { sleepTo('morgen'); return; }
   if (apo.on && AP.inside) { toggleHaus(); return; }
-  { const hd = nearHausDoor(); if (hd) { toggleHaus(hd); return; } }
+  { const hd = nearHausDoor(); if (hd) { if (apo.won && cur === 'apo_lager') { go('spawn', [970, FLOOR + 70]); return; } toggleHaus(hd); return; } }
   { const db = nearDropBox(); if (db) { apoAct('loot', 1.4, () => { AP.drop = null; const a = 10 + Math.floor(Math.random() * 8); apo.ammo += a; apo.bag.dose += 2; apo.bag.wasser += 2; apo.bag.medi += 1; const of = apoFindOutfit(0.5); toast = { text: 'Abwurf: ' + a + ' Patronen, 2 Dosen, 2 Wasser, 1 Verband' + (of ? ', Outfit „' + of + '“' : ''), t: 4.5 }; saveApo(); }, { x: db.x, base: db.y }); return; } }
   { const lt = nearLoot(); if (lt) { doLoot(lt); return; } }
   if (nearPritsche()) { if (canSleepNow()) sleepTo('morgen'); else toast = { text: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr. Arbeite doch an der Stanze!', t: 3.5 }; return; }
@@ -3439,7 +3453,7 @@ function openMenu() {
                   { label: 'Abbrechen' }];
   } else if (nearBett()) {
     menu.kind = 'sleep'; menu.title = 'Schlafen – ' + hm(gMin()) + ' Uhr';
-    const muede = gMin() >= 18 * 60 || gMin() < 6 * 60;
+    const muede = gMin() >= 18 * 60 || gMin() < 6 * 60 || (apo.on && apo.won);
     menu.items = muede ? [{ label: 'Bis morgen früh', sleep: 'morgen' }] : [{ label: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr', disabled: true }];
     if (muede && canSleepNight()) menu.items.push({ label: 'Bis in die Nacht', sleep: 'nacht' });
     menu.items.push({ label: 'Abbrechen' });
@@ -3521,8 +3535,9 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  if (apoFloorSleep()) return { x: bob.x, y: bob.y - 260 * scaleAt(bob.y), label: 'Hinlegen & ausschlafen' };
   if (apo.on && AP.inside) return { x: AP.inside.x, y: FLOOR - 230, label: AP.inside.hinter ? 'Rauskommen' : 'Rausgehen' };
-  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: hd.hinter ? 'Hinters Haus' : 'Reingehen' }; }
+  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: apo.won && cur === 'apo_lager' ? 'Nach Hause' : hd.hinter ? 'Hinters Haus' : 'Reingehen' }; }
   { const db = nearDropBox(); if (db) return { x: db.x, y: db.y - 150, label: 'Abwurf öffnen' }; }
   { const lt = nearLoot(); if (lt) return { x: lt.x, y: lt.base - 220, label: lt.k === 'fluss' ? 'Trinken' : lootEmpty(lt) ? 'Leer' : 'Durchsuchen' }; }
   if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
@@ -4931,7 +4946,7 @@ function drawSleep(dt) {
   if (!sleepFx) return;
   const f = sleepFx; f.t += dt;
   let a = f.t < 0.8 ? f.t / 0.8 : f.t < 2.4 ? 1 : 1 - (f.t - 2.4) / 0.8;
-  if (f.t >= 0.8 && !f.done) { f.done = true; gt.T = f.target; saveTime(); }
+  if (f.t >= 0.8 && !f.done) { f.done = true; gt.T = f.target; saveTime(); if (apo.on && apo.won) apoFinish(); }
   g.fillStyle = `rgba(5,8,20,${Math.max(0, a)})`; g.fillRect(XL, 0, VW, H);
   if (f.t > 0.6 && f.t < 2.8) {
     g.globalAlpha = Math.max(0, Math.min(1, a));
@@ -6264,7 +6279,7 @@ function frame(t) {
   // Tür in der Wand: nach oben hineinlaufen
   for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, a.ay || FLOOR + 70]); doorLock = true; }
   const d = R.door;
-  if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
+  if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
   tickTime(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
