@@ -96,7 +96,8 @@ const ROOMS = {
               objs: [
                 { type: 'npc', outfit: 'polizist', x: 1100, base: 560, w: 120, depth: 30, t: -1 },
                 { type: 'theke', x: 950, w: 320, base: 640, h: 130, depth: 70 },
-                { type: 'npc', outfit: 'polizist', x: 200, base: 720, w: 120, depth: 30, t: 1 },
+                { type: 'npc', outfit: 'swat', x: 200, base: 720, w: 120, depth: 30, t: 1 },
+                { type: 'npc', outfit: 'kommissar', x: 790, base: 600, w: 120, depth: 30, t: -1 },
                 { type: 'moebel', t: 'sofa', fx: 1450, base: 620, r: 0 },
                 { type: 'moebel', t: 'pflanze', fx: -120, base: 520, r: 0 },
               ] },
@@ -635,6 +636,8 @@ const NPC_LINES = {
   hoodie: ['…', 'Ich war nie hier. Du auch nicht.', 'Hab gehört, irgendwo hier unten steht eine Truhe.'],
   mantel: ['Ein Glücks-Shot und du bist reich. Oder pleite.', 'Ich handel mit allem. Fast allem.', 'Die Augen im Tunnel? Frag lieber nicht.'],
   polizist: ['Alles ruhig heute.', 'Wir suchen einen Würfel mit Sturmmaske …', 'Die Zellen sind links durch die Tür.', 'Kanalisation? Da gehen wir nicht runter.', 'Hast du was gesehen? Nein? Gut.'],
+  swat: ['Zugriff! … ach nee, falscher Alarm.', 'Ich bin für die harten Fälle da.', 'Wer in den Tresor will, kriegt Ärger.'],
+  kommissar: ['Ich hab da so eine Spur … gelb und eckig.', 'Siehst du das Plakat? Kommt dir der bekannt vor?', 'Jeder macht mal einen Fehler. Und dann krieg ich ihn.'],
   barkeeper: ['Was darf es sein?', 'Hier unten fragt keiner, woher das Geld kommt.'],
 };
 let boostUntil = 0;
@@ -1923,10 +1926,42 @@ Object.assign(OUTFITS, {
       g.fillStyle = '#111'; g.fillRect(x, y + h - 26, w, 14);
     },
     front: (bx, by, hx, hy, t) => {
-      const CP = mkPal('#1f3a6e', '#2a4c8a'); g.lineWidth = 4.5; g.strokeStyle = '#111';
-      cube(hx + 2 + 6 * t, hy - 46, HEAD.w - 4, 50, DEPTH - 2, CP, true, t);
-      cube(hx - 8 + 6 * t, hy - 4, HEAD.w + 16, 12, DEPTH + 12, mkPal('#111', '#222'), true, t);
-      g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(hx + HEAD.w / 2 + 6 * t, hy - 22, 13, 0, 7); g.fill(); g.lineWidth = 3; g.stroke();
+      // Schirmmütze: schmales Band, breiter flacher Deckel, schwarzer Schirm vorne
+      g.lineWidth = 4.5; g.strokeStyle = '#111';
+      const o = 6 * t, cx = hx + HEAD.w / 2 + o;
+      cube(hx + 30 + o, hy - 30, HEAD.w - 60, 32, DEPTH - 12, mkPal('#1f3a6e', '#2a4c8a'), false, t);
+      cube(hx + 12 + o, hy - 50, HEAD.w - 24, 20, DEPTH + 2, mkPal('#24427a', '#2e5294'), true, t);
+      g.fillStyle = '#111'; g.beginPath(); g.moveTo(cx - 76, hy + 2); g.lineTo(cx + 76, hy + 2); g.lineTo(cx + 62, hy + 18); g.lineTo(cx - 62, hy + 18); g.closePath(); g.fill();
+      g.fillStyle = '#ffcc1a'; g.fillRect(hx + 30 + o, hy - 10, HEAD.w - 60, 6);
+      g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 6 : 13; g.lineTo(cx + Math.cos(a) * r, hy - 22 + Math.sin(a) * r); } g.closePath(); g.fill(); g.lineWidth = 2.5; g.stroke();
+    } },
+  swat: { name: 'SWAT', bp: mkPal('#1b1e22', '#2a2e34'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.fillStyle = '#3a4048'; g.beginPath(); g.roundRect(x + 24, y + 6, w - 48, h - 16, 10); g.fill(); g.stroke();
+      g.fillStyle = '#fff'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('POLIZEI', x + w / 2, y + 42);
+      g.fillStyle = '#2a2e34'; for (const px of [x + 46, x + w / 2 - 26, x + w - 98]) { g.fillRect(px, y + 76, 52, 40); g.strokeRect(px, y + 76, 52, 40); }
+    },
+    front: (bx, by, hx, hy, t) => {
+      g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx - 8 + 6 * t, hy - 40, HEAD.w + 16, 62, DEPTH + 10, mkPal('#22262b', '#30353c'), true, t);
+      // Visier über den Augen
+      g.fillStyle = 'rgba(140,200,255,.35)'; g.fillRect(hx + 16, hy + 28, HEAD.w - 32, 52); g.lineWidth = 5; g.strokeRect(hx + 16, hy + 28, HEAD.w - 32, 52);
+      g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(hx + 26, hy + 34, 40, 10);
+    } },
+  kommissar: { name: 'Kommissar', bp: mkPal('#4a4f57', '#5a6069'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.fillStyle = '#f4f4f4'; g.beginPath(); g.moveTo(x + 76, y); g.lineTo(x + w / 2, y + 90); g.lineTo(x + w - 76, y); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#7a1f1f'; g.beginPath(); g.moveTo(x + w / 2 - 10, y + 6); g.lineTo(x + w / 2 + 10, y + 6); g.lineTo(x + w / 2 + 14, y + 70); g.lineTo(x + w / 2, y + 86); g.lineTo(x + w / 2 - 14, y + 70); g.closePath(); g.fill(); g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#2a2d33'; g.fillRect(x, y + h - 30, w, 16);
+      g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(x + 50, y + h - 46); g.lineTo(x + 78, y + h - 46); g.lineTo(x + 78, y + h - 20); g.quadraticCurveTo(x + 64, y + h - 8, x + 50, y + h - 20); g.closePath(); g.fill(); g.stroke();
+    },
+    front: (bx, by, hx, hy, t) => {
+      const HP = mkPal('#5a4632', '#6b5640'); g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx - 20 + 6 * t, hy - 12, HEAD.w + 40, 14, DEPTH + 14, HP, true, t);
+      cube(hx + 36 + 6 * t, hy - 66, HEAD.w - 72, 56, DEPTH - 6, HP, true, t);
+      g.fillStyle = '#2a2018'; g.fillRect(hx + 36 + 6 * t, hy - 26, HEAD.w - 72, 12);
     } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
