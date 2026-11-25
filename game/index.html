@@ -5300,6 +5300,7 @@ const WEB_ITEMS = [
   { id: 'auto2', cat: 'haus', name: 'Autoklicker 2', price: 8000, desc: ['Klickt jetzt alle 4 statt', '5 Sekunden'], once: true, needs: 'auto' },
   { id: 'klick2', cat: 'haus', name: 'Doppel-Klick', price: 12000, desc: ['Jeder Klick aufs Tier', 'bringt 2 € statt 1 €'], once: true, needs: 'auto2' },
   { id: 'tierhaus', cat: 'haus', name: 'Tierhaus', price: 15000, desc: ['Neues Haus im Garten: Tierbett,', 'Napf, Klo, Maid & Kalender'], once: true, needs: 'hundehaus' },
+  { id: 'kralarm', cat: 'haus', name: 'Profit-Alarm', price: 20000, desc: ['Krypto: Ziel-Plus', 'wird direkt angezeigt'], once: true },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
@@ -5321,7 +5322,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5375,6 +5376,7 @@ function webPic(id, cx, cy, sz) {
   if (id.startsWith('acc_')) { g.restore(); g.save(); drawBobFig(cx, cy + 50, sz / 640, 0.6, 0, 1, 'gruen', false, [id.slice(4)]); g.restore(); return; }
   if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
+  if (id === 'kralarm') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#f0b90b'; g.beginPath(); g.moveTo(-30, 20); g.quadraticCurveTo(-26, -34, 0, -36); g.quadraticCurveTo(26, -34, 30, 20); g.lineTo(38, 28); g.lineTo(-38, 28); g.closePath(); g.fill(); g.stroke(); circ(0, 36, 8, '#f0b90b'); g.stroke(); circ(0, -40, 6, '#f0b90b'); g.stroke(); g.fillStyle = '#16c784'; g.beginPath(); g.arc(30, -26, 18, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('+', 30, -25); g.restore(); return; }
   if (id === 'tierhaus') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 30, 100, 20); g.fillStyle = '#e8a25a'; g.fillRect(-36, -8, 72, 44); g.strokeRect(-36, -8, 72, 44); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-46, -6); g.lineTo(0, -46); g.lineTo(46, -6); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#5a2e14'; g.fillRect(-10, 10, 20, 26); g.fillStyle = '#c8ecff'; g.fillRect(-30, 0, 14, 14); g.fillRect(16, 0, 14, 14); g.restore(); return; }
   if (id === 'auto2' || id === 'klick2') { g.fillStyle = id === 'auto2' ? '#555b66' : '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = id === 'auto2' ? '#3cff5a' : '#7a5a00'; g.font = '900 ' + (id === 'auto2' ? 26 : 30) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'auto2' ? '4s' : '×2', 0, 2); g.restore(); return; }
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
@@ -5691,8 +5693,8 @@ try { const d = JSON.parse(localStorage.getItem('bob-krypto') || 'null'); if (d)
 for (const [k, c] of Object.entries(COINS)) { if (!(kr.p[k] > 0)) kr.p[k] = c.start; if (!kr.h[k] || !kr.h[k].length) { kr.h[k] = []; let v = c.start; for (let i = 0; i < KR_HIST; i++) { v *= Math.exp((Math.random() - 0.5) * 2 * c.vol); kr.h[k].push(v); } kr.p[k] = v; } }
 if (!kr.T) kr.T = Math.floor(gt.T / KR_STEP);
 let krSave = 0;
-const KR_ALARM_PREIS = 20000;
 if (!kr.al) kr.al = {};
+if (kr.alarm) { lief.kralarm = true; delete kr.alarm; try { saveLief(); } catch (er) {} }
 kr.edit = null; kr.editTxt = '';
 function krSetAl(k, v) { kr.al[k] = Math.max(0, Math.min(99999999, Math.floor(v))); kr.edit = null; saveKr(); }
 function krEditDone() { if (kr.edit) krSetAl(kr.edit, +kr.editTxt || 0); kr.edit = null; }
@@ -5709,7 +5711,7 @@ addEventListener('keydown', e => {
 }, true);
 // Alarm-Anzeige außerhalb vom Handy
 const krHit = {};
-function krAlarms() { if (!kr.alarm) return []; const L = []; for (const k of Object.keys(COINS)) { const t = kr.al[k] || 0; if (t > 0 && (kr.hold[k] || 0) > 0) { const pl = krPL(k); if (pl >= t) { if (!krHit[k]) krHit[k] = performance.now(); L.push({ k, pl, t }); continue; } } krHit[k] = 0; } return L; }
+function krAlarms() { if (!lief.kralarm) return []; const L = []; for (const k of Object.keys(COINS)) { const t = kr.al[k] || 0; if (t > 0 && (kr.hold[k] || 0) > 0) { const pl = krPL(k); if (pl >= t) { if (!krHit[k]) krHit[k] = performance.now(); L.push({ k, pl, t }); continue; } } krHit[k] = 0; } return L; }
 function drawKrAlarm() {
   const L = krAlarms(); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
   const now = performance.now();
@@ -5819,11 +5821,9 @@ function drawKryptoApp(s) {
     if (have > 0) txt('nach 1 % Gebühr · Plus/Minus ggü. Kaufpreis', s.x + s.w / 2, s.y + 604, '500 11px system-ui', '#4a5468', 'center');
     // Profit-Alarm
     const ay = s.y + 620;
-    if (!kr.alarm) {
-      const b = { x: L, y: ay, w: Wd, h: 42 }, ok = bank.money >= KR_ALARM_PREIS;
-      g.fillStyle = ok ? '#f0b90b' : '#1c2230'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill();
-      txt('Profit-Alarm kaufen · ' + money(KR_ALARM_PREIS), b.x + b.w / 2, b.y + 21, '800 15px system-ui', ok ? '#1b1d22' : '#4a5468', 'center');
-      btns.push({ b, act: () => { if (bank.money < KR_ALARM_PREIS) return; bank.money -= KR_ALARM_PREIS; bank.log.push({ t: 'Profit-Alarm', v: -KR_ALARM_PREIS }); saveBank(); kr.alarm = true; saveKr(); } });
+    if (!lief.kralarm) {
+      g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(L, ay, Wd, 42, 10); g.fill();
+      txt('Profit-Alarm gibt es im bobnet', L + Wd / 2, ay + 21, '700 14px system-ui', '#4a5468', 'center');
     } else {
       const v = kr.al[k] || 0, ed = kr.edit === k, f = { x: L, y: ay, w: 128, h: 42 };
       g.fillStyle = ed ? '#2a3448' : '#141a26'; g.beginPath(); g.roundRect(f.x, f.y, f.w, f.h, 10); g.fill();
