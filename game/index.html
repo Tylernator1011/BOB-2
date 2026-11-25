@@ -4945,6 +4945,8 @@ function kryptoTick(dt) {
 }
 function krFmt(v) { return v >= 1000 ? v.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €' : v >= 1 ? v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €' : v.toLocaleString('de-DE', { maximumFractionDigits: 4 }) + ' €'; }
 function krChange(k) { const h = kr.h[k]; return h.length ? (kr.p[k] / h[0] - 1) * 100 : 0; }
+function krNet(k, part) { return Math.floor((kr.hold[k] || 0) * (part || 1) * kr.p[k] * 0.99); }
+function krPL(k, part) { return krNet(k, part) - Math.round((kr.paid[k] || 0) * (part || 1)); }
 function krWorth() { return Object.keys(COINS).reduce((a, k) => a + (kr.hold[k] || 0) * kr.p[k], 0); }
 function krBuy(k, eur) {
   eur = Math.floor(Math.min(eur, bank.money)); if (eur < 1) { toast = { text: 'Nicht genug Geld auf dem Konto.', t: 2 }; return; }
@@ -4986,15 +4988,17 @@ function drawKryptoApp(s) {
     txt('Dein Depot', L + 16, s.y + 114, '600 14px system-ui', '#8a93a6'); txt(krFmt(worth), L + 16, s.y + 144, '800 28px system-ui', '#fff');
     if (paid > 0) txt((pl >= 0 ? '+' : '') + krFmt(pl) + ' (' + (pl >= 0 ? '+' : '') + (pl / paid * 100).toFixed(1) + ' %)', L + 16, s.y + 174, '700 14px system-ui', pl >= 0 ? '#16c784' : '#ea3943');
     txt('Konto: ' + money(Math.floor(bank.money)), L + Wd - 16, s.y + 114, '600 13px system-ui', '#8a93a6', 'right');
+    if (worth > 0) { const net = Object.keys(COINS).reduce((a, k) => a + krNet(k), 0), npl = net - Math.round(paid); txt('Alles verkaufen:', L + Wd - 16, s.y + 144, '600 12px system-ui', '#8a93a6', 'right'); txt(money(net) + ' (' + (npl >= 0 ? '+' : '') + money(npl) + ')', L + Wd - 16, s.y + 164, '800 14px system-ui', npl >= 0 ? '#16c784' : '#ea3943', 'right'); }
     let y = s.y + 204;
     for (const [k, c] of Object.entries(COINS)) {
-      const b = { x: L, y, w: Wd, h: 86 }, ch = krChange(k);
+      const held = kr.hold[k] > 0, b = { x: L, y, w: Wd, h: held ? 108 : 86 }, ch = krChange(k);
       g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill();
       krCoinIcon(k, L + 30, y + 43, 20);
       txt(c.name, L + 60, y + 30, '700 16px system-ui', '#fff'); txt(c.sym + (kr.hold[k] > 0 ? ' · ' + krFmt(kr.hold[k] * kr.p[k]) : ''), L + 60, y + 54, '500 13px system-ui', '#8a93a6');
       krChart(k, L + 175, y + 22, 70, 40, false);
       txt(krFmt(kr.p[k]), L + Wd - 14, y + 30, '700 15px system-ui', '#fff', 'right'); txt((ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(1) + ' %', L + Wd - 14, y + 54, '700 13px system-ui', ch >= 0 ? '#16c784' : '#ea3943', 'right');
-      btns.push({ b, act: () => { kr.tab = k; } }); y += 96;
+      if (held) { const pl = krPL(k); g.fillStyle = '#0f141e'; g.beginPath(); g.roundRect(L + 10, y + 78, Wd - 20, 24, 8); g.fill(); txt('Alles verkaufen: ' + money(krNet(k)), L + 20, y + 90, '700 13px system-ui', '#cfd6e4'); txt((pl >= 0 ? '+' : '') + money(pl), L + Wd - 20, y + 90, '800 13px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'right'); }
+      btns.push({ b, act: () => { kr.tab = k; } }); y += b.h + 10;
     }
     if (kr.news && gt.T - kr.news.t < 240) { const n = kr.news; txt((n.up ? '🚀 ' : '💥 ') + COINS[n.k].sym + (n.up ? ' schießt nach oben!' : ' stürzt ab!'), s.x + s.w / 2, y + 14, '700 14px system-ui', n.up ? '#16c784' : '#ea3943', 'center'); }
     else txt('Kurse ändern sich alle 10 Spielminuten · 1 % Gebühr', s.x + s.w / 2, y + 14, '500 12px system-ui', '#4a5468', 'center');
@@ -5006,12 +5010,17 @@ function drawKryptoApp(s) {
     krChart(k, L + 4, s.y + 180, Wd - 8, 170, true);
     g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(L, s.y + 372, Wd, 66, 12); g.fill();
     txt('Du hast', L + 14, s.y + 392, '600 13px system-ui', '#8a93a6'); txt(have.toLocaleString('de-DE', { maximumFractionDigits: 6 }) + ' ' + c.sym, L + 14, s.y + 416, '700 16px system-ui', '#fff');
-    txt(krFmt(have * kr.p[k]), L + Wd - 14, s.y + 404, '800 18px system-ui', '#fff', 'right');
+    txt(krFmt(have * kr.p[k]), L + Wd - 14, s.y + 396, '800 18px system-ui', '#fff', 'right');
+    if (have > 0) { const pl = krPL(k); txt((pl >= 0 ? '+' : '') + money(pl) + ' seit Kauf', L + Wd - 14, s.y + 420, '700 13px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'right'); }
     txt('Kaufen (vom Konto: ' + money(Math.floor(bank.money)) + ')', L, s.y + 460, '700 14px system-ui', '#8a93a6');
     const bw = (Wd - 16) / 3;
     [[100, '100 €'], [1000, '1.000 €'], [0, 'Alles']].forEach(([v, lab], i) => btn({ x: L + i * (bw + 8), y: s.y + 474, w: bw, h: 44 }, lab, '#16a36b', v ? bank.money >= v : bank.money >= 1, () => krBuy(k, v || bank.money)));
     txt('Verkaufen', L, s.y + 540, '700 14px system-ui', '#8a93a6');
-    [[0.25, '25 %'], [0.5, '50 %'], [1, 'Alles']].forEach(([p, lab], i) => btn({ x: L + i * (bw + 8), y: s.y + 554, w: bw, h: 44 }, lab, '#d6334a', have > 0, () => krSell(k, p)));
+    [[0.25, '25 %'], [0.5, '50 %'], [1, 'Alles']].forEach(([p, lab], i) => {
+      btn({ x: L + i * (bw + 8), y: s.y + 554, w: bw, h: 44 }, lab, '#d6334a', have > 0, () => krSell(k, p));
+      if (have > 0) { const pl = krPL(k, p); txt('= ' + money(krNet(k, p)), L + i * (bw + 8) + bw / 2, s.y + 614, '700 13px system-ui', '#cfd6e4', 'center'); txt((pl >= 0 ? '+' : '') + money(pl), L + i * (bw + 8) + bw / 2, s.y + 632, '700 12px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'center'); }
+    });
+    if (have > 0) txt('nach 1 % Gebühr · Plus/Minus ggü. Kaufpreis', s.x + s.w / 2, s.y + 656, '500 11px system-ui', '#4a5468', 'center');
   }
 }
 function saveTime() { try { localStorage.setItem('bob-zeit', JSON.stringify(gt)); } catch (e) {} }
