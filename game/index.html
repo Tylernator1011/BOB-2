@@ -2394,7 +2394,7 @@ function updateFade(dt) {
   if (!fade.dir) return;
   fade.a += fade.dir * dt * 5;
   if (fade.dir > 0 && fade.a >= 1) {
-    fade.a = 1; fade.dir = -1; cur = fade.to; AP.inside = null; build.on = false; bob.x = fade.at[0]; bob.y = fade.at[1]; bob.hidden = false;
+    fade.a = 1; fade.dir = -1; cur = fade.to; AP.inside = null; build.on = false; bob.x = fade.at[0]; bob.y = fade.at[1]; bob.hidden = false; if (cur === 'zellen' && !jailed()) bob.y = Math.max(bob.y, 770);
     banner = { text: ROOMS[cur].name, t: 2.2 };
   } else if (fade.dir < 0 && fade.a <= 0) { fade.a = 0; fade.dir = 0; }
 }
