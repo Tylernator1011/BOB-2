@@ -242,6 +242,14 @@ function drawZellen(R) {
     g.fillStyle = '#5d646c'; g.fillRect(cx - 150, FLOOR - 10, 170, 70); g.strokeRect(cx - 150, FLOOR - 10, 170, 70);
     g.fillStyle = '#ff7a1a'; g.fillRect(cx - 146, FLOOR - 30, 162, 30); g.strokeRect(cx - 146, FLOOR - 30, 162, 30);
     g.fillStyle = '#fff'; g.fillRect(cx - 146, FLOOR - 36, 46, 22); g.strokeRect(cx - 146, FLOOR - 36, 46, 22);
+    if (cx === 600) {
+      // Stanzmaschine für die Gefängnisarbeit
+      g.fillStyle = '#6b4220'; g.fillRect(cx + 60, FLOOR + 10, 120, 50); g.strokeRect(cx + 60, FLOOR + 10, 120, 50);
+      g.fillStyle = '#8c949c'; g.fillRect(cx + 100, FLOOR - 90, 40, 100); g.strokeRect(cx + 100, FLOOR - 90, 40, 100);
+      g.fillStyle = '#5d646c'; g.fillRect(cx + 80, FLOOR - 110, 80, 26); g.strokeRect(cx + 80, FLOOR - 110, 80, 26);
+      g.fillStyle = '#f4f4f4'; g.fillRect(cx + 70, FLOOR - 2, 70, 22); g.lineWidth = 3; g.strokeRect(cx + 70, FLOOR - 2, 70, 22); g.lineWidth = 5;
+      continue;
+    }
     // Klo
     g.fillStyle = '#f2f2f2'; g.beginPath(); g.roundRect(cx + 80, FLOOR - 30, 60, 70, 10); g.fill(); g.stroke();
     g.fillStyle = '#d9d9d9'; g.beginPath(); g.ellipse(cx + 110, FLOOR + 40, 36, 14, 0, 0, 7); g.fill(); g.stroke();
@@ -982,6 +990,7 @@ function drawGuard() {
 }
 function nearGuard() { return cur === 'zellen' && guard.state === 'wait' && !guard.tried && Math.abs(bob.x - guard.x) < 230 && !fade.dir; }
 function nearPritsche() { return cur === 'zellen' && jailed() && bob.x > 420 && bob.x < 640 && bob.y < 640 && !fade.dir; }
+function canSleepNow() { return gMin() >= 18 * 60 || gMin() < 6 * 60; }
 function openBribe() {
   const m = Math.floor(bank.money);
   menu.kind = 'bribe'; menu.title = 'Wache bestechen – Konto: ' + money(m);
@@ -1008,6 +1017,66 @@ function drawJailHud() {
   g.fillStyle = 'rgba(255,122,26,.92)'; g.beginPath(); g.roundRect(W / 2 - w / 2, 16, w, 46, 23); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tx, W / 2, 40);
 }
+// Gefängnisarbeit: Nummernschilder stanzen (ohne Lohn, aber die Zeit vergeht)
+const stz = { on: false };
+const STZ_TEXT = 'BOB-1011';
+function nearWerkbank() { return cur === 'zellen' && jailed() && bob.x >= 640 && bob.y < 640 && !fade.dir; }
+function startStanze() { Object.assign(stz, { on: true, i: 0, pos: 0, dir: 1, zone: stzZone(), plates: stz.plates || 0, shake: 0, flash: 0, t0: performance.now() }); keys.clear(); joy.on = false; }
+function stzZone() { const w = 0.16 + Math.random() * 0.08; const a = Math.random() * (1 - w); return [a, a + w]; }
+function stzHit() {
+  if (!stz.on) return;
+  if (stz.pos >= stz.zone[0] && stz.pos <= stz.zone[1]) {
+    stz.i++; stz.flash = 0.25; stz.zone = stzZone();
+    if (stz.i >= STZ_TEXT.length) {
+      stz.plates++; stz.i = 0; gt.T += 45; saveTime(); stz.done = 1.4;
+      if (stz.plates % 4 === 0 && jailed()) { jail.until = Math.max(gt.T, jail.until - 180); saveJail(); stz.bonus = 2.5; }
+    }
+  } else stz.shake = 0.35;
+}
+addEventListener('keydown', e => {
+  if (!stz.on || performance.now() - stz.t0 < 200) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.code === 'Space' || e.code === 'Enter') stzHit();
+  else if (e.code === 'Escape' || e.code === 'KeyE') stz.on = false;
+}, true);
+function stzClose() { return { x: XR - 70, y: 70, r: 40 }; }
+function stzClick(x, y) { const c = stzClose(); if (Math.hypot(x - c.x, y - c.y) < c.r + 8) { stz.on = false; return; } stzHit(); }
+function drawStanze(dt) {
+  if (!stz.on) return;
+  if (!jailed()) { stz.on = false; toast = { text: 'Feierabend – deine Haft ist vorbei!', t: 3 }; return; }
+  stz.pos += stz.dir * dt * 0.9; if (stz.pos > 1) { stz.pos = 1; stz.dir = -1; } if (stz.pos < 0) { stz.pos = 0; stz.dir = 1; }
+  for (const k of ['shake', 'flash', 'done', 'bonus']) if (stz[k]) stz[k] = Math.max(0, stz[k] - dt);
+  const t = performance.now() / 1000, sx = stz.shake ? Math.sin(t * 80) * 8 : 0;
+  g.fillStyle = '#4a4f56'; g.fillRect(XL, 0, VW, H);
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let y = 60; y < H; y += 60) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); }
+  // Werkbank
+  g.fillStyle = '#6b4220'; g.fillRect(XL, 560, VW, H - 560); g.fillStyle = LINE; g.fillRect(XL, 556, VW, 6);
+  // Nummernschild
+  const px = W / 2 - 330 + sx, py = 300;
+  g.fillStyle = '#f4f4f4'; g.beginPath(); g.roundRect(px, py, 660, 150, 18); g.fill(); g.lineWidth = 6; g.strokeStyle = LINE; g.stroke();
+  g.fillStyle = '#1f4f9e'; g.fillRect(px + 6, py + 6, 60, 138); g.fillStyle = '#ffcc1a'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('D', px + 36, py + 118);
+  g.font = '900 86px ui-monospace, monospace';
+  for (let k = 0; k < STZ_TEXT.length; k++) { g.fillStyle = k < stz.i ? '#111' : 'rgba(0,0,0,.12)'; g.fillText(STZ_TEXT[k], px + 110 + k * 70, py + 80); }
+  // Stanze über dem nächsten Buchstaben
+  const kx = px + 110 + stz.i * 70, down = stz.flash > 0;
+  g.fillStyle = '#8c949c'; g.fillRect(kx - 30, down ? py - 30 : py - 110, 60, 80); g.lineWidth = 5; g.strokeRect(kx - 30, down ? py - 30 : py - 110, 60, 80);
+  g.fillStyle = '#5d646c'; g.fillRect(kx - 10, 0, 20, down ? py - 30 : py - 110);
+  // Takt-Balken
+  const bx = W / 2 - 300, by = 520, bw = 600;
+  g.fillStyle = '#2a2d33'; g.beginPath(); g.roundRect(bx, by, bw, 40, 20); g.fill();
+  g.fillStyle = '#3cff5a'; g.fillRect(bx + stz.zone[0] * bw, by, (stz.zone[1] - stz.zone[0]) * bw, 40);
+  g.lineWidth = 4; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, bw, 40, 20); g.stroke();
+  g.fillStyle = '#fff'; g.fillRect(bx + stz.pos * bw - 5, by - 12, 10, 64); g.strokeRect(bx + stz.pos * bw - 5, by - 12, 10, 64);
+  // Texte
+  g.fillStyle = '#fff'; g.font = '800 30px system-ui'; g.textAlign = 'center'; g.fillText('Gefängnisarbeit: Nummernschilder stanzen', W / 2, 60);
+  g.font = '600 20px system-ui'; g.fillStyle = '#ddd'; g.fillText('Fertige Schilder: ' + stz.plates + '   ·   kein Lohn – aber jedes Schild lässt 45 Min. vergehen', W / 2, 100);
+  g.fillText('Alle 4 Schilder: 3 Stunden weniger Haft (gute Führung)   ·   in Haft bis ' + jailText() + ' Uhr', W / 2, 132);
+  g.fillStyle = '#fff'; g.font = '600 20px system-ui'; g.fillText(isTouch() ? 'Tippen, wenn der Strich im grünen Feld ist' : 'Leertaste, wenn der Strich im grünen Feld ist  ·  Esc: aufhören', W / 2, H - 40);
+  if (stz.done) { g.globalAlpha = Math.min(1, stz.done * 2); marker('Schild fertig! +45 Min.', W / 2, 250, 44, '#3cff5a'); g.globalAlpha = 1; }
+  if (stz.bonus) { g.globalAlpha = Math.min(1, stz.bonus); marker('Gute Führung: 3 Std. weniger!', W / 2, 640, 40, '#ffcc1a'); g.globalAlpha = 1; }
+  const c = stzClose(); g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d'; g.beginPath(); g.arc(c.x, c.y, c.r, 0, 7); g.fill(); g.stroke();
+  g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(c.x - 15, c.y - 15); g.lineTo(c.x + 15, c.y + 15); g.moveTo(c.x + 15, c.y - 15); g.lineTo(c.x - 15, c.y + 15); g.stroke(); g.lineCap = 'butt';
+}
 function chaseEnd() {
   chase.on = false;
   if (chase.done === 'frei') {
@@ -1015,12 +1084,12 @@ function chaseEnd() {
     bump('flucht'); go('kanal1', [500, FLOOR + 100]);
     toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
   } else {
-    const lost = Math.floor(bank.cash || 0); bank.cash = 0; const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
+    const lost = Math.ceil((bank.cash || 0) * 0.01); bank.cash = Math.max(0, (bank.cash || 0) - lost); const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
     jail.count++; const days = Math.min(5, jail.count);
     gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); jail.until = gt.T + (days - 1) * 1440; jail.free = days <= 1; saveJail(); go('zellen', [600, 600]);
     guard.state = 'off'; guard.next = 20;
     if (!wear.owned.includes('gefangener')) wear.owned.push('gefangener'); wear.on = 'gefangener'; saveWear();
-    toast = { text: 'Festgenommen (' + jail.count + '. Mal)! ' + (days <= 1 ? 'Eine Nacht in der Zelle – jetzt bist du frei.' : days + ' Tage Haft.') + ' Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
+    toast = { text: 'Festgenommen (' + jail.count + '. Mal)! ' + (days <= 1 ? 'Eine Nacht in der Zelle – jetzt bist du frei.' : days + ' Tage Haft.') + ' 1 % Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
   }
 }
 // Flucht im Fluchtwagen (einfacher): von oben, Spur wechseln
@@ -2231,7 +2300,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !tres.on && !chase.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche()); }
+function canInteract() { return !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -2413,7 +2482,8 @@ function drawWardrobe() {
 let toast = { text: '', t: 0 };
 function openMenu() {
   if (nearGuard()) { openBribe(); return; }
-  if (nearPritsche()) { sleepTo('morgen'); return; }
+  if (nearPritsche()) { if (canSleepNow()) sleepTo('morgen'); else toast = { text: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr. Arbeite doch an der Stanze!', t: 3.5 }; return; }
+  if (nearWerkbank()) { startStanze(); return; }
   if (nearDrop()) { dwPickup(nearDrop()); return; }
   if (nearRaub()) { startTresor(nearRaub()); return; }
   if (nearGulli()) { const o = nearGulli(); go(o.to[0], [o.to[1], FLOOR + 80]); return; }
@@ -2553,7 +2623,8 @@ function interactTarget() {
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
-  if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: 'Schlafen' };
+  if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
+  if (nearWerkbank()) return { x: 700, y: FLOOR - 120, label: 'Arbeiten' };
   const dr = nearDrop();
   if (dr) return { x: dr.x, y: dr.y - 120 * scaleAt(dr.y) - (dr.kind === 'schmuggelB' ? 200 : 0), label: dr.kind === 'schmuggelB' ? 'Ware abgeben' : dr.kind === 'item' ? 'Abholen (' + money(dr.pay) + ' bar)' : 'Ware abholen' };
   if (nearRaub()) return { x: 1560, y: 120, label: 'Tresor knacken' };
@@ -2755,6 +2826,7 @@ const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (!device) { deviceClick(x, y); return; }
+  if (stz.on) { stzClick(x, y); return; }
   if (chase.on) { if (chase.mode === 'car') { if (!chase.done) chase.lane = x < W / 2 ? Math.max(0, chase.lane - 1) : Math.min(2, chase.lane + 1); } else chaseJump(); return; }
   if (tres.on) { tresClick(x, y); return; }
   if (wk.on) { workDown(x, y); return; }
@@ -3607,7 +3679,7 @@ const APPS = [
   { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 setTimeout(() => { if (dw.access && !APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); });
-function canPhone() { return !tres.on && !chase.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
+function canPhone() { return !tres.on && !chase.on && !stz.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
@@ -5245,7 +5317,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if (tres.on || chase.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
+  if (tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
@@ -5300,7 +5372,7 @@ function frame(t) {
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawJailHud(); drawSleep(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawJailHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
