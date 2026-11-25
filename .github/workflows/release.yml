@@ -47,7 +47,7 @@ jobs:
         run: |
           V=${{ steps.ver.outputs.version }}
           gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "v$V" --repo "$GITHUB_REPOSITORY" --draft --title "$V" --notes "BOB 2 Version $V" --target "$GITHUB_SHA"
+            gh release create "v$V" --repo "$GITHUB_REPOSITORY" --draft --title "$V" --notes "BOB 2 Version $V"
 
       - name: Installer bauen und hochladen
         if: steps.ver.outputs.neu == 'ja'
