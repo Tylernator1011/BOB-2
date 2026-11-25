@@ -3204,7 +3204,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !web.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg()); }
+function canInteract() { return !web.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3225,7 +3225,7 @@ function wrSwitchPet(d) {
   if (!owned.length) return;
   wr.pi = (wr.pi + d + owned.length) % owned.length; wr.scroll = 0; wr.sel = Math.max(0, wrItems().indexOf(wrOn()));
 }
-function wrPickPet() { const p = wrPet(); if (p && (p === labor.pet || p === apo.pet)) { toast = { text: PETS[p].name + ' ist gerade nicht da!', t: 2.5 }; return; } if (p && p !== activePet) { activePet = p; saveOwned(); const ps = petFor(p); if (ps.room === cur) [ps.x, ps.y] = freeSpot(ps.x, ps.y, 60); } }
+function wrPickPet() { const p = wrPet(); if (p && (p === labor.pet || p === apo.pet)) { toast = { text: PETS[p].name + ' ist gerade nicht da!', t: 2.5 }; return; } if (p && p !== activePet) { activePet = p; saveOwned(); const ps = petFor(p); if (cur === 'garten' && lief.hundehaus) { ps.room = 'garten'; ps.mode = 'home'; ps.x = HH.x + 200; ps.y = HH.y + 70; } else if (ps.room === cur) [ps.x, ps.y] = freeSpot(ps.x, ps.y, 60); } else if (p && cur === 'garten' && lief.hundehaus) { const ps = petFor(p); if (ps.room !== 'garten') { ps.room = 'garten'; ps.mode = 'home'; ps.x = HH.x + 200; ps.y = HH.y + 70; } } }
 function wrCell(i) { const r = Math.floor(i / WR.cols) - wr.scroll, c = i % WR.cols; return { x: WR.gx + c * (WR.cw + WR.gap), y: WR.gy + r * (WR.ch + WR.gap), vis: r >= 0 && r < WR.rows }; }
 const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CLOSE = { x: W - 70, y: 70, r: 40 };
 function wrEquip(i) {
@@ -3432,8 +3432,16 @@ function openMenu() {
     menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear(); return;
   }
   if (nearMuell()) { wuehlen(); return; }
+  { const hh = nearHundehaus(); if (hh) {
+    menu.kind = 'hundehaus'; menu.title = 'Haustier-Haus'; menu.hhNapf = hh;
+    const pet = activeList()[0];
+    menu.items = [{ label: 'Tier wählen', hh: 'tier', tag: pet ? PETS[pet].name : 'keins' }, { label: 'Napf füllen', hh: 'napf', tag: hh.food ? FOODS[hh.food].name : 'leer' }, { label: 'Abbrechen' }];
+    MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now();
+    menu.open = true; menu.sel = 0; keys.clear(); return;
+  } }
   const nap = nearFurn('napf');
-  if (nap) {
+  if (nap) { napfMenu(nap); return; }
+  if (false) {
     menu.kind = 'napf'; menu.napf = nap; menu.title = 'Napf – ' + (nap.food ? FOODS[nap.food].name + ' liegt drin' : 'leer');
     menu.items = [1, 2, 3, 4].filter(l => garden.food[l] > 0).map(l => ({ label: FOODS[l].name + ' hineinlegen', tag: '× ' + garden.food[l], fill: l, lvl: l }));
     if (!menu.items.length) menu.items.push({ label: 'Kein Futter – kauf welches im Tierladen', disabled: true });
@@ -3486,6 +3494,8 @@ function openMenu() {
 function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
+  if (it.hh === 'tier') { if (!owned.length) { toast = { text: 'Du hast noch kein Haustier – kauf eins im Tierladen.', t: 3 }; return; } openWardrobe('pet'); return; }
+  if (it.hh === 'napf') { napfMenu(menu.hhNapf); return; }
   if (it.dest) bump('bus');
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
@@ -3540,6 +3550,7 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  { const hh = nearHundehaus(); if (hh) return { x: HH.x, y: HH.y - 330, label: 'Haustier-Haus' }; }
   { const pk = nearPkg(); if (pk) return { x: pk.x, y: pk.y - 170, label: 'Bestellung aufheben' }; }
   { const pc = nearFurn('gamingtisch'); if (pc && !apo.on) return { x: pc.x, y: pc.y - 300, label: 'Computer' }; }
   if (apoFloorSleep()) return { x: bob.x, y: bob.y - 260 * scaleAt(bob.y), label: 'Hinlegen & ausschlafen' };
@@ -4507,6 +4518,7 @@ const ADMIN = {
     ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
+    ['Haustier-Haus', '#c0392b', () => { lief.garten = true; lief.hundehaus = true; saveLief(); gartenSetup(); }],
     ['Krypto: Kurse +50 %', '#16a36b', () => { for (const k in COINS) { kr.p[k] *= 1.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
     ['Krypto: Crash −50 %', '#d6334a', () => { for (const k in COINS) { kr.p[k] *= 0.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
     ['Alle Erfolge', '#e0a10f', () => { for (const a of ACH) ach.done[a.id] = true; ach.regal = true; inv.trophaeenregal = (inv.trophaeenregal || 0) + 2; saveFurn(); saveAch(); }],
@@ -4933,6 +4945,7 @@ const WEB_ITEMS = [
   { id: 'tf2x', cat: 'tier', name: 'Futter Lv2 ×10', price: 80,  desc: ['Vorratspack', 'billiger als im Laden'], food: [2, 10] },
   { id: 'tf3',  cat: 'tier', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
   { id: 'tf3x', cat: 'tier', name: 'Futter Lv3 ×6', price: 110, desc: ['Vorratspack', 'billiger als im Laden'], food: [3, 6] },
+  { id: 'hundehaus', cat: 'haus', name: 'Haustier-Haus', price: 1500, desc: ['Für den Garten: mit Napf,', 'dort wählst du dein Tier'], once: true, needs: 'garten' },
   { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Große Rasenfläche hinterm Haus:', 'im Haus ganz nach unten'], once: true },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
@@ -4949,9 +4962,10 @@ function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now()
 function webOrder(it) {
   if (it.once) {
     if (lief[it.id]) return;
+    if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst den Garten.'; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5002,6 +5016,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'hundehaus') { g.fillStyle = '#45c43a'; g.fillRect(-50, 26, 100, 24); g.lineWidth = 3; g.strokeStyle = '#3a2010'; g.fillStyle = '#c0392b'; g.fillRect(-32, -10, 64, 40); g.strokeRect(-32, -10, 64, 40); g.fillStyle = '#6a3a1a'; g.beginPath(); g.moveTo(-40, -8); g.lineTo(0, -42); g.lineTo(40, -8); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#1a0c06'; g.beginPath(); g.moveTo(-14, 30); g.lineTo(-14, 10); g.arc(0, 10, 14, Math.PI, 0); g.lineTo(14, 30); g.closePath(); g.fill(); g.fillStyle = '#e0262b'; g.beginPath(); g.ellipse(30, 36, 14, 6, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#c8a060'; g.beginPath(); g.ellipse(30, 33, 10, 3, 0, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'garten') { g.fillStyle = '#5fb8ff'; g.fillRect(-50, -50, 100, 56); g.fillStyle = '#ffee00'; g.beginPath(); g.arc(-30, -32, 11, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(14, -30, 9, 0, 7); g.arc(26, -34, 11, 0, 7); g.arc(38, -30, 8, 0, 7); g.fill(); g.fillStyle = '#4dbb3a'; g.beginPath(); g.ellipse(-20, 8, 50, 16, 0, Math.PI, 0); g.fill(); g.fillStyle = '#45c43a'; g.fillRect(-50, 6, 100, 44); g.fillStyle = 'rgba(255,255,255,.12)'; for (let x = -50; x < 50; x += 20) g.fillRect(x, 6, 10, 44); g.restore(); return; }
   if (id === 'pizza') { g.fillStyle = '#e9b04a'; g.beginPath(); g.arc(0, 0, 44, 0, 7); g.fill(); g.stroke(); circ(0, 0, 36, '#d8442a'); g.fillStyle = 'rgba(255,230,150,.85)'; for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.cos(i * 2.4) * 22, Math.sin(i * 2.4) * 22, 9, 6, i, 0, 7); g.fill(); } for (const [a, b] of [[-16, -12], [14, -18], [18, 12], [-10, 18], [0, 0]]) circ(a, b, 7, '#a8202a'); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(Math.cos(i * 0.785) * 44, Math.sin(i * 0.785) * 44); g.lineTo(-Math.cos(i * 0.785) * 44, -Math.sin(i * 0.785) * 44); g.stroke(); } }
   else if (id === 'burger') { g.fillStyle = '#e0a040'; g.beginPath(); g.ellipse(0, -14, 44, 26, 0, Math.PI, 0); g.fill(); g.stroke(); g.fillStyle = '#fff6d0'; for (const [a, b] of [[-18, -28], [0, -32], [16, -26], [-6, -22]]) { g.beginPath(); g.ellipse(a, b, 3, 2, 0.4, 0, 7); g.fill(); } g.fillStyle = '#4bc040'; g.fillRect(-46, -14, 92, 8); g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(-44, -6); g.lineTo(44, -6); g.lineTo(30, 6); g.lineTo(-30, 6); g.closePath(); g.fill(); g.fillStyle = '#6a3a1a'; g.beginPath(); g.roundRect(-44, 0, 88, 16, 8); g.fill(); g.stroke(); g.fillStyle = '#e0a040'; g.beginPath(); g.roundRect(-42, 16, 84, 18, 9); g.fill(); g.stroke(); }
@@ -5042,14 +5057,14 @@ function drawWeb(dt) {
   its.forEach((it, i) => {
     const r = Math.floor(i / L.cols) - web.scroll, c = i % L.cols, x = P.x + 25 + c * (L.cw + L.gap), y = L.gy + r * (L.ch + 14);
     if (y > P.y + P.h || y + L.ch < L.gy) return;
-    const own = it.once && lief[it.id], ok = !own && webHave(it) >= it.price, hov = web.hover === it.id;
+    const own = it.once && lief[it.id], lock = it.needs && !lief[it.needs], ok = !own && !lock && webHave(it) >= it.price, hov = web.hover === it.id;
     g.fillStyle = '#fff'; g.fillRect(x, y, L.cw, 132); webPic(it.id, x + L.cw / 2, y + 66, 110);
     outl(it.name, x + L.cw / 2, y + 160, '800 25px "Trebuchet MS", system-ui', '#fff', 5);
     outl('Preis: ' + it.price + ' €' + (webCur(it) === 'bar' ? ' bar' : ''), x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', webCur(it) === 'bar' ? '#ffd23a' : '#5aff3a', 5);
     it.desc.forEach((d, k) => outl(d, x + L.cw / 2, y + 224 + k * 24, '700 17px "Trebuchet MS", system-ui', '#e8e8e8', 4));
     const b = { x, y: L.ch - 56 + y, w: L.cw, h: 56 };
     g.fillStyle = ok ? (hov ? '#3cff2a' : '#1fd81a') : '#1a7a1a'; g.fillRect(b.x, b.y, b.w, b.h); g.strokeStyle = '#0a3a0a'; g.lineWidth = 3; g.strokeRect(b.x, b.y, b.w, b.h);
-    outl(own ? 'Gekauft' : ok ? (it.once ? 'Kaufen' : 'Bestellen') : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
+    outl(own ? 'Gekauft' : lock ? 'Erst Garten' : ok ? (it.once ? 'Kaufen' : 'Bestellen') : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
     btns.push({ b, id: it.id, act: () => webOrder(it) });
   });
   g.restore();
@@ -5077,9 +5092,42 @@ addEventListener('keydown', e => {
 }, true);
 // ---------- Garten (in bobnet kaufen, im Haus ganz nach unten) ----------
 function gartenOwned() { return !!lief.garten; }
+const HH = { x: 1150, y: 600 };
+function nearHundehaus() { if (cur !== 'garten' || !lief.hundehaus || fade.dir || build.on) return null; if (Math.abs(bob.x - HH.x) < 190 && Math.abs(bob.y - (HH.y + 30)) < 120) return (furn.garten || []).find(f => f.t === 'napf' && f.hh) || null; return null; }
+function drawHundehaus() {
+  const s = scaleAt(HH.y), x = HH.x, y = HH.y, t = 0.55, w = 260 * s, h = 170 * s, d = 120 * s, dx = -d * t, dy = -d * 0.55;
+  g.save(); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x, y + 4, w * 0.65, 18 * s, 0, 0, 7); g.fill();
+  const pal = mkPal('#c0392b', '#d04a3a');
+  cube(x - w / 2, y - h, w, h, d, pal, false, t);
+  // Dach (zwei schräge Flächen, auf die Tiefe gezogen)
+  const rh = 110 * s, ov = 18 * s, L = x - w / 2 - ov, R = x + w / 2 + ov, top = y - h - rh, eave = y - h + 6 * s;
+  g.fillStyle = '#4a2a14'; g.beginPath(); g.moveTo(x, top); g.lineTo(x + dx, top + dy); g.lineTo(L + dx, eave + dy); g.lineTo(L, eave); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#6a3a1a'; g.beginPath(); g.moveTo(x, top); g.lineTo(x + dx, top + dy); g.lineTo(R + dx, eave + dy); g.lineTo(R, eave); g.closePath(); g.fill(); g.stroke();
+  // Giebel vorne
+  g.fillStyle = '#d04a3a'; g.beginPath(); g.moveTo(x - w / 2, y - h); g.lineTo(x, top + 14 * s); g.lineTo(x + w / 2, y - h); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; for (let k = 1; k < 5; k++) { g.beginPath(); g.moveTo(x - w / 2, y - h + k * h / 5); g.lineTo(x + w / 2, y - h + k * h / 5); g.stroke(); }
+  g.strokeStyle = LINE; g.lineWidth = 5;
+  // Dachkante vorne
+  g.fillStyle = '#3a200e'; g.beginPath(); g.moveTo(L, eave); g.lineTo(x, top); g.lineTo(R, eave); g.lineTo(R - 10 * s, eave + 12 * s); g.lineTo(x, top + 16 * s); g.lineTo(L + 10 * s, eave + 12 * s); g.closePath(); g.fill(); g.stroke();
+  // Eingang
+  g.fillStyle = '#1a0c06'; g.beginPath(); g.moveTo(x - 62 * s, y); g.lineTo(x - 62 * s, y - 80 * s); g.arc(x, y - 80 * s, 62 * s, Math.PI, 0); g.lineTo(x + 62 * s, y); g.closePath(); g.fill(); g.stroke();
+  // Napf drinnen im Eingang
+  const nf = (furn.garten || []).find(f => f.t === 'napf' && f.hh);
+  g.lineWidth = 3; g.fillStyle = '#e0262b'; g.beginPath(); g.moveTo(x - 34 * s, y - 16 * s); g.lineTo(x + 34 * s, y - 16 * s); g.lineTo(x + 26 * s, y - 2 * s); g.lineTo(x - 26 * s, y - 2 * s); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = nf && nf.food ? FOODS[nf.food].col : '#5a1010'; g.beginPath(); g.ellipse(x, y - 16 * s, 32 * s, 7 * s, 0, 0, 7); g.fill(); g.stroke();
+  if (nf && nf.food) { g.fillStyle = shade(FOODS[nf.food].col, -0.3); for (const a of [-16, -4, 8, 18]) { g.beginPath(); g.arc(x + a * s, y - 19 * s, 4 * s, 0, 7); g.fill(); } }
+  g.lineWidth = 5;
+  // Namensschild
+  const pet = activeList()[0], nm = pet ? PETS[pet].name : 'Haustier'; g.font = `800 ${Math.round(17 * s)}px system-ui`; const pw = g.measureText(nm).width + 26 * s;
+  g.fillStyle = '#f3e6c8'; g.beginPath(); g.roundRect(x - pw / 2, y - h - 52 * s, pw, 34 * s, 8 * s); g.fill(); g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#5a3a1a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(pet ? PETS[pet].name : 'Haustier', x, y - h - 35 * s);
+  g.restore();
+}
 function gartenSetup() {
   if (!gartenOwned()) return;
   ROOMS.pink.exits.d = 'garten';
+  if (lief.hundehaus) { furn.garten = furn.garten || []; for (const f of furn.garten) if (f.hh) f.y = HH.y - 4; if (!furn.garten.some(f => f.t === 'napf' && f.hh)) { furn.garten.push({ t: 'napf', x: HH.x, y: HH.y - 4, r: 0, hh: true }); saveFurn(); } }
 }
 function gartenTree(x, s, apples) {
   g.lineWidth = 6; g.strokeStyle = LINE;
@@ -5991,7 +6039,7 @@ function drawErfolgeApp(s) {
 function setPetMode(id, mode) {
   if (mode === 'gassi') bump('gassi');
   const p = petFor(id);
-  if (mode === 'home' && !BUILD_ROOMS.includes(cur)) {
+  if (mode === 'home' && !BUILD_ROOMS.includes(cur) && cur !== 'garten') {
     p.mode = 'home'; p.room = 'spawn'; p.x = 300 + Math.random() * 600; p.y = 620 + Math.random() * 120; p.wait = 1;
     toast = { text: PETS[id].name + ' läuft nach Hause.', t: 3 };
   } else {
@@ -6285,6 +6333,15 @@ function bagItems() {
   for (const k in SEEDS) ids.push('seed:' + k);
   for (const k in SEEDS) ids.push('plant:' + k);
   return ids.filter(id => itemInfo(id).n > 0 && !hotbar.includes(id));
+}
+function napfMenu(nap) {
+  menu.kind = 'napf'; menu.napf = nap; menu.title = 'Napf – ' + (nap.food ? FOODS[nap.food].name + ' liegt drin' : 'leer');
+  menu.items = [1, 2, 3, 4].filter(l => garden.food[l] > 0).map(l => ({ label: FOODS[l].name + ' hineinlegen', tag: '× ' + garden.food[l], fill: l, lvl: l }));
+  if (!menu.items.length) menu.items.push({ label: 'Kein Futter – bestell welches in bobnet', disabled: true });
+  if (nap.food) menu.items.push({ label: 'Futter wieder rausnehmen', empty: true });
+  menu.items.push({ label: 'Abbrechen' });
+  MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now();
+  menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear();
 }
 function fillNapf(f, l) {
   if ((garden.food[l] || 0) <= 0) return;
@@ -6602,14 +6659,15 @@ function frame(t) {
   room();
   const st = ROOMS[cur].stop;
     const list = [];
-  for (const f of furn[cur] || []) if (FURN[f.t].flat) drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r);
-  for (const f of furn[cur] || []) if (!FURN[f.t].flat) list.push({ y: f.y, f: () => drawFurnItem(f) });
+  for (const f of furn[cur] || []) if (FURN[f.t].flat && !f.hh) drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r);
+  for (const f of furn[cur] || []) if (!FURN[f.t].flat && !f.hh) list.push({ y: f.y, f: () => drawFurnItem(f) });
   for (const o of ROOMS[cur].objs || []) list.push({ y: o.base, f: () => drawObj(o) });
   if (!build.on) { for (const sd of garden.world[cur] || []) list.push({ y: sd.y, f: () => drawSeed(sd) }); for (const c of garden.coins[cur] || []) list.push({ y: c.y, f: () => drawCoinPile(c) }); }
   if (st) list.push({ y: STOP_BASE, f: () => drawStop(st) });
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
+  if (cur === 'garten' && lief.hundehaus) list.push({ y: HH.y, f: drawHundehaus });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else list.push({ y: bob.y + 0.01, f: drawBob }); }
   apoListItems(list);
