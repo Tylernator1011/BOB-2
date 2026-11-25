@@ -3184,31 +3184,114 @@ function drawLock(s, dt) {
     g.fillStyle = '#fff'; g.font = '400 34px system-ui'; g.fillText(i === 10 ? '0' : String(i + 1), k.x, k.y + 1);
   }
 }
-const ADMIN = [
-  ['+1.000 €', () => { bank.money += 1000; bank.log.push({ t: 'Admin', v: 1000 }); saveBank(); }],
-  ['+10.000 €', () => { bank.money += 10000; bank.log.push({ t: 'Admin', v: 10000 }); saveBank(); }],
-  ['Alle Tiere', () => { for (const k in PETS) if (!owned.includes(k)) owned.push(k); if (!activePet) activePet = owned[0]; saveOwned(); }],
-  ['Alle Möbel (+3)', () => { for (const k in FURN) if (FURN[k].price || k === 'transportbox') inv[k] = (inv[k] || 0) + 3; saveFurn(); }],
-  ['Alle Wände & Böden', () => { deko.walls = Object.keys(WALLS); deko.floors = Object.keys(FLOORS); saveDeko(); }],
-  ['Alle Outfits', () => { wear.owned = Object.keys(OUTFITS); saveWear(); }],
-  ['Futter & Samen', () => { for (const l of [1, 2, 3, 4]) garden.food[l] = (garden.food[l] || 0) + 5; for (const k in SEEDS) garden.seeds[k] = (garden.seeds[k] || 0) + 2; saveGarden(); }],
-  ['Zeit +3 Stunden', () => { gt.T += 180; saveTime(); }],
-  ['Job: Strafen & Sperre weg', () => { if (job) { job.warnings = 0; job.unpaidUntil = -1; job.sickCount = 0; } if (unemp) unemp.banUntil = gDay(); saveJob(); }],
-  ['Job: 1 Woche überspringen', () => { if (job) { job.start -= 7; saveJob(); } }],
+// ---------- Admin-Menü ----------
+const ADMIN_TABS = [
+  { id: 'geld', name: 'Geld', col: '#13b84a', icon: 'cash' },
+  { id: 'sachen', name: 'Sachen', col: '#ff8a1a', icon: 'food' },
+  { id: 'welt', name: 'Welt', col: '#2f6fe0', icon: 'sun' },
+  { id: 'tiere', name: 'Tiere', col: '#9b5de5', icon: 'paw' },
+  { id: 'jobs', name: 'Jobs', col: '#e0a10f', icon: 'trophy' },
+  { id: 'tp', name: 'Teleport', col: '#e0262b', icon: 'home' },
 ];
+const tpTo = (r, at) => () => { togglePhone(false); go(r, at); };
+const ADMIN = {
+  geld: [
+    ['+1.000 € Konto', '#13b84a', () => { bank.money += 1000; bank.log.push({ t: 'Admin', v: 1000 }); saveBank(); }],
+    ['+10.000 € Konto', '#0a8a2f', () => { bank.money += 10000; bank.log.push({ t: 'Admin', v: 10000 }); saveBank(); }],
+    ['+500 € Bargeld', '#5fd36a', () => earn(500)],
+    ['+5.000 € Bargeld', '#2fae4a', () => earn(5000)],
+    ['Konto auf 0 €', '#7b8190', () => { bank.money = 0; saveBank(); }],
+    ['Bargeld auf 0 €', '#7b8190', () => { bank.cash = 0; saveBank(); }],
+  ],
+  sachen: [
+    ['Alle Outfits', '#9b5de5', () => { wear.owned = Object.keys(OUTFITS); saveWear(); }],
+    ['Alle Möbel (+3)', '#ff8a1a', () => { for (const k in FURN) if (FURN[k].price || k === 'transportbox' || SHOP_FURN[k]) inv[k] = (inv[k] || 0) + 3; saveFurn(); }],
+    ['Alle Wände & Böden', '#ffb21a', () => { deko.walls = Object.keys(WALLS); deko.floors = Object.keys(FLOORS); saveDeko(); }],
+    ['Futter & Samen', '#2fa84f', () => { for (const l of [1, 2, 3, 4]) garden.food[l] = (garden.food[l] || 0) + 5; for (const k in SEEDS) garden.seeds[k] = (garden.seeds[k] || 0) + 2; saveGarden(); }],
+    ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
+    ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
+    ['Alle Erfolge', '#e0a10f', () => { for (const a of ACH) ach.done[a.id] = true; ach.regal = true; inv.trophaeenregal = (inv.trophaeenregal || 0) + 2; saveFurn(); saveAch(); }],
+    ['Erfolge zurücksetzen', '#7b8190', () => { ach = { done: {}, cnt: {}, regal: false }; saveAch(); }],
+  ],
+  welt: [
+    ['Zeit +1 Stunde', '#2f6fe0', () => { gt.T += 60; saveTime(); }],
+    ['Zeit +3 Stunden', '#1f4f9e', () => { gt.T += 180; saveTime(); }],
+    ['Auf 18:00 Uhr', '#ff8a1a', () => { gt.T = gDay() * 1440 + 18 * 60 + (gMin() >= 18 * 60 ? 1440 : 0); saveTime(); }],
+    ['Nächster Morgen', '#ffb21a', () => { gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); }],
+    ['Schnell laufen (3 Std.)', '#13b84a', () => { boostUntil = gt.T + 180; }],
+    ['Mülltonne voll', '#8c949c', () => { muell = { day: gDay(), full: true, done: false }; try { localStorage.setItem('bob-muell', JSON.stringify(muell)); } catch (e) {} }],
+    ['Kanal-Truhe neu füllen', '#8b4a1e', () => { schatz.open = false; try { localStorage.setItem('bob-schatz', JSON.stringify(schatz)); } catch (e) {} }],
+  ],
+  tiere: [
+    ['Alle Tiere', '#9b5de5', () => { for (const k in PETS) if (!owned.includes(k)) owned.push(k); if (!activePet) activePet = owned[0]; saveOwned(); }],
+    ['Alle Tiere satt', '#2fa84f', () => { for (const id of owned) statsOf(id).hunger = 100; savePetStats(); }],
+    ['Alle Tiere +1 Level', '#ffb21a', () => { for (const id of owned) statsOf(id).lvl++; savePetStats(); }],
+    ['Goldmodus an', '#e0a10f', () => { for (const id of owned) { const st = statsOf(id); st.goldUntil = gt.T + GOLD_MIN; st.goldAcc = 0; } savePetStats(); }],
+    ['Tiere zu mir holen', '#2f6fe0', () => { for (const id of activeList()) { const p = petFor(id); p.room = cur; p.x = bob.x + 120; p.y = bob.y; p.mode = 'home'; } savePetStats(); }],
+  ],
+  jobs: [
+    ['Strafen & Sperre weg', '#13b84a', () => { if (job) { job.warnings = 0; job.unpaidUntil = -1; job.sickCount = 0; } if (unemp) unemp.banUntil = gDay(); saveJob(); }],
+    ['1 Woche überspringen', '#2f6fe0', () => { if (job) { job.start -= 7; saveJob(); } }],
+    ['Job sofort kündigen', '#e0262b', () => { job = null; saveJob(); }],
+    ['Darkweb: Termine jetzt', '#0b0f0c', () => { for (const a of dw.appts) { const d = a.t1 - a.t0; a.t0 = gt.T; a.t1 = gt.T + Math.max(60, d); } saveDw(); }],
+    ['Darkweb: neue Aufträge', '#1f3a2a', () => { dw.jobDay = -1; saveDw(); }],
+    ['Darkweb: Termine löschen', '#7b8190', () => { dw.appts = []; dw.carry = null; saveDw(); }],
+  ],
+  tp: [
+    ['Zuhause', '#6ad9fb', tpTo('spawn', [600, 700])],
+    ['Draußen', '#45c43a', tpTo('draussen', [600, 650])],
+    ['Bank', '#1f4f9e', tpTo('bankplatz', [600, 650])],
+    ['Tierladen', '#ffd84a', tpTo('tierladen', [600, 650])],
+    ['Möbelhaus', '#e0262b', tpTo('moebelhaus', [600, 650])],
+    ['Bushaltestelle', '#ff8a1a', tpTo('haltestelle', [600, 650])],
+    ['Kanalisation', '#3b5a3a', tpTo('kanal1', [250, FLOOR + 80])],
+    ['Schwarzmarkt', '#3a2d4a', tpTo('schwarzmarkt', [-350, FLOOR + 80])],
+  ],
+};
 function drawAdminApp(s) {
-  g.fillStyle = '#1b1d22'; g.fillRect(s.x, s.y, s.w, s.h);
-  g.fillStyle = '#e0262b'; g.fillRect(s.x, s.y, s.w, 110);
+  const t = performance.now() / 1000;
+  g.fillStyle = '#14161b'; g.fillRect(s.x, s.y, s.w, s.h);
+  const hg = g.createLinearGradient(s.x, s.y, s.x + s.w, s.y + 120); hg.addColorStop(0, '#ff3b3b'); hg.addColorStop(1, '#a0121a');
+  g.fillStyle = hg; g.fillRect(s.x, s.y, s.w, 118);
+  g.fillStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.arc(s.x + s.w - 30, s.y + 10, 80, 0, 7); g.fill();
   backBtn(s);
-  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '800 26px system-ui'; g.fillText('ADMIN', s.x + s.w / 2, s.y + 62);
+  // Schild-Symbol
+  g.save(); g.translate(s.x + s.w / 2 - 70, s.y + 62); g.fillStyle = '#fff';
+  g.beginPath(); g.moveTo(0, -18); g.lineTo(15, -12); g.lineTo(13, 6); g.quadraticCurveTo(8, 16, 0, 20); g.quadraticCurveTo(-8, 16, -13, 6); g.lineTo(-15, -12); g.closePath(); g.fill(); g.restore();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 28px system-ui'; g.fillText('ADMIN', s.x + s.w / 2 + 14, s.y + 62);
+  g.font = '600 13px system-ui'; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText('Konto ' + money(Math.floor(bank.money)) + ' · Bargeld ' + money(Math.floor(bank.cash || 0)), s.x + s.w / 2, s.y + 96);
   const btns = []; phone.ui = { btns };
-  ADMIN.forEach(([label, act], i) => {
-    const b = { x: s.x + 20, y: s.y + 124 + i * 51, w: s.w - 40, h: 43 };
-    g.fillStyle = '#2c3038'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill();
-    g.fillStyle = '#fff'; g.font = '600 18px system-ui'; g.fillText(label, b.x + b.w / 2, b.y + 24);
-    btns.push({ b, act: () => { act(); phone.msg = label + ' ✓'; phone.msgT = 1.5; } });
+  const tab = phone.adminTab = phone.adminTab || 'geld';
+  // Reiter: 2 Reihen mit 3
+  const tw = (s.w - 32) / 3;
+  ADMIN_TABS.forEach((tb, i) => {
+    const b = { x: s.x + 16 + (i % 3) * tw, y: s.y + 130 + Math.floor(i / 3) * 52, w: tw - 6, h: 44 }, on = tab === tb.id;
+    g.fillStyle = on ? tb.col : '#23262e'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill();
+    if (!on) { g.strokeStyle = '#33373f'; g.lineWidth = 2; g.stroke(); }
+    uiIcon(tb.icon, b.x + 20, b.y + b.h / 2, 18, on ? '#fff' : tb.col);
+    g.fillStyle = on ? '#fff' : '#cfd3da'; g.font = '700 14px system-ui'; g.textAlign = 'left'; g.fillText(tb.name, b.x + 34, b.y + b.h / 2 + 1);
+    btns.push({ b, act: () => { phone.adminTab = tb.id; } });
   });
-  if (phone.msgT > 0) { g.fillStyle = '#13f000'; g.font = '700 17px system-ui'; g.fillText(phone.msg, s.x + s.w / 2, s.y + s.h - 40); }
+  // Knöpfe als Kacheln in 2 Spalten
+  const list = ADMIN[tab], cw = (s.w - 40) / 2, top = s.y + 246;
+  list.forEach(([label, col, act], i) => {
+    const b = { x: s.x + 16 + (i % 2) * (cw + 8), y: top + Math.floor(i / 2) * 82, w: cw, h: 72 };
+    const hit = phone.adminHit === label && t - phone.adminHitT < 0.3;
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.roundRect(b.x, b.y + 4, b.w, b.h, 16); g.fill();
+    g.fillStyle = hit ? shade(col.length === 7 ? col : '#555555', 0.35) : '#262a32'; g.beginPath(); g.roundRect(b.x, b.y + (hit ? 3 : 0), b.w, b.h, 16); g.fill();
+    g.fillStyle = col; g.beginPath(); g.roundRect(b.x, b.y + (hit ? 3 : 0), 8, b.h, [16, 0, 0, 16]); g.fill();
+    g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.font = '700 15px system-ui'; const yy = b.y + b.h / 2 + (hit ? 3 : 0);
+    if (g.measureText(label).width <= b.w - 30) g.fillText(label, b.x + 20, yy);
+    else { const w = label.split(' '); let l1 = '', k = 0; while (k < w.length && g.measureText((l1 + ' ' + w[k]).trim()).width <= b.w - 30) l1 = (l1 + ' ' + w[k++]).trim(); if (!l1) { l1 = w[0]; k = 1; } g.fillText(l1, b.x + 20, yy - 10); g.fillText(w.slice(k).join(' '), b.x + 20, yy + 10); }
+    btns.push({ b, act: () => { act(); phone.adminHit = label; phone.adminHitT = performance.now() / 1000; phone.msg = label + ' ✓'; phone.msgT = 1.6; } });
+  });
+  if (phone.msgT > 0) {
+    g.globalAlpha = Math.min(1, phone.msgT * 2);
+    g.font = '700 15px system-ui'; const mw = g.measureText(phone.msg).width + 40;
+    g.fillStyle = '#13b84a'; g.beginPath(); g.roundRect(s.x + s.w / 2 - mw / 2, s.y + s.h - 84, mw, 38, 19); g.fill();
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(phone.msg, s.x + s.w / 2, s.y + s.h - 64); g.globalAlpha = 1;
+  }
 }
 
 function phoneBox() { const y = 70 + (1 - phone.a) * 900; return { x: W / 2 - PH.w / 2, y, w: PH.w, h: PH.h }; }
