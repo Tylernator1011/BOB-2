@@ -94,11 +94,11 @@ const ROOMS = {
               objs: [{ type: 'loot', k: 'tonne', x: 300, base: 560 }, { type: 'loot', k: 'kiste', x: 1200, base: 600 }, { type: 'versteck', k: 'busch', x: 0, w: 240, base: 720 }, { type: 'versteck', k: 'haus', x: 710, w: 200, base: 530 }] },
   apo_strasse: { name: 'Zerstörte Straße', apo: true, theme: 'strasse', danger: 0.7, maxPat: 2, exits: { l: 'apo_lager', r: 'apo_markt' }, wide: [-800, 2400], maxY: H - 60,
               arches: [{ x: 1700, to: 'apo_park', ax: 0, label: 'Park' }],
-              objs: [{ type: 'versteck', k: 'haus', x: -150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 200, w: 300, base: 700 }, { type: 'versteck', k: 'auto', x: 1100, w: 300, base: 760 }, { type: 'versteck', k: 'busch', x: -500, w: 260, base: 600 }, { type: 'versteck', k: 'busch', x: 2100, w: 240, base: 620 },
+              objs: [{ type: 'versteck', k: 'haus', hinter: true, x: -150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 200, w: 300, base: 700 }, { type: 'versteck', k: 'auto', x: 1100, w: 300, base: 760 }, { type: 'versteck', k: 'busch', x: -500, w: 260, base: 600 }, { type: 'versteck', k: 'busch', x: 2100, w: 240, base: 620 },
                      { type: 'loot', k: 'auto', x: 200, base: 700 }, { type: 'loot', k: 'auto', x: 1100, base: 760 }, { type: 'loot', k: 'kiste', x: 600, base: 560 }] },
   apo_markt: { name: 'Am Supermarkt', apo: true, theme: 'markt', danger: 0.6, maxPat: 1, exits: { l: 'apo_strasse' }, wide: [-600, 2000], maxY: H - 60,
               arches: [{ x: 750, to: 'apo_laden', ax: 600, label: 'Supermarkt' }],
-              objs: [{ type: 'versteck', k: 'haus', x: 1150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1500, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: -300, w: 240, base: 640 }, { type: 'loot', k: 'auto', x: 1500, base: 720 }, { type: 'loot', k: 'kiste', x: 100, base: 580 }] },
+              objs: [{ type: 'versteck', k: 'haus', hinter: true, x: 1150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1500, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: -300, w: 240, base: 640 }, { type: 'loot', k: 'auto', x: 1500, base: 720 }, { type: 'loot', k: 'kiste', x: 100, base: 580 }] },
   apo_laden: { name: 'Im Supermarkt', apo: true, theme: 'laden', danger: 0.45, maxPat: 1, exits: {}, wide: [-400, 1600], maxY: H - 60,
               arches: [{ x: 600, to: 'apo_markt', ax: 750, label: 'Ausgang' }],
               objs: [{ type: 'loot', k: 'regal', x: 0, base: 560 }, { type: 'loot', k: 'regal', x: 250, base: 560 }, { type: 'loot', k: 'regal', x: 1000, base: 560 }, { type: 'loot', k: 'kuehl', x: 1300, base: 560 }, { type: 'loot', k: 'kuehl', x: -250, base: 560 }, { type: 'versteck', k: 'busch', x: 1450, w: 200, base: 760 }] },
@@ -108,7 +108,7 @@ const ROOMS = {
                      { type: 'loot', k: 'fluss', x: 300, base: 760 }, { type: 'loot', k: 'fluss', x: 1800, base: 760 }, { type: 'loot', k: 'kiste', x: 1250, base: 600 }] },
   apo_camp: { name: 'Affen-Lager', apo: true, theme: 'camp', danger: 1, maxPat: 3, exits: {}, wide: [-600, 2200], maxY: H - 60,
               arches: [{ x: -300, to: 'apo_park', ax: 2050, label: 'Park' }],
-              objs: [{ type: 'versteck', k: 'haus', x: 400, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1700, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: 200, w: 240, base: 640 }, { type: 'versteck', k: 'gras', x: 1000, w: 360, base: 720 }, { type: 'loot', k: 'kiste', x: 600, base: 580 }, { type: 'loot', k: 'kiste', x: 1400, base: 600 }, { type: 'loot', k: 'kiste', x: 1900, base: 580 }] },
+              objs: [{ type: 'versteck', k: 'haus', hinter: true, x: 400, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1700, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: 200, w: 240, base: 640 }, { type: 'versteck', k: 'gras', x: 1000, w: 360, base: 720 }, { type: 'loot', k: 'kiste', x: 600, base: 580 }, { type: 'loot', k: 'kiste', x: 1400, base: 600 }, { type: 'loot', k: 'kiste', x: 1900, base: 580 }] },
   laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'labor', at: [600, FLOOR + 80], bank: true } },
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
@@ -1231,7 +1231,7 @@ function apoInHaus() { return apo.on && !!AP.inside; }
 function nearHausDoor() { if (!apo.on || AP.inside || fade.dir) return null; return apoObjs('versteck').find(o => o.k === 'haus' && Math.abs(bob.x - o.x) < 95 && Math.abs(bob.y - o.base) < 110); }
 function toggleHaus(o) {
   if (AP.inside) { const d = AP.inside; AP.inside = null; bob.y = d.base + 40; toast = { text: 'Du bist wieder draußen.', t: 1.5 }; return; }
-  AP.inside = o; bob.x = o.x; bob.y = o.base; toast = { text: 'Du versteckst dich im Haus. [E] zum Rausgehen.', t: 2.5 };
+  AP.inside = o; bob.x = o.x; bob.y = o.base; toast = { text: o.hinter ? 'Du versteckst dich hinter dem Haus. [E] zum Rauskommen.' : 'Du versteckst dich im Haus. [E] zum Rausgehen.', t: 2.5 };
 }
 function apoSheltered() { return !!AP.inside || ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => o.k === 'auto' && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
 // ----- Animationen: Essen, Trinken, Verband, Looten, Überwältigen -----
@@ -3407,8 +3407,8 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
-  if (apo.on && AP.inside) return { x: AP.inside.x, y: FLOOR - 230, label: 'Rausgehen' };
-  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: 'Reingehen' }; }
+  if (apo.on && AP.inside) return { x: AP.inside.x, y: FLOOR - 230, label: AP.inside.hinter ? 'Rauskommen' : 'Rausgehen' };
+  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: hd.hinter ? 'Hinters Haus' : 'Reingehen' }; }
   { const db = nearDropBox(); if (db) return { x: db.x, y: db.y - 150, label: 'Abwurf öffnen' }; }
   { const lt = nearLoot(); if (lt) return { x: lt.x, y: lt.base - 220, label: lt.k === 'fluss' ? 'Trinken' : lootEmpty(lt) ? 'Leer' : 'Durchsuchen' }; }
   if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
@@ -6163,7 +6163,7 @@ function frame(t) {
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
-  if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside, t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else list.push({ y: bob.y + 0.01, f: drawBob }); }
+  if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else list.push({ y: bob.y + 0.01, f: drawBob }); }
   apoListItems(list);
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
