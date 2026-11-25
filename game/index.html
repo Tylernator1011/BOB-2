@@ -5477,10 +5477,14 @@ function drawTierhausAussen() {
   const L = x - w / 2 - 24, R = x + w / 2 + 24, top = y - h - 150, eave = y - h + 6;
   g.fillStyle = '#5a2e14'; g.beginPath(); g.moveTo(x, top); g.lineTo(x + dx, top + dy); g.lineTo(L + dx, eave + dy); g.lineTo(L, eave); g.closePath(); g.fill(); g.stroke();
   g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(x, top); g.lineTo(x + dx, top + dy); g.lineTo(R + dx, eave + dy); g.lineTo(R, eave); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = '#f0b26a'; g.beginPath(); g.moveTo(x - w / 2, y - h); g.lineTo(x, top + 18); g.lineTo(x + w / 2, y - h); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = '#c8ecff'; g.beginPath(); g.arc(x, y - h - 50, 30, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x - 30, y - h - 50); g.lineTo(x + 30, y - h - 50); g.moveTo(x, y - h - 80); g.lineTo(x, y - h - 20); g.lineWidth = 3; g.stroke(); g.lineWidth = 5;
+  // Giebel vorne: Dachkante (Brett) + Giebelwand, bündig ohne Lücken
+  g.fillStyle = '#6a3518'; g.beginPath(); g.moveTo(L, eave); g.lineTo(x, top); g.lineTo(R, eave); g.closePath(); g.fill(); g.stroke();
+  const ia = top + 30, hw = (eave - ia) * (R - x) / (eave - top);
+  g.fillStyle = '#f0b26a'; g.beginPath(); g.moveTo(x - hw, eave); g.lineTo(x, ia); g.lineTo(x + hw, eave); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(L, eave); g.lineTo(R, eave); g.stroke();
+  g.fillStyle = '#c8ecff'; g.beginPath(); g.arc(x, y - h - 40, 26, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x - 26, y - h - 40); g.lineTo(x + 26, y - h - 40); g.moveTo(x, y - h - 66); g.lineTo(x, y - h - 14); g.lineWidth = 3; g.stroke(); g.lineWidth = 5;
   // Pfote im Giebel
-  g.fillStyle = '#5a2e14'; g.beginPath(); g.ellipse(x, y - h - 98, 10, 8, 0, 0, 7); g.fill(); for (const [a, b] of [[-12, -10], [-4, -16], [4, -16], [12, -10]]) { g.beginPath(); g.arc(x + a, y - h - 98 + b, 4, 0, 7); g.fill(); }
+  g.fillStyle = '#5a2e14'; g.beginPath(); g.ellipse(x, y - h - 82, 8, 6, 0, 0, 7); g.fill(); for (const [a, b] of [[-9, -8], [-3, -12], [3, -12], [9, -8]]) { g.beginPath(); g.arc(x + a, y - h - 82 + b, 3, 0, 7); g.fill(); }
   for (const wx of [x - 160, x + 90]) { g.fillStyle = '#c8ecff'; g.fillRect(wx, y - h + 60, 70, 70); g.strokeRect(wx, y - h + 60, 70, 70); g.fillStyle = '#ff7ac6'; g.fillRect(wx - 6, y - h + 130, 82, 14); g.strokeRect(wx - 6, y - h + 130, 82, 14); }
   g.fillStyle = '#5a2e14'; g.fillRect(x - 60, y - 170, 120, 170); g.strokeRect(x - 60, y - 170, 120, 170); g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(x + 40, y - 85, 8, 0, 7); g.fill(); g.stroke();
   g.fillStyle = '#f3e6c8'; g.beginPath(); g.roundRect(x - 80, y - 214, 160, 34, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#5a2e14'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Tierhaus', x, y - 196);
