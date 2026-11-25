@@ -747,10 +747,16 @@ function tresTol() { return dw.dietrich ? 4 : 2; }
 function tresDist() { const d = Math.abs(tres.val - tres.nums[tres.idx]); return Math.min(d, 100 - d); }
 function tresLock() {
   if (tres.done) return;
-  if (tresDist() <= tresTol()) { tres.idx++; if (tres.idx >= 3) { tres.done = 'ok'; tres.dt = 2.5; earn(tres.a.reward); bump('dw'); } }
+  if (tresDist() <= tresTol()) { tres.idx++; if (tres.idx >= 3) { tres.done = 'ok'; tres.dt = 2.5; } }
   else { tres.strikes++; tres.shake = 0.4; if (tres.strikes >= 3) { tres.done = 'alarm'; tres.dt = 2.5; } }
 }
-function tresEnd() { dw.appts.splice(dw.appts.indexOf(tres.a), 1); saveDw(); tres.on = false; toast = { text: tres.done === 'ok' ? 'Tresor geknackt! +' + money(tres.a.reward) + ' Bargeld' : 'ALARM! Du bist gerade noch entkommen – ohne Beute.', t: 4.5 }; }
+function tresEnd() {
+  dw.appts.splice(dw.appts.indexOf(tres.a), 1); saveDw(); tres.on = false;
+  // Chance auf Verfolgungsjagd: steigt mit jedem Fehler und wenn man zu langsam war
+  const ok = tres.done === 'ok', p = ok ? 0.15 + tres.strikes * 0.25 + (tres.t < 15 ? 0.2 : 0) : 1;
+  if (Math.random() < p) { startChase(ok ? tres.a.reward : 0); return; }
+  if (ok) { earn(tres.a.reward); bump('dw'); toast = { text: 'Tresor geknackt! Keiner hat was gemerkt. +' + money(tres.a.reward) + ' Bargeld', t: 4.5 }; }
+}
 function tresBtns() { return { l: { x: W / 2 - 300, y: 700, r: 52 }, r: { x: W / 2 + 300, y: 700, r: 52 }, lock: { x: W / 2 - 130, y: 760, w: 260, h: 70 } }; }
 let tresHold = 0;
 addEventListener('keydown', e => {
@@ -806,6 +812,85 @@ function drawTresorGame(dt) {
   g.fillStyle = '#fff'; g.font = '800 26px system-ui'; g.fillText('Einrasten', W / 2, b.lock.y + b.lock.h / 2 + 1);
   g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '600 18px system-ui'; g.fillText(isTouch() ? '‹ › drehen, wenn es grün leuchtet: Einrasten' : '← → drehen  ·  wenn das Lämpchen grün leuchtet: Leertaste', W / 2, H - 30);
   if (tres.done) { marker(tres.done === 'ok' ? 'GEKNACKT!' : 'ALARM!', W / 2, cy, 110, tres.done === 'ok' ? '#3cff5a' : '#fff'); }
+}
+// ---------- Verfolgungsjagd nach dem Tresor ----------
+const chase = { on: false };
+function startChase(loot) {
+  Object.assign(chase, { on: true, loot, t: 0, dur: 28, gap: 0.75, y: 0, vy: 0, scroll: 0, obs: [], next: 1.2, hit: 0, done: null, dt: 0, t0: performance.now() });
+  keys.clear(); joy.on = false;
+}
+function chaseJump() { if (chase.on && !chase.done && chase.y <= 0.01) chase.vy = 820; }
+addEventListener('keydown', e => {
+  if (!chase.on || performance.now() - chase.t0 < 300) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') chaseJump();
+}, true);
+function chaseEnd() {
+  chase.on = false;
+  if (chase.done === 'frei') {
+    if (chase.loot) { earn(chase.loot); bump('dw'); }
+    bump('flucht'); go('kanal1', [500, FLOOR + 100]);
+    toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
+  } else {
+    const lost = Math.floor(bank.cash || 0); bank.cash = 0; const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
+    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); go('spawn', [600, 700]);
+    toast = { text: 'Festgenommen! Eine Nacht in der Zelle. Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
+  }
+}
+function drawChase(dt) {
+  if (!chase.on) return;
+  const c = chase, GY = 720, BX = W / 2 + 120, sp = 520;
+  if (c.done) { c.dt -= dt; if (c.dt <= 0) { chaseEnd(); return; } }
+  else {
+    c.t += dt; c.scroll += sp * dt;
+    c.vy -= 2200 * dt; c.y = Math.max(0, c.y + c.vy * dt); if (c.y === 0) c.vy = Math.max(0, c.vy);
+    c.next -= dt; if (c.next <= 0) { c.next = 0.9 + Math.random() * 1.1; c.obs.push({ x: XR + 80, k: Math.floor(Math.random() * 3) }); }
+    for (const o of c.obs) { o.x -= sp * dt; if (!o.hit && Math.abs(o.x - BX) < 60 && c.y < 70) { o.hit = true; c.gap -= 0.3; c.hit = 0.5; } }
+    c.obs = c.obs.filter(o => o.x > XL - 100);
+    c.gap = Math.min(1, c.gap + 0.025 * dt); if (c.hit) c.hit = Math.max(0, c.hit - dt);
+    if (c.gap <= 0) { c.done = 'gefasst'; c.dt = 2.5; }
+    else if (c.t >= c.dur) { c.done = 'frei'; c.dt = 2.2; }
+  }
+  const t = performance.now() / 1000;
+  // Nachthimmel und Häuser
+  const sk = g.createLinearGradient(0, 0, 0, GY); sk.addColorStop(0, '#0b1030'); sk.addColorStop(1, '#283a6a'); g.fillStyle = sk; g.fillRect(XL, 0, VW, H);
+  g.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const sx = ((i * 197 - c.scroll * 0.05) % VW + VW) % VW + XL; g.fillRect(sx, (i * 53) % 300, 3, 3); }
+  for (let i = -1; i < VW / 260 + 2; i++) {
+    const hx = XL + i * 260 - (c.scroll * 0.4) % 260, hh = 200 + ((i + Math.floor(c.scroll * 0.4 / 260)) * 37 % 5) * 40;
+    g.fillStyle = '#18203f'; g.fillRect(hx, GY - 120 - hh, 220, hh + 10); g.strokeStyle = LINE; g.lineWidth = 4; g.strokeRect(hx, GY - 120 - hh, 220, hh + 10);
+    g.fillStyle = '#ffd84a'; for (let wy = GY - 100 - hh; wy < GY - 140; wy += 60) for (const wx of [30, 130]) if ((wy + wx + i) % 3) g.fillRect(hx + wx, wy, 50, 30);
+  }
+  // Gehweg und Straße
+  g.fillStyle = '#9a958c'; g.fillRect(XL, GY - 120, VW, 120); g.fillStyle = '#3a3a3f'; g.fillRect(XL, GY, VW, H - GY); g.fillStyle = LINE; g.fillRect(XL, GY - 4, VW, 6);
+  g.fillStyle = '#fff'; for (let x = XL - (c.scroll % 160); x < XR; x += 160) g.fillRect(x, GY + 80, 90, 10);
+  // Hindernisse
+  for (const o of c.obs) {
+    g.lineWidth = 4; g.strokeStyle = LINE;
+    if (o.k === 0) { g.fillStyle = '#8c949c'; g.fillRect(o.x - 30, GY - 70, 60, 70); g.strokeRect(o.x - 30, GY - 70, 60, 70); g.fillStyle = '#5d646c'; g.fillRect(o.x - 36, GY - 80, 72, 12); g.strokeRect(o.x - 36, GY - 80, 72, 12); }
+    else if (o.k === 1) { g.fillStyle = '#ff7a1a'; g.beginPath(); g.moveTo(o.x - 28, GY); g.lineTo(o.x, GY - 66); g.lineTo(o.x + 28, GY); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.fillRect(o.x - 14, GY - 34, 28, 8); }
+    else { g.fillStyle = '#c8955a'; g.fillRect(o.x - 34, GY - 56, 68, 56); g.strokeRect(o.x - 34, GY - 56, 68, 56); g.fillStyle = '#e8d28a'; g.fillRect(o.x - 6, GY - 56, 12, 56); }
+  }
+  // Bob rennt
+  const k = BASE_W / BODY.w * 0.85;
+  drawBobFig(BX, GY - c.y, k, 1, c.y > 0 ? 0 : -Math.abs(Math.sin(t * 16)) * 10, 1, wear.on, c.y < 5);
+  if (c.hit) { g.globalAlpha = c.hit; marker('Autsch!', BX, GY - 330, 44, '#ff4d4d'); g.globalAlpha = 1; }
+  // Polizeiauto
+  const px = BX - 220 - c.gap * 520, blink = Math.sin(t * 14) > 0;
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#d9dde3'; g.beginPath(); g.moveTo(px - 190, GY - 20); g.lineTo(px - 190, GY - 90); g.lineTo(px - 120, GY - 100); g.lineTo(px - 80, GY - 160); g.lineTo(px + 60, GY - 160); g.lineTo(px + 110, GY - 100); g.lineTo(px + 170, GY - 90); g.lineTo(px + 170, GY - 20); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#1f4f9e'; g.fillRect(px - 190, GY - 76, 360, 22); g.strokeRect(px - 190, GY - 76, 360, 22);
+  g.fillStyle = '#9ad8f0'; g.beginPath(); g.moveTo(px - 66, GY - 104); g.lineTo(px - 40, GY - 148); g.lineTo(px + 50, GY - 148); g.lineTo(px + 86, GY - 104); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('POLIZEI', px - 10, GY - 64);
+  for (const [lx, on, col] of [[px - 30, blink, '#2f6fff'], [px + 10, !blink, '#ff2a2a']]) { g.save(); if (on) { g.shadowColor = col; g.shadowBlur = 40; } g.fillStyle = on ? col : '#333'; g.fillRect(lx, GY - 176, 26, 16); g.restore(); g.strokeRect(lx, GY - 176, 26, 16); }
+  for (const wx of [px - 120, px + 100]) { g.fillStyle = '#111'; g.beginPath(); g.arc(wx, GY - 16, 30, 0, 7); g.fill(); g.fillStyle = '#888'; g.beginPath(); g.arc(wx, GY - 16, 12, 0, 7); g.fill(); }
+  // Blaulicht-Schimmer
+  g.fillStyle = blink ? 'rgba(40,80,255,.10)' : 'rgba(255,40,40,.08)'; g.fillRect(XL, 0, VW, H);
+  // Anzeige
+  g.fillStyle = 'rgba(15,20,30,.7)'; g.beginPath(); g.roundRect(W / 2 - 260, 20, 520, 80, 20); g.fill();
+  g.fillStyle = '#fff'; g.font = '800 26px system-ui'; g.textAlign = 'center'; g.fillText('Flucht vor der Polizei!', W / 2, 46);
+  g.fillStyle = '#333'; g.fillRect(W / 2 - 220, 70, 440, 16); g.fillStyle = '#3cff5a'; g.fillRect(W / 2 - 220, 70, 440 * Math.min(1, c.t / c.dur), 16);
+  g.fillStyle = '#fff'; g.font = '600 20px system-ui'; g.fillText(isTouch() ? 'Tippen zum Springen' : 'Leertaste / ↑ zum Springen', W / 2, H - 40);
+  if (c.done) { g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(XL, 0, VW, H); marker(c.done === 'frei' ? 'ENTKOMMEN!' : 'GEFASST!', W / 2, 380, 110, c.done === 'frei' ? '#3cff5a' : '#ff4d4d'); }
 }
 // Darkweb-App
 function drawDarkwebApp(s) {
@@ -1856,7 +1941,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !tres.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub()); }
+function canInteract() { return !tres.on && !chase.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -2367,6 +2452,7 @@ const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (!device) { deviceClick(x, y); return; }
+  if (chase.on) { chaseJump(); return; }
   if (tres.on) { tresClick(x, y); return; }
   if (wk.on) { workDown(x, y); return; }
   if (pp.open) { petPanelClick(x, y); return; }
@@ -3129,7 +3215,7 @@ const APPS = [
   { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 setTimeout(() => { if (dw.access && !APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); });
-function canPhone() { return !tres.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
+function canPhone() { return !tres.on && !chase.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
@@ -4131,6 +4217,7 @@ const ACH = [
   { id: 'paket',   name: 'Paketbote',        desc: 'Liefere 10 Pakete aus',       prog: () => [cnt('paket'), 10], money: 70 },
   { id: 'schatz',  name: 'Kanalratte',       desc: 'Find den Schatz im Kanal',    prog: () => [cnt('schatz'), 1], money: 100 },
   { id: 'dw',      name: 'Unterwelt',        desc: 'Erledige einen Darkweb-Auftrag', prog: () => [cnt('dw'), 1], money: 100 },
+  { id: 'flucht',  name: 'Fluchtwagen? Nö.',  desc: 'Entkomme der Polizei',        prog: () => [cnt('flucht'), 1], money: 150 },
   { id: 'bus',     name: 'Busfahrer',        desc: '5x Bus fahren',               prog: () => [cnt('bus'), 5], money: 40 },
   { id: 'schlaf',  name: 'Langschläfer',     desc: '7x schlafen',                 prog: () => [cnt('sleep'), 7], money: 50 },
 ];
@@ -4766,7 +4853,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if (tres.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
+  if (tres.on || chase.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
@@ -4820,7 +4907,7 @@ function frame(t) {
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawTresorGame(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
