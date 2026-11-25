@@ -4568,6 +4568,7 @@ const ADMIN = {
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
+    ['Pässe + 1000 XP', '#ffe14a', () => { lief.paesse = true; saveLief(); passXp(1000); }],
     ['Jahreszeit wechseln', '#5fb8ff', () => { seasonOverride = ((seasonOverride != null ? seasonOverride : seasonIdx()) + 1) % 4; toast = { text: 'Jahreszeit: ' + season().name, t: 2 }; }],
     ['Streichel-Bonus', '#ffcc1a', () => { lief.klick = true; saveLief(); }],
     ['Gold-Rezept Lv3', '#9b5de5', () => { lief.lv3gold = true; saveLief(); }],
@@ -5012,6 +5013,7 @@ const WEB_ITEMS = [
   { id: 'klick', cat: 'haus', name: 'Streichel-Bonus', price: 2500, desc: ['Jeder Klick aufs Tier:', '+1 € Bargeld (Rechtsklick: Infos)'], once: true, needs: 'hundehaus' },
   { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
+  { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'garten' },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
 const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
@@ -5030,7 +5032,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5081,6 +5083,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
   if (id === 'klick') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.arc(18, -14, 22, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 18, -13); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-30, -20); g.lineTo(-30, 30); g.lineTo(-18, 18); g.lineTo(-8, 38); g.lineTo(0, 34); g.lineTo(-10, 14); g.lineTo(6, 14); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'lv3gold') { webPic('tf3', 0, 0, 100); g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.ellipse(30, 38, 16, 9, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.ellipse(30, 29, 10, 6, 0, 0, 7); g.fill(); g.stroke(); g.restore(); return; }
@@ -6311,7 +6314,7 @@ function feedPet(id) {
 let ach = { done: {}, cnt: {}, regal: false };
 try { const a = JSON.parse(localStorage.getItem('bob-erfolge') || 'null'); if (a && a.done) ach = Object.assign(ach, a); } catch (e) {}
 function saveAch() { try { localStorage.setItem('bob-erfolge', JSON.stringify(ach)); } catch (e) {} }
-function bump(k) { ach.cnt[k] = (ach.cnt[k] || 0) + 1; saveAch(); try { bpXp(k === 'work' ? 40 : 15); } catch (e) {} }
+function bump(k) { ach.cnt[k] = (ach.cnt[k] || 0) + 1; saveAch(); try { passXp(k === 'work' ? 40 : 15); } catch (e) {} }
 const cnt = k => ach.cnt[k] || 0;
 const ACH = [
   { id: 'tier1',   name: 'Erstes Haustier',  desc: 'Hol dir ein Tier',            prog: () => [owned.length, 1], money: 50 },
@@ -6445,7 +6448,8 @@ function drawSeasonAir(dt) {
 }
 // Große Updates
 const BIG_UPDATES = [
-  ['1.37', 'Kalender, Jahreszeiten & Battlepass', 'Kalender im Garten, 4 Jahreszeiten mit eigenem Aussehen, Battlepass kommt bald'],
+  ['1.38', 'Pässe & Bob-Pass', 'Pässe-Tab im Kalender, Bob-Pass mit 100 Leveln'],
+  ['1.37', 'Kalender & Jahreszeiten', 'Kalender im Garten, 4 Jahreszeiten mit eigenem Aussehen'],
   ['1.36', 'Streicheln & Autoklicker', 'Tier anklicken bringt Geld, Autoklicker alle 5 Sekunden'],
   ['1.35', 'Goldenes Tier-Klo', '+10 € pro Goldkacke, Gold-Rezept für Futter Lv3'],
   ['1.34', 'Haus-Maid & Gemüsefeld', 'Maid füllt den Napf und sammelt Goldkacke, Feld mit 8 Beeten'],
@@ -6496,7 +6500,7 @@ function drawKalWall() {
   g.fillStyle = '#111'; g.font = '900 38px system-ui'; g.fillText(String(seasonDay()), x, y + 58); g.font = '700 12px system-ui'; g.fillStyle = '#666'; g.fillText('Jahr ' + gYear(), x, y + 90);
   g.restore();
 }
-function openKal() { kal.open = true; kal.t0 = performance.now(); kal.scroll = 0; keys.clear(); joy.on = false; bpCheck(); }
+function openKal() { kal.pass = null; kal.open = true; kal.t0 = performance.now(); kal.scroll = 0; keys.clear(); joy.on = false; bpCheck(); }
 function drawKal() {
   if (!kal.open) return;
   const P = { x: W / 2 - 430, y: 60, w: 860, h: 770 }, btns = []; kal.ui = { btns, P }; const s = season();
@@ -6509,7 +6513,7 @@ function drawKal() {
   txt(s.icon + ' ' + s.name + ' · Tag ' + seasonDay() + ' · Jahr ' + gYear(), P.x + P.w - 80, P.y + 50, '700 20px system-ui', '#fff', 'right');
   const xb = { x: P.x + P.w - 62, y: P.y + 28, w: 40, h: 40 }; txt('✕', xb.x + 20, xb.y + 20, '900 30px system-ui', '#fff', 'center'); btns.push({ b: xb, act: () => { kal.open = false; } });
   // Tabs
-  [['kalender', 'Kalender'], ['updates', 'Große Updates'], ['battlepass', BP_LOCKED ? '🔒 Battlepass' : 'Battlepass']].forEach(([id, lab], i) => {
+  [['kalender', 'Kalender'], ['updates', 'Große Updates'], ['battlepass', lief.paesse ? 'Pässe' : '🔒 Pässe']].forEach(([id, lab], i) => {
     const b = { x: P.x + 24 + i * 272, y: P.y + 110, w: 260, h: 50 }, on = kal.tab === id;
     g.fillStyle = on ? '#e0262b' : '#f0e8d8'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill(); g.lineWidth = 3; g.strokeStyle = on ? '#111' : '#cbbfa8'; g.stroke();
     txt(lab, b.x + b.w / 2, b.y + 26, '800 20px system-ui', on ? '#fff' : '#5a4a3a', 'center'); btns.push({ b, act: () => { kal.tab = id; kal.scroll = 0; } });
@@ -6540,35 +6544,110 @@ function drawKal() {
       txt(title + (i === 0 ? '  ✨ NEU' : ''), C.x + 104, y + 23, '800 19px system-ui', '#111'); txt(desc, C.x + 104, y + 47, '500 15px system-ui', '#6a5a4a');
     });
     g.restore();
-  } else if (BP_LOCKED) {
+  } else if (!lief.paesse) {
     g.fillStyle = '#f3eee4'; g.beginPath(); g.roundRect(C.x + 60, C.y + 80, C.w - 120, 300, 24); g.fill(); g.lineWidth = 3; g.strokeStyle = '#ddd3c2'; g.stroke();
-    txt('🔒', C.x + C.w / 2, C.y + 170, '400 80px system-ui', '#000', 'center');
-    txt('Der Battlepass ist noch gesperrt', C.x + C.w / 2, C.y + 260, '900 28px system-ui', '#3a2a1a', 'center');
-    txt('Er kommt in einem späteren Update.', C.x + C.w / 2, C.y + 300, '600 18px system-ui', '#8a7a6a', 'center');
+    txt('🔒', C.x + C.w / 2, C.y + 160, '400 76px system-ui', '#000', 'center');
+    txt('Der Pässe-Tab ist noch gesperrt', C.x + C.w / 2, C.y + 250, '900 28px system-ui', '#3a2a1a', 'center');
+    txt('Hol ihn dir am Computer in bobnet – der Bob-Pass ist gratis dabei!', C.x + C.w / 2, C.y + 292, '600 18px system-ui', '#8a7a6a', 'center');
   } else {
-    bpCheck(); const lv = bpLevel(), into = bpass.xp - lv * BP_XP;
-    txt(s.icon + ' Battlepass ' + s.name + ' – Stufe ' + lv + ' / ' + BP_TIERS, C.x, C.y + 16, '900 24px system-ui', '#111');
-    txt('Endet in ' + (SEASON_DAYS - seasonDay() + 1) + ' Tagen', C.x + C.w, C.y + 16, '700 16px system-ui', '#8a7a6a', 'right');
-    g.fillStyle = '#eee4d2'; g.beginPath(); g.roundRect(C.x, C.y + 38, C.w, 22, 11); g.fill(); g.fillStyle = s.col; g.beginPath(); g.roundRect(C.x, C.y + 38, lv >= BP_TIERS ? C.w : C.w * into / BP_XP, 22, 11); g.fill();
-    txt(lv >= BP_TIERS ? 'Alles geschafft!' : into + ' / ' + BP_XP + ' Punkte bis Stufe ' + (lv + 1), C.x + C.w / 2, C.y + 49, '700 14px system-ui', '#3a2a1a', 'center');
-    txt('Punkte gibt es für alles: arbeiten, ernten, Tiere füttern, Einsätze, Erfolge …', C.x, C.y + 80, '500 14px system-ui', '#8a7a6a');
-    const cols = 5, cw = C.w / cols, ch = 104, gy = C.y + 100;
-    for (let i = 1; i <= BP_TIERS; i++) {
-      const c = (i - 1) % cols, r = Math.floor((i - 1) / cols), x = C.x + c * cw + 5, y = gy + r * (ch + 8), rw = bpReward(i), got = bpass.claimed.includes(i), can = !got && lv >= i;
-      g.fillStyle = got ? '#e2f5e2' : can ? '#fff2c8' : lv >= i ? '#fff' : '#f1ece2'; g.beginPath(); g.roundRect(x, y, cw - 10, ch, 12); g.fill(); g.lineWidth = can ? 4 : 2; g.strokeStyle = can ? s.col : '#ddd3c2'; g.stroke();
-      txt('Stufe ' + i, x + 12, y + 18, '800 15px system-ui', '#5a4a3a');
-      txt(rw.k === 'troph' ? '🏆' : rw.k === 'food' ? (rw.lvl === 4 ? '✨' : '🥣') : '💶', x + cw - 30, y + 20, '400 20px system-ui', '#000', 'center');
-      g.font = '700 14px system-ui'; const lab = rw.label; txt(lab.length > 22 ? lab.slice(0, 21) + '…' : lab, x + 12, y + 48, '700 14px system-ui', '#3a2a1a');
-      const b = { x: x + 10, y: y + 64, w: cw - 30, h: 30 };
-      g.fillStyle = got ? '#2fa84f' : can ? '#e0262b' : '#d6cdbd'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill();
-      txt(got ? '✓ Abgeholt' : can ? 'Abholen' : '🔒', b.x + b.w / 2, b.y + 16, '800 14px system-ui', '#fff', 'center');
-      if (can) btns.push({ b, act: () => bpClaim(i) });
-    }
+    drawPassTab(C, btns, txt);
   }
 }
+const PASSES = [
+  { id: 'bob', name: 'Bob-Pass', col: '#ffe14a', dark: '#2a2a2a', sub: '100 Level', open: true },
+  { id: 'affe', name: 'Affen-Pass', col: '#c98a4a', dark: '#2a2016', sub: 'Bald verfügbar', open: false },
+  { id: 'gold', name: 'Gold-Pass', col: '#ffcc1a', dark: '#2a2208', sub: 'Bald verfügbar', open: false },
+];
+const PASS_LV = 100, PASS_XP = 100;
+let bobpass = { xp: 0, claimed: [] };
+try { const d = JSON.parse(localStorage.getItem('bob-pass') || 'null'); if (d) bobpass = Object.assign(bobpass, d); } catch (e) {}
+function savePass() { try { localStorage.setItem('bob-pass', JSON.stringify(bobpass)); } catch (e) {} }
+function passLevel() { return Math.min(PASS_LV, Math.floor(bobpass.xp / PASS_XP)); }
+function passXp(v) { if (!lief.paesse) return; const b = passLevel(); bobpass.xp += v; savePass(); if (passLevel() > b) toast = { text: '🎟️ Bob-Pass Level ' + passLevel() + ' erreicht! Im Kalender freischalten.', t: 3.5 }; }
+const PP = { parts: [], burst: [] };
+function passGo(d) { kal.bpSel = Math.max(1, Math.min(PASS_LV, (kal.bpSel || 1) + d)); }
+function passUnlock() { const i = kal.bpSel; if (passLevel() < i || bobpass.claimed.includes(i)) return; bobpass.claimed.push(i); savePass(); for (let k = 0; k < 40; k++) { const a = Math.random() * 6.283, v = 120 + Math.random() * 260; PP.burst.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 1 }); } toast = { text: 'Level ' + i + ' freigeschaltet!', t: 2 }; }
+function drawPassTab(C, btns, txt) {
+  const t = performance.now() / 1000, dt = 1 / 60;
+  if (!kal.pass) {
+    // Auswahl der Pässe (wie Kriegsanleihen)
+    txt('Wähle einen Pass', C.x + C.w / 2, C.y + 20, '900 26px system-ui', '#111', 'center');
+    const cw = 230, ch = 470, gap = 30, x0 = C.x + C.w / 2 - (cw * 3 + gap * 2) / 2;
+    PASSES.forEach((p, i) => {
+      const x = x0 + i * (cw + gap), y = C.y + 56, hov = p.open && kal.hoverPass === p.id;
+      g.save(); g.translate(x + cw / 2, y + ch / 2); const sc = p.open ? 1 + Math.sin(t * 2) * 0.01 : 1; g.scale(sc, sc); g.translate(-(x + cw / 2), -(y + ch / 2));
+      g.fillStyle = p.dark; g.beginPath(); g.roundRect(x, y, cw, ch, 16); g.fill(); g.lineWidth = 4; g.strokeStyle = p.open ? p.col : '#555'; g.stroke();
+      g.save(); g.beginPath(); g.roundRect(x, y, cw, ch, 16); g.clip();
+      const gr = g.createLinearGradient(x, y, x + cw, y + ch * 0.7); gr.addColorStop(0, p.open ? 'rgba(255,225,74,.75)' : 'rgba(120,120,120,.35)'); gr.addColorStop(0.6, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(x, y, cw, ch);
+      if (p.open) for (let k = 0; k < 6; k++) { const px = x + ((k * 53 + t * 18) % cw), py = y + ch - ((k * 97 + t * 40) % ch); const pg = g.createRadialGradient(px, py, 0, px, py, 12); pg.addColorStop(0, 'rgba(255,240,80,1)'); pg.addColorStop(1, 'rgba(255,240,80,0)'); g.fillStyle = pg; g.beginPath(); g.arc(px, py, 12, 0, 7); g.fill(); }
+      g.restore();
+      // Bild
+      if (p.id === 'bob') { g.lineWidth = 4; g.strokeStyle = '#111'; cube(x + cw / 2 - 55, y + 90, 110, 82, 18, YEL, true, 0.4); if (face.complete && face.width) g.drawImage(face, x + cw / 2 - 55 + 6, y + 98, 98, 70); cube(x + cw / 2 - 58, y + 172, 116, 70, 18, mkPal('#13c000', '#2fe01a'), true, 0.4); g.fillStyle = '#111'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.fillText('BoB', x + cw / 2, y + 210); }
+      else { g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(x + cw / 2, y + 170, 70, 0, 7); g.fill(); txt(p.id === 'affe' ? '🐒' : '👑', x + cw / 2, y + 172, '400 64px system-ui', '#000', 'center'); txt('🔒', x + cw - 30, y + 30, '400 26px system-ui', '#000', 'center'); }
+      txt(p.name, x + cw / 2, y + 300, '900 26px system-ui', p.open ? p.col : '#888', 'center');
+      txt(p.sub, x + cw / 2, y + 334, '600 16px system-ui', p.open ? '#ddd' : '#777', 'center');
+      if (p.open) {
+        const lv = passLevel(); g.fillStyle = '#444'; g.beginPath(); g.roundRect(x + 20, y + 366, cw - 40, 14, 7); g.fill(); g.fillStyle = p.col; g.beginPath(); g.roundRect(x + 20, y + 366, (cw - 40) * lv / PASS_LV, 14, 7); g.fill();
+        txt('Level ' + lv + ' / ' + PASS_LV, x + cw / 2, y + 396, '700 15px system-ui', '#ddd', 'center');
+        g.fillStyle = p.col; g.beginPath(); g.roundRect(x + 30, y + ch - 62, cw - 60, 42, 12); g.fill(); txt('Öffnen', x + cw / 2, y + ch - 40, '900 20px system-ui', '#111', 'center');
+        btns.push({ b: { x, y, w: cw, h: ch }, act: () => { kal.pass = p.id; kal.bpSel = Math.max(1, Math.min(PASS_LV, passLevel() + 1)); kal.bpPos = kal.bpSel; } });
+      } else { g.fillStyle = '#3a3a3a'; g.beginPath(); g.roundRect(x + 30, y + ch - 62, cw - 60, 42, 12); g.fill(); txt('Gesperrt', x + cw / 2, y + ch - 40, '800 18px system-ui', '#888', 'center'); }
+      g.restore();
+    });
+    return;
+  }
+  // Der Bob-Pass
+  const P = { x: C.x - 10, y: C.y - 6, w: C.w + 20, h: C.h + 6 }; kal.bpSel = kal.bpSel || 1; kal.bpPos = kal.bpPos == null ? kal.bpSel : kal.bpPos; kal.bpPos += (kal.bpSel - kal.bpPos) * Math.min(1, dt * 9);
+  g.save(); g.beginPath(); g.roundRect(P.x, P.y, P.w, P.h, 14); g.clip();
+  g.fillStyle = '#272727'; g.fillRect(P.x, P.y, P.w, P.h);
+  // Lichtkegel von oben links
+  const pulse = 0.75 + 0.25 * Math.sin(t * 1.4);
+  const lg = g.createLinearGradient(P.x, P.y, P.x + P.w * 0.75, P.y + P.h * 0.85); lg.addColorStop(0, `rgba(255,236,60,${0.85 * pulse})`); lg.addColorStop(0.45, `rgba(255,236,60,${0.25 * pulse})`); lg.addColorStop(1, 'rgba(255,236,60,0)');
+  g.fillStyle = lg; g.beginPath(); g.moveTo(P.x, P.y); g.lineTo(P.x + P.w * 0.62, P.y); g.lineTo(P.x + P.w * 0.7, P.y + P.h * 0.25); g.lineTo(P.x + P.w * 0.2, P.y + P.h); g.lineTo(P.x, P.y + P.h); g.closePath(); g.fill();
+  // Partikel
+  if (PP.parts.length < 26 && Math.random() < 0.3) PP.parts.push({ x: P.x + Math.random() * P.w, y: P.y + P.h + 10, v: 18 + Math.random() * 30, r: 5 + Math.random() * 9, ph: Math.random() * 6 });
+  for (const q of PP.parts) { q.y -= q.v * dt; q.x += Math.sin(t + q.ph) * 0.4; const a = Math.min(1, (q.y - P.y) / 120); const pg = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.r * 2.2); pg.addColorStop(0, `rgba(255,245,90,${a})`); pg.addColorStop(0.35, `rgba(255,225,40,${0.6 * a})`); pg.addColorStop(1, 'rgba(255,225,40,0)'); g.fillStyle = pg; g.beginPath(); g.arc(q.x, q.y, q.r * 2.2, 0, 7); g.fill(); }
+  PP.parts = PP.parts.filter(q => q.y > P.y - 30);
+  // Rahmen
+  g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.5; g.strokeRect(P.x + 70, P.y + 26, P.w - 140, P.h - 52);
+  // XP-Leiste
+  const lv = passLevel(), into = lv >= PASS_LV ? PASS_XP : bobpass.xp - lv * PASS_XP, bx = P.x + 110, bw = P.w - 220, by = P.y + 56;
+  g.fillStyle = '#3c3c3c'; g.fillRect(bx, by, bw, 46); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(bx, by, bw, 46);
+  const fg = g.createLinearGradient(bx, 0, bx + bw, 0); fg.addColorStop(0, '#ffe14a'); fg.addColorStop(1, '#ffb21a'); g.fillStyle = fg; g.fillRect(bx + 3, by + 3, (bw - 6) * into / PASS_XP, 40);
+  g.fillStyle = `rgba(255,255,255,${0.25 + 0.2 * Math.sin(t * 3)})`; g.fillRect(bx + 3 + ((t * 160) % Math.max(1, (bw - 6) * into / PASS_XP)), by + 3, 18, 40);
+  txt('Level ' + lv + (lv >= PASS_LV ? ' – MAX' : '  ·  ' + into + ' / ' + PASS_XP + ' XP'), bx + bw / 2, by + 24, '900 20px system-ui', '#fff', 'center');
+  // Stufen-Kästen (nach links/rechts scrollen)
+  const cx = P.x + P.w / 2, cy = P.y + 250, step = 320;
+  g.fillStyle = '#b8b8b8'; g.fillRect(P.x + 60, cy - 28, P.w - 120, 56);
+  for (let i = Math.max(1, Math.floor(kal.bpPos) - 2); i <= Math.min(PASS_LV, Math.ceil(kal.bpPos) + 2); i++) {
+    const d = i - kal.bpPos, x = cx + d * step, sz = 230 - Math.min(1, Math.abs(d)) * 40, sel = i === kal.bpSel, reached = lv >= i, got = bobpass.claimed.includes(i);
+    g.save(); g.globalAlpha = Math.max(0, 1 - Math.max(0, Math.abs(d) - 1.2) * 1.2);
+    if (sel && reached && !got) { const hg = g.createRadialGradient(x, cy, sz * 0.3, x, cy, sz); hg.addColorStop(0, `rgba(255,236,60,${0.35 + 0.15 * Math.sin(t * 4)})`); hg.addColorStop(1, 'rgba(255,236,60,0)'); g.fillStyle = hg; g.beginPath(); g.arc(x, cy, sz, 0, 7); g.fill(); }
+    g.fillStyle = got ? '#4a4a3a' : '#404040'; g.fillRect(x - sz / 2, cy - sz / 2, sz, sz); g.lineWidth = sel ? 9 : 3; g.strokeStyle = sel ? '#fff' : '#111'; g.strokeRect(x - sz / 2, cy - sz / 2, sz, sz);
+    txt('LEVEL ' + i, x, cy - sz / 2 + 24, '900 ' + (sel ? 20 : 16) + 'px system-ui', reached ? '#ffe14a' : '#9a9a9a', 'center');
+    txt(got ? '✓' : reached ? '🎁' : '🔒', x, cy + 6, '400 ' + (sel ? 62 : 46) + 'px system-ui', '#fff', 'center');
+    txt(got ? 'Freigeschaltet' : 'Belohnung folgt', x, cy + sz / 2 - 22, '700 ' + (sel ? 16 : 13) + 'px system-ui', got ? '#9aff9a' : '#cfcfcf', 'center');
+    if (!sel && Math.abs(d) < 1.5) btns.push({ b: { x: x - sz / 2, y: cy - sz / 2, w: sz, h: sz }, act: () => passGo(i > kal.bpSel ? 1 : -1) });
+    g.restore();
+  }
+  // Pfeile
+  for (const [dir, ax] of [[-1, P.x + 30], [1, P.x + P.w - 30]]) { const can = dir < 0 ? kal.bpSel > 1 : kal.bpSel < PASS_LV; g.fillStyle = can ? '#ffe14a' : '#555'; g.beginPath(); g.moveTo(ax + dir * 16, cy); g.lineTo(ax - dir * 12, cy - 26); g.lineTo(ax - dir * 12, cy + 26); g.closePath(); g.fill(); if (can) btns.push({ b: { x: ax - 30, y: cy - 40, w: 60, h: 80 }, act: () => passGo(dir) }); }
+  // Unlock
+  const sel = kal.bpSel, reached = lv >= sel, got = bobpass.claimed.includes(sel), ub = { x: cx - 170, y: P.y + P.h - 132, w: 340, h: 74 };
+  g.fillStyle = '#000'; g.fillRect(ub.x, ub.y, ub.w, ub.h); g.fillStyle = got ? '#3a6a3a' : reached ? (0.5 + 0.5 * Math.sin(t * 4) > 0.5 ? '#ffe14a' : '#f2d23a') : '#8a8a8a'; g.fillRect(ub.x + 10, ub.y + 10, ub.w - 20, ub.h - 20);
+  txt(got ? '✓ Freigeschaltet' : reached ? 'Freischalten' : '🔒 Level ' + sel + ' nötig', cx, ub.y + ub.h / 2 + 1, '900 30px system-ui', got ? '#fff' : '#111', 'center');
+  if (reached && !got) btns.push({ b: ub, act: passUnlock });
+  // Explosion
+  for (const q of PP.burst) { q.t -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; const pg = g.createRadialGradient(cx + q.x, cy + q.y, 0, cx + q.x, cy + q.y, 10); pg.addColorStop(0, `rgba(255,245,120,${q.t})`); pg.addColorStop(1, 'rgba(255,245,120,0)'); g.fillStyle = pg; g.beginPath(); g.arc(cx + q.x, cy + q.y, 10, 0, 7); g.fill(); }
+  PP.burst = PP.burst.filter(q => q.t > 0);
+  g.restore();
+  // Zurück zur Auswahl
+  const back = { x: P.x + 10, y: P.y + 10, w: 120, h: 34 }; g.fillStyle = 'rgba(0,0,0,.55)'; g.beginPath(); g.roundRect(back.x, back.y, back.w, back.h, 10); g.fill(); txt('◀ Pässe', back.x + back.w / 2, back.y + 18, '800 16px system-ui', '#fff', 'center'); btns.push({ b: back, act: () => { kal.pass = null; } });
+  txt(sel + ' / ' + PASS_LV, cx, P.y + P.h - 26, '700 15px system-ui', '#bbb', 'center');
+}
 function kalClick(x, y) { const u = kal.ui; if (!u) return; for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(); return; } const P = u.P; if (x < P.x || x > P.x + P.w || y < P.y - 20 || y > P.y + P.h) kal.open = false; }
-cv.addEventListener('wheel', e => { if (!kal.open) return; e.preventDefault(); kal.scroll += e.deltaY * 0.8; }, { passive: false });
-addEventListener('keydown', e => { if (!kal.open || performance.now() - kal.t0 < 150) return; if (e.code === 'Escape' || e.code === 'KeyE') { kal.open = false; e.preventDefault(); e.stopImmediatePropagation(); } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { const T = ['kalender', 'updates', 'battlepass']; kal.tab = T[(T.indexOf(kal.tab) + (e.code === 'ArrowRight' ? 1 : 2)) % 3]; e.preventDefault(); e.stopImmediatePropagation(); } else { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+cv.addEventListener('wheel', e => { if (!kal.open) return; e.preventDefault(); if (kal.tab === 'battlepass' && kal.pass) { kal.wAcc = (kal.wAcc || 0) + (e.deltaX || e.deltaY); if (Math.abs(kal.wAcc) > 60) { passGo(Math.sign(kal.wAcc)); kal.wAcc = 0; } return; } kal.scroll += e.deltaY * 0.8; }, { passive: false });
+addEventListener('keydown', e => { if (!kal.open || performance.now() - kal.t0 < 150) return; if (e.code === 'Escape' || e.code === 'KeyE') { kal.open = false; e.preventDefault(); e.stopImmediatePropagation(); } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'KeyA' || e.code === 'KeyD') && kal.tab === 'battlepass' && kal.pass) { passGo(e.code === 'ArrowLeft' || e.code === 'KeyA' ? -1 : 1); e.preventDefault(); e.stopImmediatePropagation(); } else if ((e.code === 'Enter' || e.code === 'Space') && kal.tab === 'battlepass' && kal.pass) { passUnlock(); e.preventDefault(); e.stopImmediatePropagation(); } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { const T = ['kalender', 'updates', 'battlepass']; kal.tab = T[(T.indexOf(kal.tab) + (e.code === 'ArrowRight' ? 1 : 2)) % 3]; e.preventDefault(); e.stopImmediatePropagation(); } else { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 function checkAch(dt) {
   achT -= dt; if (achT > 0) return; achT = 0.5;
   for (const a of ACH) {
