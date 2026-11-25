@@ -1227,6 +1227,7 @@ function apeType() {
   return 'schimpanse';
 }
 function apoDmg(v) { if (wear.on === 'apo_ruestung') v *= 0.7; apo.hp -= v; }
+function apoInHaus() { return apo.on && apoObjs('versteck').some(o => o.k === 'haus' && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
 function apoSheltered() { return ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => (o.k === 'auto' || o.k === 'haus') && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
 // ----- Animationen: Essen, Trinken, Verband, Looten, Überwältigen -----
 function apoAct(k, dur, done, data) { AP.act = { k, t: 0, dur, done, data }; keys.clear(); }
@@ -1659,7 +1660,7 @@ function drawVersteck(o) {
   const s = scaleAt(o.base), hid = apo.on && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55;
   g.save(); if (hid) g.globalAlpha = 0.75;
   g.lineWidth = 4; g.strokeStyle = LINE;
-  if (o.k === 'haus') { g.restore(); g.fillStyle = '#0d0b08'; g.fillRect(o.x - 80, FLOOR - 190, 160, 190); g.lineWidth = 6; g.strokeStyle = '#3a2814'; g.strokeRect(o.x - 80, FLOOR - 190, 160, 190); g.fillStyle = '#e8d28a'; g.fillRect(o.x - 50, FLOOR - 230, 100, 30); g.lineWidth = 3; g.strokeStyle = LINE; g.strokeRect(o.x - 50, FLOOR - 230, 100, 30); g.fillStyle = '#3a2814'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Unterschlupf', o.x, FLOOR - 214); return; }
+  if (o.k === 'haus') { g.restore(); return; }
   if (o.k === 'auto') {
     const w = o.w, x = o.x - w / 2, y = o.base;
     g.fillStyle = '#6a3a2a'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 80); g.lineTo(x + w * 0.22, y - 90); g.lineTo(x + w * 0.32, y - 150); g.lineTo(x + w * 0.7, y - 150); g.lineTo(x + w * 0.82, y - 90); g.lineTo(x + w, y - 80); g.lineTo(x + w, y); g.closePath(); g.fill(); g.stroke();
@@ -1726,7 +1727,7 @@ function drawApoTop() {
     g.strokeStyle = tg; g.lineCap = 'round'; g.lineWidth = 5; g.beginPath(); g.moveTo(b.x - ux * L, b.y - uy * L); g.lineTo(b.x, b.y); g.stroke(); g.lineCap = 'butt';
     g.fillStyle = b.me ? '#ffe14a' : '#ff6a3a'; g.beginPath(); g.arc(b.x, b.y, 3.5, 0, 7); g.fill();
   }
-  if (!bob.hidden) {
+  if (!bob.hidden && !apoInHaus()) {
     const P = bobGunPos();
     drawGun('bob', P.gx, P.gy, bob.face, P.s, AP.aim || 0, AP.rec || 0, AP.flash > 0 ? 1 : 0);
   }
@@ -6153,7 +6154,7 @@ function frame(t) {
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
-  if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: drawBob });
+  if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: () => { const ih = apoInHaus(); if (ih) { g.save(); g.globalAlpha = 0.35; } drawBob(); if (ih) g.restore(); } });
   apoListItems(list);
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
