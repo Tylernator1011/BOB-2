@@ -29,8 +29,23 @@ canvas{display:block;width:100vw;height:100vh;touch-action:none}
 <div class="frame"><canvas id="c" width="1200" height="880"></canvas></div>
 
 <script>
+
 {
 const cv = document.getElementById('c'), g = cv.getContext('2d');
+// Admin-Hotkey: BOB1011 einmal irgendwo im Spiel tippen -> dieses Gerät ist freigeschaltet.
+// Danach öffnet F9 (oder Alt+A) das Admin-Menü sofort. Andere Geräte/Spieler haben den Hotkey nicht.
+function openAdmin() { togglePhone(true); phone.locked = false; phone.app = 'admin'; }
+let adminBuf = '';
+addEventListener('keydown', e => {
+  let isAdminDev = false; try { isAdminDev = localStorage.getItem('bob-admin-geraet') === '1'; } catch (er) {}
+  if (isAdminDev && (e.code === 'F9' || (e.altKey && e.code === 'KeyA'))) {
+    if (phone.open && phone.app === 'admin') togglePhone(false); else openAdmin();
+    e.preventDefault(); e.stopImmediatePropagation(); return;
+  }
+  let ch = null; if (/^Key[A-Z]$/.test(e.code)) ch = e.code.slice(3); else if (/^(Digit|Numpad)[0-9]$/.test(e.code)) ch = e.code.slice(-1);
+  if (!ch) return; adminBuf = (adminBuf + ch).slice(-7);
+  if (adminBuf === 'BOB1011') { adminBuf = ''; try { localStorage.setItem('bob-admin-geraet', '1'); } catch (er) {} openAdmin(); toast = { text: 'Admin freigeschaltet – ab jetzt öffnet F9 (oder Alt+A) das Menü.', t: 4 }; }
+}, true);
 const W = 1200, H = 880, FLOOR = 440;
 let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
 const LINE = '#111';
@@ -4397,20 +4412,6 @@ function lockClick(x, y) {
     return;
   }
 }
-// Admin-Hotkey: BOB1011 einmal irgendwo im Spiel tippen -> dieses Gerät ist freigeschaltet.
-// Danach öffnet F9 (oder Alt+A) das Admin-Menü sofort. Andere Geräte/Spieler haben den Hotkey nicht.
-function openAdmin() { togglePhone(true); phone.locked = false; phone.app = 'admin'; }
-let adminBuf = '';
-addEventListener('keydown', e => {
-  let isAdminDev = false; try { isAdminDev = localStorage.getItem('bob-admin-geraet') === '1'; } catch (er) {}
-  if (isAdminDev && (e.code === 'F9' || (e.altKey && e.code === 'KeyA'))) {
-    if (phone.open && phone.app === 'admin') togglePhone(false); else openAdmin();
-    e.preventDefault(); e.stopImmediatePropagation(); return;
-  }
-  let ch = null; if (/^Key[A-Z]$/.test(e.code)) ch = e.code.slice(3); else if (/^(Digit|Numpad)[0-9]$/.test(e.code)) ch = e.code.slice(-1);
-  if (!ch) return; adminBuf = (adminBuf + ch).slice(-SECRET.length);
-  if (adminBuf === SECRET) { adminBuf = ''; try { localStorage.setItem('bob-admin-geraet', '1'); } catch (er) {} openAdmin(); toast = { text: 'Admin freigeschaltet – ab jetzt öffnet F9 (oder Alt+A) das Menü.', t: 4 }; }
-}, true);
 // Tastatur: Ziffern tippen; BOB1011 + Enter wird nicht angezeigt und öffnet das Admin-Menü
 addEventListener('keydown', e => {
   if (!phone.open || !phone.locked) return;
