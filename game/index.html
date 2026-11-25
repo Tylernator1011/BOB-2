@@ -1194,7 +1194,7 @@ function startApo(id) {
   togglePhone(false); menu.open = false; go('apo_lager', [600, 640]);
 }
 function apoReset() {
-  AP.fx = []; AP.rec = 0; AP.aim = 0;
+  AP.inside = null; AP.fx = []; AP.rec = 0; AP.aim = 0;
   AP.storm = null; AP.drop = null; AP.act = null;
   AP.en = []; AP.bul = []; AP.shock = []; AP.room = cur; AP.patT = 40 + Math.random() * 40;
   const R = ROOMS[cur]; if (!R.apo || apo.boss) return;
@@ -1227,8 +1227,13 @@ function apeType() {
   return 'schimpanse';
 }
 function apoDmg(v) { if (wear.on === 'apo_ruestung') v *= 0.7; apo.hp -= v; }
-function apoInHaus() { return apo.on && apoObjs('versteck').some(o => o.k === 'haus' && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
-function apoSheltered() { return ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => (o.k === 'auto' || o.k === 'haus') && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
+function apoInHaus() { return apo.on && !!AP.inside; }
+function nearHausDoor() { if (!apo.on || AP.inside || fade.dir) return null; return apoObjs('versteck').find(o => o.k === 'haus' && Math.abs(bob.x - o.x) < 95 && Math.abs(bob.y - o.base) < 110); }
+function toggleHaus(o) {
+  if (AP.inside) { const d = AP.inside; AP.inside = null; bob.y = d.base + 40; toast = { text: 'Du bist wieder draußen.', t: 1.5 }; return; }
+  AP.inside = o; bob.x = o.x; bob.y = o.base; toast = { text: 'Du versteckst dich im Haus. [E] zum Rausgehen.', t: 2.5 };
+}
+function apoSheltered() { return !!AP.inside || ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => o.k === 'auto' && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
 // ----- Animationen: Essen, Trinken, Verband, Looten, Überwältigen -----
 function apoAct(k, dur, done, data) { AP.act = { k, t: 0, dur, done, data }; keys.clear(); }
 function apoActTick(dt) { const a = AP.act; if (!a) return; a.t += dt; if (a.t >= a.dur) { AP.act = null; a.done && a.done(); } }
@@ -1451,7 +1456,7 @@ function drawGunFx() {
 }
 // Verstecke und Beute aus der Karte
 function apoObjs(type) { return (ROOMS[cur].objs || []).filter(o => o.type === type); }
-function apoHidden() { return apoObjs('versteck').some(o => Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
+function apoHidden() { return !!AP.inside || apoObjs('versteck').some(o => o.k !== 'haus' && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
 function nearLoot() { if (!apo.on || fade.dir) return null; return apoObjs('loot').find(o => Math.abs(bob.x - o.x) < 110 && Math.abs(bob.y - o.base) < 90); }
 function lootKey(o) { return cur + ':' + o.x; }
 function lootEmpty(o) { return o.k !== 'fluss' && apo.looted[lootKey(o)] === apoDay(); }
@@ -1488,7 +1493,7 @@ function doTakedown(e) { e.frozen = true; bob.x = e.x - e.dir * 80; bob.face = e
 function apoAlertAll() { for (const e of AP.en) { e.st = 'alert'; e.lost = 0; } }
 function bobGunPos() { const s = scaleAt(bob.y); return { gx: bob.x + bob.face * 95 * s, gy: bob.y - 118 * s, s: s * 0.95 }; }
 function apoShoot(tx, ty) {
-  if (!apo.on || AP.cd > 0 || AP.dead) return;
+  if (!apo.on || AP.cd > 0 || AP.dead || AP.inside) return;
   if (apo.ammo <= 0) { toast = { text: 'Keine Munition! Durchsuch Kisten – oder schleich dich von hinten an.', t: 2.5 }; AP.cd = 0.5; return; }
   apo.ammo--; AP.cd = 0.28;
   bob.face = tx < bob.x ? -1 : 1;
@@ -1545,7 +1550,7 @@ function apoTick(dt) {
       e.dir = dx > 0 ? 1 : -1;
       const sp = T.sp * scaleAt(e.y);
       if (e.type === 'flitzer') {
-        e.zz = (e.zz || 0) + dt * 6; if (d > 70) { e.x += dx / d * sp * dt; e.y += (dy / d * sp * 0.7 + Math.sin(e.zz) * 120) * dt; } else { e.bite = (e.bite || 0) - dt; if (e.bite <= 0) { e.bite = 0.8; apoDmg(10); AP.hurt = 0.3; } }
+        e.zz = (e.zz || 0) + dt * 6; if (d > 70) { e.x += dx / d * sp * dt; e.y += (dy / d * sp * 0.7 + Math.sin(e.zz) * 120) * dt; } else { e.bite = (e.bite || 0) - dt; if (e.bite <= 0 && !AP.inside) { e.bite = 0.8; apoDmg(10); AP.hurt = 0.3; } }
       } else if (e.type === 'scharf') {
         if (d < 300) { e.x -= dx / d * sp * dt; }
       } else {
@@ -2276,7 +2281,7 @@ function updateFade(dt) {
   if (!fade.dir) return;
   fade.a += fade.dir * dt * 5;
   if (fade.dir > 0 && fade.a >= 1) {
-    fade.a = 1; fade.dir = -1; cur = fade.to; build.on = false; bob.x = fade.at[0]; bob.y = fade.at[1]; bob.hidden = false;
+    fade.a = 1; fade.dir = -1; cur = fade.to; AP.inside = null; build.on = false; bob.x = fade.at[0]; bob.y = fade.at[1]; bob.hidden = false;
     banner = { text: ROOMS[cur].name, t: 2.2 };
   } else if (fade.dir < 0 && fade.a <= 0) { fade.a = 0; fade.dir = 0; }
 }
@@ -3069,7 +3074,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox()); }
+function canInteract() { return !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3253,6 +3258,8 @@ function openMenu() {
   if (nearGuard()) { openBribe(); return; }
   if (nearTerminal()) { openLabor(); return; }
   { const td = nearTakedown(); if (td) { doTakedown(td); return; } }
+  if (apo.on && AP.inside) { toggleHaus(); return; }
+  { const hd = nearHausDoor(); if (hd) { toggleHaus(hd); return; } }
   { const db = nearDropBox(); if (db) { apoAct('loot', 1.4, () => { AP.drop = null; const a = 10 + Math.floor(Math.random() * 8); apo.ammo += a; apo.bag.dose += 2; apo.bag.wasser += 2; apo.bag.medi += 1; const of = apoFindOutfit(0.5); toast = { text: 'Abwurf: ' + a + ' Patronen, 2 Dosen, 2 Wasser, 1 Verband' + (of ? ', Outfit „' + of + '“' : ''), t: 4.5 }; saveApo(); }, { x: db.x, base: db.y }); return; } }
   { const lt = nearLoot(); if (lt) { doLoot(lt); return; } }
   if (nearPritsche()) { if (canSleepNow()) sleepTo('morgen'); else toast = { text: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr. Arbeite doch an der Stanze!', t: 3.5 }; return; }
@@ -3400,6 +3407,8 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  if (apo.on && AP.inside) return { x: AP.inside.x, y: FLOOR - 230, label: 'Rausgehen' };
+  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: 'Reingehen' }; }
   { const db = nearDropBox(); if (db) return { x: db.x, y: db.y - 150, label: 'Abwurf öffnen' }; }
   { const lt = nearLoot(); if (lt) return { x: lt.x, y: lt.base - 220, label: lt.k === 'fluss' ? 'Trinken' : lootEmpty(lt) ? 'Leer' : 'Durchsuchen' }; }
   if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
@@ -6104,7 +6113,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if ((apo.on && AP.act) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
+  if ((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
@@ -6154,7 +6163,7 @@ function frame(t) {
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
-  if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: () => { const ih = apoInHaus(); if (ih) { g.save(); g.globalAlpha = 0.35; } drawBob(); if (ih) g.restore(); } });
+  if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside, t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else list.push({ y: bob.y + 0.01, f: drawBob }); }
   apoListItems(list);
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
