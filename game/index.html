@@ -492,28 +492,22 @@ let schatz = { day: -1 };
 try { schatz = JSON.parse(localStorage.getItem('bob-schatz') || 'null') || schatz; } catch (e) {}
 function nearSchatz() { const o = (ROOMS[cur].objs || []).find(o => o.type === 'schatz'); return o && !fade.dir && Math.abs(bob.x - o.x) < 160 && Math.abs(bob.y - o.base) < 130 && o; }
 function openSchatz() {
-  if (schatz.day === gDay()) { toast = { text: 'Die Truhe ist leer. Komm morgen wieder!', t: 3 }; return; }
-  schatz.day = gDay(); try { localStorage.setItem('bob-schatz', JSON.stringify(schatz)); } catch (e) {}
-  const v = 40 + Math.floor(Math.random() * 81); earn(v); bump('schatz');
+  if (schatz.open) { toast = { text: 'Die Truhe ist leer.', t: 3 }; return; }
+  schatz.open = true; try { localStorage.setItem('bob-schatz', JSON.stringify(schatz)); } catch (e) {}
+  const v = 300; earn(v); bump('schatz');
   toast = { text: 'Ein Schatz in der Kanalisation! +' + money(v) + ' Bargeld', t: 4 };
 }
-function drawSchatz(o) {
-  const open = schatz.day === gDay(), x = o.x, y = o.base;
-  g.save(); g.translate(x, y); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
-  g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(0, 0, 90, 16, 0, 0, 7); g.fill();
-  // Seite (3D)
-  g.fillStyle = '#5a3214'; g.beginPath(); g.moveTo(-80, 0); g.lineTo(-100, -14); g.lineTo(-100, -84); g.lineTo(-80, -70); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = '#8b4a1e'; g.fillRect(-80, -70, 160, 70); g.strokeRect(-80, -70, 160, 70);
-  g.fillStyle = '#ffcc1a'; g.fillRect(-80, -48, 160, 10); g.strokeRect(-80, -48, 160, 10);
-  if (open) {
-    g.fillStyle = '#2b1a0c'; g.beginPath(); g.moveTo(-80, -70); g.lineTo(-100, -84); g.lineTo(60, -84); g.lineTo(80, -70); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = '#7a4520'; g.beginPath(); g.moveTo(-100, -84); g.lineTo(60, -84); g.lineTo(60, -150); g.lineTo(-100, -150); g.closePath(); g.fill(); g.stroke();
-  } else {
-    g.fillStyle = '#7a4520'; g.beginPath(); g.moveTo(-80, -70); g.lineTo(-100, -84); g.quadraticCurveTo(-10, -130, 60, -84); g.lineTo(80, -70); g.quadraticCurveTo(0, -116, -80, -70); g.fill(); g.stroke();
-    g.fillStyle = '#ffcc1a'; g.fillRect(-12, -62, 24, 26); g.strokeRect(-12, -62, 24, 26);
-    const tw = Math.sin(performance.now() / 300); g.fillStyle = `rgba(255,240,150,${0.5 + 0.5 * tw})`; g.beginPath(); g.arc(50, -100, 5, 0, 7); g.fill();
-  }
-  g.restore();
+function drawSchatz(o) { drawFurn(schatz.open ? 'truhe_auf' : 'truhe_zu', o.x, o.base, scaleAt(o.base), 1, 0); }
+// Deko im Kanal so verteilen, dass nichts übereinanderliegt
+function kanalLayout(R) {
+  if (R._lay) return R._lay;
+  const rr = rnd(R.seed * 7 + 3), used = [];
+  for (const a of R.arches || []) used.push([a.x - 165, a.x + 165]);
+  if (R.ladder) used.push([R.ladder.x - 140, R.ladder.x + 140]);
+  for (const o of R.objs || []) used.push([o.x - 120, o.x + 120]);
+  const free = (a, b) => a > R.wide[0] + 60 && b < R.wide[1] - 60 && !used.some(([u, v]) => a < v + 30 && b > u - 30);
+  const place = (n, half) => { const out = []; for (let k = 0; k < 60 && out.length < n; k++) { const x = R.wide[0] + 100 + rr() * (R.wide[1] - R.wide[0] - 200); if (free(x - half, x + half)) { used.push([x - half, x + half]); out.push(x); } } return out; };
+  return R._lay = { grates: place(2, 100), pipes: place(3, 90) };
 }
 function drawKanal(R) {
   const t = performance.now() / 1000, rr = rnd(R.seed * 7 + 3);
@@ -530,16 +524,14 @@ function drawKanal(R) {
     g.fillStyle = tg; g.fillRect(ax - 140, 300, 280, FLOOR - 300);
   }
   // Sackgassen-Gitter
-  for (let i = 0; i < 2; i++) {
-    const gx = R.wide[0] + 300 + rr() * (R.wide[1] - R.wide[0] - 600);
-    if ((R.arches || []).some(a => Math.abs(a.x - gx) < 260) || (R.ladder && Math.abs(R.ladder.x - gx) < 220)) continue;
+  for (const gx of kanalLayout(R).grates) {
     g.fillStyle = '#0d0f0d'; g.beginPath(); g.arc(gx, 300, 80, 0, 7); g.fill(); g.lineWidth = 6; g.strokeStyle = '#5a5f58'; g.stroke();
     g.strokeStyle = '#7a7f78'; g.lineWidth = 6; for (let k = -60; k <= 60; k += 24) { g.beginPath(); g.moveTo(gx + k, 300 - Math.sqrt(6400 - k * k)); g.lineTo(gx + k, 300 + Math.sqrt(6400 - k * k)); g.stroke(); }
   }
   // Rohre
   g.lineWidth = 5; g.strokeStyle = LINE;
   g.fillStyle = '#6b7b6a'; g.fillRect(XL, 90, VW, 34); g.strokeRect(XL - 10, 90, VW + 20, 34);
-  const pipes = [0, 1, 2].map(() => R.wide[0] + 200 + rr() * (R.wide[1] - R.wide[0] - 400));
+  const pipes = kanalLayout(R).pipes;
   for (const px of pipes) {
     g.fillStyle = '#7d8a7c'; g.fillRect(px - 26, 124, 52, 160); g.strokeRect(px - 26, 124, 52, 160);
     g.fillStyle = '#7d8a7c'; g.fillRect(px - 34, 270, 68, 24); g.strokeRect(px - 34, 270, 68, 24);
@@ -2087,6 +2079,15 @@ Object.assign(FURN, {
   ] },
 });
 const RW = '#7a4520', RD = '#55301a';
+// Schatztruhe (zu und offen)
+FURN.truhe_zu = { name: 'Truhe', boxes: [
+  B(-80, 80, 0, 70, 0, 66, '#8b4a1e', 'truhe'), B(-86, 86, -4, 74, 66, 104, '#7a4520', 'deckel'),
+  B(-86, 86, -6, -4, 40, 54, '#ffcc1a'),
+] };
+FURN.truhe_auf = { name: 'Truhe', boxes: [
+  B(-80, 80, 0, 70, 0, 66, '#8b4a1e', 'truhe'), B(-72, 72, 8, 62, 66, 84, '#ffcc1a', 'gold'),
+  B(-86, 86, 70, 80, 66, 150, '#7a4520'),
+] };
 FURN.paketstapel = { name: 'Pakete', boxes: [
   B(-90, -10, 0, 60, 0, 60, '#c8955a', 'paket'), B(0, 86, 6, 62, 0, 52, '#b98a52', 'paket'),
   B(-64, 26, 10, 56, 60, 112, '#d4a46a', 'paket'), B(-30, 30, 16, 52, 112, 150, '#c8955a', 'paket'),
@@ -2289,7 +2290,10 @@ function drawFurn(t, x, y, s, alpha, r, extra) {
       const knob = (u, v, r, c) => { const [kx, ky] = at(u, v); g.fillStyle = c || '#ffee00'; g.beginPath(); g.arc(kx, ky, r || 8, 0, 7); g.fill(); g.stroke(); };
       g.lineWidth = 4; g.strokeStyle = LINE;
       const dc = b.deco;
-      if (dc === 'paket') { quad(0.44, 0, 0.56, 1, '#e8d28a'); quad(0.64, 0.22, 0.9, 0.5, '#fff'); }
+      if (dc === 'truhe') { quad(0, 0.55, 1, 0.68, '#ffcc1a'); quad(0.42, 0.42, 0.58, 0.85, '#ffcc1a'); }
+      else if (dc === 'deckel') { quad(0, 0.25, 1, 0.45, 'rgba(0,0,0,.15)'); }
+      else if (dc === 'gold') { g.fillStyle = '#e0a800'; for (let i = 0; i < 5; i++) { const [cx, cy] = at(0.15 + i * 0.17, 0.5); g.beginPath(); g.arc(cx, cy, 5, 0, 7); g.fill(); } }
+      else if (dc === 'paket') { quad(0.44, 0, 0.56, 1, '#e8d28a'); quad(0.64, 0.22, 0.9, 0.5, '#fff'); }
       else if (dc === 'schild') { const [cx, cy] = at(0.5, 0.5); g.fillStyle = '#7a4a00'; g.font = '900 13px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TROPHÄEN', cx, cy + 1); }
       else if (dc === 'glanz') { quad(0.12, 0.12, 0.26, 0.85, 'rgba(255,255,255,.55)'); }
       else if (dc === 'pfote' || dc === 'euro' || dc === 'stern' || dc === 'tonne') {
@@ -4278,7 +4282,7 @@ function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   // große Räume: Kamera folgt Bob
   { const RW = ROOMS[cur].wide; XL = SXL; XR = SXR; VW = SVW; camX = 0;
-    if (RW) { camX = Math.max(RW[0] - SXL, Math.min(RW[1] - SXR, bob.x - (SXL + SXR) / 2)); XL = RW[0]; XR = RW[1]; VW = XR - XL; } }
+    if (RW) { camX = RW[1] - RW[0] <= SVW ? (RW[0] + RW[1]) / 2 - (SXL + SXR) / 2 : Math.max(RW[0] - SXL, Math.min(RW[1] - SXR, bob.x - (SXL + SXR) / 2)); XL = RW[0]; XR = RW[1]; VW = XR - XL; } }
   g.setTransform(1, 0, 0, 1, -(SXL + camX), 0);
   let vx = (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0);
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
