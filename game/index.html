@@ -32,7 +32,7 @@ canvas{display:block;width:100vw;height:100vh;touch-action:none}
 {
 const cv = document.getElementById('c'), g = cv.getContext('2d');
 const W = 1200, H = 880, FLOOR = 440;
-let XL = 0, XR = W, VW = W; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
+let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
 const LINE = '#111';
 
 // Wandstreifen wie im alten Spawn (helle und dunkle Bahnen)
@@ -51,9 +51,20 @@ const ROOMS = {
   orange:   { name: 'Oranger Raum', wall: ['#6ad9fb', '#c4f0fc'], exits: { l: 'spawn' } },
   pink:     { name: 'Pinker Raum', wall: ['#6ad9fb', '#c4f0fc'], exits: {},
               door: { x: 510, w: 180, to: 'spawn', label: 'Spawn', at: [600, H - 60] } },
-  draussen: { name: 'Draußen', outside: true, kind: 'house', exits: { r: 'haltestelle' }, maxY: H - 175,
+  draussen: { name: 'Draußen', outside: true, kind: 'house', exits: { l: 'bankplatz', r: 'haltestelle' }, maxY: H - 175,
               objs: [{ type: 'muell', x: 650, w: 120, base: 530, depth: 40, h: 190 }],
               door: { x: 880, w: 180, to: 'spawn', label: 'Für BoB', at: [970, FLOOR + 70] } },
+  bankplatz: { name: 'Bank', outside: true, kind: 'street', facade: 'bank', exits: { r: 'draussen' }, maxY: H - 175, wide: [-750, 1950],
+              door: { x: 500, w: 200, to: 'bank_innen', at: [600, FLOOR + 70], bank: true } },
+  bank_innen: { name: 'In der Bank', wall: ['#e9dfc6', '#f7f0dd'], floorStyle: 'fliesen', exits: {}, wide: [-850, 2050],
+              door: { x: 510, w: 180, to: 'bankplatz', at: [600, FLOOR + 80] },
+              objs: [
+                { type: 'schalter', x: -720, w: 330, base: 600, h: 150, depth: 80, col: '#2f6fe0' },
+                { type: 'schalter', x: -290, w: 330, base: 600, h: 150, depth: 80, col: '#13a040' },
+                { type: 'moebel', t: 'pflanze', fx: 160, base: 520, r: 0 },
+                { type: 'moebel', t: 'pflanze', fx: 1040, base: 520, r: 0 },
+                { type: 'moebel', t: 'sofa', fx: 1250, base: 760, r: 0 },
+              ] },
   haltestelle: { name: 'Bushaltestelle', outside: true, kind: 'street', grass: true, exits: { l: 'draussen' }, maxY: H - 175,
               stop: { x: 760, name: 'Zuhause', dests: ['tierladen', 'moebelhaus'] } },
   tierladen: { name: 'Tierladen', outside: true, kind: 'street', shop: true, exits: {}, maxY: H - 175,
@@ -110,6 +121,41 @@ function drawRoad() {
   g.fillStyle = '#fff';
   for (let x = 30 + Math.floor((XL - 30) / 160) * 160; x < XR; x += 160) g.fillRect(x, ROAD + 80, 90, 10);
 }
+function drawBankFacade() {
+  // Bäume links und rechts
+  for (const tx of [-560, -380, 1600, 1780]) {
+    g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
+    g.fillStyle = '#1fa830'; g.beginPath(); g.arc(tx, FLOOR - 160, 70, 0, 7); g.fill(); g.stroke();
+  }
+  const X0 = -240, X1 = 1440, top = 150;
+  g.lineWidth = 6; g.strokeStyle = LINE;
+  // Gebäude
+  g.fillStyle = '#efe6cf'; g.fillRect(X0, top, X1 - X0, FLOOR - top); g.strokeRect(X0, top, X1 - X0, FLOOR - top);
+  // Giebel
+  g.fillStyle = '#e2d6b6'; g.beginPath(); g.moveTo(X0 - 40, top + 4); g.lineTo(600, 6); g.lineTo(X1 + 40, top + 4); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#d8cba8'; g.fillRect(X0 - 40, top - 6, X1 - X0 + 80, 34); g.strokeRect(X0 - 40, top - 6, X1 - X0 + 80, 34);
+  // Schild
+  g.fillStyle = '#1f4f9e'; g.beginPath(); g.roundRect(430, 54, 340, 74, 12); g.fill(); g.stroke();
+  marker('BoB BANK', 600, 92, 54, '#ffcc1a');
+  // Münze im Giebel
+  g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(600, 196, 0, 0, 7); g.fill();
+  // Säulen
+  for (let x = X0 + 60; x < X1 - 40; x += 150) {
+    if (x > 440 && x < 740) continue;
+    g.fillStyle = '#fbf6ea'; g.fillRect(x, top + 50, 54, FLOOR - top - 70); g.strokeRect(x, top + 50, 54, FLOOR - top - 70);
+    g.fillStyle = '#e2d6b6'; g.fillRect(x - 10, top + 30, 74, 22); g.strokeRect(x - 10, top + 30, 74, 22);
+    g.fillRect(x - 10, FLOOR - 24, 74, 22); g.strokeRect(x - 10, FLOOR - 24, 74, 22);
+    g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; for (const dx of [14, 27, 40]) { g.beginPath(); g.moveTo(x + dx, top + 56); g.lineTo(x + dx, FLOOR - 28); g.stroke(); }
+    g.lineWidth = 6; g.strokeStyle = LINE;
+  }
+  // Fenster zwischen den Säulen
+  for (let x = X0 + 128; x < X1 - 100; x += 150) {
+    if (x > 380 && x < 760) continue;
+    g.fillStyle = '#c4f0fc'; g.beginPath(); g.roundRect(x, 230, 68, 130, [34, 34, 0, 0]); g.fill(); g.stroke();
+  }
+  // Treppe vor der Tür
+  g.fillStyle = '#d8cba8'; g.fillRect(450, FLOOR - 16, 300, 16); g.strokeRect(450, FLOOR - 16, 300, 16);
+}
 function drawStreet(R) {
   const sky = g.createLinearGradient(0, 0, 0, FLOOR);
   sky.addColorStop(0, '#5fb8ff'); sky.addColorStop(1, '#c8ecff');
@@ -117,7 +163,8 @@ function drawStreet(R) {
   g.fillStyle = '#fff';
   for (const [cx, cy] of [[160, 80], [900, 120]]) { g.beginPath(); g.arc(cx, cy, 30, 0, 7); g.arc(cx + 38, cy - 10, 40, 0, 7); g.arc(cx + 80, cy, 30, 0, 7); g.fill(); }
   g.lineWidth = 6; g.strokeStyle = LINE;
-  if (R.facade === 'moebel') {
+  if (R.facade === 'bank') drawBankFacade();
+  else if (R.facade === 'moebel') {
     for (const tx of [90, 330]) {
       g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
       g.fillStyle = '#1fa830'; g.beginPath(); g.arc(tx, FLOOR - 160, 70, 0, 7); g.fill(); g.stroke();
@@ -412,6 +459,41 @@ function drawObj(o) {
   else if (o.type === 'cage') drawCage(o); else if (o.type === 'haendler') drawHaendler(o);
   else if (o.type === 'moebel') drawFurn(o.t, o.fx, o.base, scaleAt(o.base), 1, o.r);
   else if (o.type === 'muell') drawMuell(o);
+  else if (o.type === 'schalter') drawSchalter(o);
+}
+const BANK_PAL = {};
+function drawSchalter(o) {
+  const top = o.base - o.h, cx = o.x + o.w / 2;
+  // Mitarbeiter hinter der Theke
+  const c = o.col, pal = BANK_PAL[c] = BANK_PAL[c] || { front: c, front2: shade(c, 0.25), side: shade(c, -0.25), side2: shade(c, -0.42), top: shade(c, -0.12), top2: shade(c, -0.22) };
+  drawPerson(pal, cx, top + 40, 0.62);
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(o.x + 10, o.base - 6, o.w + 10, 16);
+  // Theke aus Holz mit Marmorplatte
+  g.fillStyle = '#7a4520'; g.fillRect(o.x, top + 30, o.w, o.h - 30); g.strokeRect(o.x, top + 30, o.w, o.h - 30);
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let x = o.x + 40; x < o.x + o.w - 20; x += 70) g.strokeRect(x, top + 50, 50, o.h - 70);
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#f3eee2'; g.fillRect(o.x - 10, top, o.w + 20, 32); g.strokeRect(o.x - 10, top, o.w + 20, 32);
+  // Glasscheibe
+  g.fillStyle = 'rgba(190,235,255,.35)'; g.fillRect(o.x + 10, top - 150, o.w - 20, 150); g.strokeRect(o.x + 10, top - 150, o.w - 20, 150);
+  g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.moveTo(o.x + 30, top - 140); g.lineTo(o.x + 80, top - 140); g.lineTo(o.x + 30, top - 70); g.fill();
+  g.fillStyle = '#1f4f9e'; g.beginPath(); g.roundRect(cx - 70, top - 196, 140, 40, 10); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.font = '800 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SCHALTER', cx, top - 175);
+}
+function drawTresor() {
+  const cx = 1560, cy = 250, r = 150;
+  g.lineWidth = 6; g.strokeStyle = LINE;
+  g.fillStyle = '#8e969e'; g.fillRect(cx - r - 40, cy - r - 40, 2 * r + 80, FLOOR - (cy - r - 40)); g.strokeRect(cx - r - 40, cy - r - 40, 2 * r + 80, FLOOR - (cy - r - 40));
+  const gr = g.createRadialGradient(cx - 40, cy - 40, 20, cx, cy, r); gr.addColorStop(0, '#e3e7ea'); gr.addColorStop(1, '#9aa3ab');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); g.stroke();
+  g.beginPath(); g.arc(cx, cy, r - 26, 0, 7); g.stroke();
+  g.fillStyle = '#5d646c'; g.beginPath(); g.arc(cx, cy, 34, 0, 7); g.fill(); g.stroke();
+  g.lineWidth = 12; g.lineCap = 'round';
+  for (let i = 0; i < 3; i++) { const a = i * 2.094 + 0.3; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * 90, cy + Math.sin(a) * 90); g.stroke(); }
+  g.lineCap = 'butt'; g.lineWidth = 6;
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.fillStyle = '#5d646c'; g.beginPath(); g.arc(cx + Math.cos(a) * (r - 13), cy + Math.sin(a) * (r - 13), 7, 0, 7); g.fill(); }
+  g.fillStyle = '#ffcc1a'; g.beginPath(); g.roundRect(cx - 80, cy - r - 34, 160, 28, 8); g.fill(); g.stroke();
+  g.fillStyle = '#5a3a00'; g.font = '900 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TRESOR', cx, cy - r - 20);
 }
 // ---------- Mülltonne: 1x pro Tag 25 % Chance auf das Müll-Kostüm ----------
 let muell = { day: -1, full: false, done: false }, muellShake = 0;
@@ -542,6 +624,7 @@ function drawBurn(d, top) {
 }
 
 function drawDoor(d) {
+  if (d.bank) { const top = 200, h = FLOOR - 16 - top; g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#c99a2e'; g.fillRect(d.x - 12, top - 12, d.w + 24, h + 12); g.strokeRect(d.x - 12, top - 12, d.w + 24, h + 12); g.fillStyle = '#9ad8f0'; g.fillRect(d.x, top, d.w, h); g.strokeRect(d.x, top, d.w, h); g.beginPath(); g.moveTo(d.x + d.w / 2, top); g.lineTo(d.x + d.w / 2, top + h); g.stroke(); g.fillStyle = '#ffcc1a'; g.fillRect(d.x + d.w / 2 - 22, top + h / 2, 10, 40); g.fillRect(d.x + d.w / 2 + 12, top + h / 2, 10, 40); return; }
   const top = 150, h = FLOOR - top;
   g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(d.x + 8, top + 8, d.w, h - 8);
   const dg = g.createLinearGradient(d.x, 0, d.x + d.w, 0);
@@ -619,6 +702,7 @@ function room() {
     if (R.exits.d && !R.openBottom) open(0, H, 0, H - 60, GAP_X[1] - GAP_X[0] + 80, 60, GAP_X[0] - 40, H - 60);
   }
   if (R.door) drawDoor(R.door);
+  if (cur === 'bank_innen') drawTresor();
 }
 
 // Raumwechsel mit kurzem Abblenden
@@ -1245,9 +1329,10 @@ function nearBox() {
   return (furn[cur] || []).find(f => f.t === 'transportbox' && Math.abs(bob.x - f.x) < 200 && Math.abs(bob.y - f.y) < 150);
 }
 function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); return job && job.id === 'liefer' && onShift() && o && !fade.dir && Math.abs(bob.x - o.fx) < 200 && Math.abs(bob.y - o.base) < 160 && o; }
+function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal')); }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal')); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -1400,6 +1485,18 @@ function openMenu() {
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
   if (nearKasse() || nearPakete()) { startWork(); return; }
+  if (nearSchalter()) {
+    bankInterest(); const sv = bank.save || 0, m = bank.money;
+    menu.kind = 'bank'; menu.title = 'Sparkonto: ' + money(sv) + ' – 2 % Zinsen jeden Tag' + (bank.lastZins ? ' · zuletzt +' + money(bank.lastZins) : '');
+    const it = [];
+    for (const v of [50, 200, 1000]) it.push({ label: money(v) + ' einzahlen', dep: v, disabled: m < v, tag: m < v ? 'zu wenig Geld' : null, tagCol: '#c0392b' });
+    it.push({ label: 'Alles einzahlen', dep: Math.floor(m), disabled: m < 1, tag: money(Math.floor(m)) });
+    for (const v of [50, 200]) it.push({ label: money(v) + ' abheben', wd: v, disabled: sv < v });
+    it.push({ label: 'Alles abheben', wd: sv, disabled: sv < 1, tag: money(sv) });
+    it.push({ label: 'Tschüss' });
+    menu.items = it; MENU.row = Math.min(76, Math.floor((H - 220) / it.length)); menu.t0 = performance.now();
+    menu.open = true; menu.sel = Math.max(0, it.findIndex(i => !i.disabled)); keys.clear(); return;
+  }
   const tr = nearFurn('trophaeenregal');
   if (tr) {
     tr.slots = tr.slots || [null, null, null, null, null];
@@ -1469,6 +1566,8 @@ function choose(i) {
   if (it.dest) bump('bus');
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
+  if (it.dep) { bankInterest(); bank.money -= it.dep; bank.save = (bank.save || 0) + it.dep; bank.log.push({ t: 'Aufs Sparkonto', v: -it.dep }); saveBank(); toast = { text: money(it.dep) + ' liegen jetzt auf dem Sparkonto.', t: 3 }; }
+  if (it.wd) { bankInterest(); bank.save -= it.wd; bank.money += it.wd; bank.log.push({ t: 'Vom Sparkonto', v: it.wd }); saveBank(); toast = { text: money(it.wd) + ' abgehoben.', t: 3 }; }
   if (it.put && menu.regal) { const i = menu.regal.slots.indexOf(null); if (i >= 0) { menu.regal.slots[i] = it.troph; saveFurn(); toast = { text: TROPHIES[it.troph].name + ' steht jetzt im Regal!', t: 3 }; } }
   if (it.take && menu.regal) { const i = menu.regal.slots.indexOf(it.troph); if (i >= 0) { menu.regal.slots[i] = null; saveFurn(); } }
   if (it.fill && menu.napf) fillNapf(menu.napf, it.fill);
@@ -1511,6 +1610,8 @@ function interactTarget() {
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  const sc = nearSchalter();
+  if (sc) return { x: sc.x + sc.w / 2, y: sc.base - sc.h - 220, label: 'Sparkonto' };
   const pk = nearPakete();
   if (pk) return { x: pk.fx, y: pk.base - 190, label: 'Pakete ausliefern' };
   const trg = nearFurn('trophaeenregal');
@@ -1547,7 +1648,7 @@ function drawPill() {
   g.fillText('E', x + h / 2, y + h / 2 + 1);
   g.fillStyle = '#fff'; g.font = '600 26px system-ui, sans-serif'; g.textAlign = 'left';
   g.fillText(t.label, x + h + 6, y + h / 2 + 1);
-  pill = { x, y, w, h };
+  pill = { x: x - camX, y, w, h };
 }
 // ---------- Menü-Design ----------
 const MENU = { w: 600, row: 76 };
@@ -1559,6 +1660,7 @@ const MENU_STYLE = {
   plant: { c: '#2fa84f', icon: 'sprout' },
   napf:  { c: '#e0262b', icon: 'food' },
   troph: { c: '#e0a10f', icon: 'trophy' },
+  bank:  { c: '#1f4f9e', icon: 'coin' },
 };
 function menuStyle() { return MENU_STYLE[menu.kind] || { c: '#2f6fe0', icon: 'i' }; }
 function menuBox() { const h = 120 + menu.items.length * MENU.row + 52; return { x: W / 2 - MENU.w / 2, y: Math.max(16, (H - h) / 2), h }; }
@@ -1577,7 +1679,7 @@ function uiIcon(name, x, y, s, col) {
   const P = () => g.beginPath();
   if (name === 'bus') { P(); g.roundRect(-16, -14, 32, 24, 5); g.fill(); g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(-12, -10, 10, 8); g.fillRect(2, -10, 10, 8); g.fillStyle = col || '#fff'; P(); g.arc(-9, 13, 4, 0, 7); g.arc(9, 13, 4, 0, 7); g.fill(); }
   else if (name === 'trophy') { P(); g.moveTo(-12, -15); g.lineTo(12, -15); g.lineTo(9, 1); g.quadraticCurveTo(0, 8, -9, 1); g.closePath(); g.fill(); P(); g.arc(-12, -8, 5, Math.PI * 0.5, Math.PI * 1.5); g.stroke(); P(); g.arc(12, -8, 5, -Math.PI * 0.5, Math.PI * 0.5); g.stroke(); g.fillRect(-2.5, 4, 5, 8); P(); g.roundRect(-10, 11, 20, 6, 2); g.fill(); }
-  else if (name === 'coin') { P(); g.arc(0, 0, 14, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 0, 1); }
+  else if (name === 'coin') { P(); g.arc(0, 0, 14, 0, 7); g.fill(); g.fillStyle = (!col || col === '#fff') ? '#1f4f9e' : 'rgba(255,255,255,.9)'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 0, 1); }
   else if (name === 'paw') { P(); g.ellipse(0, 6, 10, 8, 0, 0, 7); g.fill(); for (const [a, b] of [[-12, -4], [-5, -11], [5, -11], [12, -4]]) { P(); g.arc(a, b, 4.5, 0, 7); g.fill(); } }
   else if (name === 'moon') { g.save(); P(); g.arc(0, 0, 14, 0, 7); g.clip(); P(); g.arc(0, 0, 14, 0, 7); g.arc(7, -5, 12, 0, 7); g.fill('evenodd'); g.restore(); }
   else if (name === 'sun') { P(); g.arc(0, 0, 8, 0, 7); g.fill(); for (let a = 0; a < 6.28; a += 0.785) { P(); g.moveTo(Math.cos(a) * 12, Math.sin(a) * 12); g.lineTo(Math.cos(a) * 17, Math.sin(a) * 17); g.stroke(); } }
@@ -1594,6 +1696,8 @@ function uiIcon(name, x, y, s, col) {
 function rowIcon(it) {
   if (it.foodBuy || it.fill) return ['food', FOODS[it.lvl].col];
   if (it.empty) return ['x', '#e0262b'];
+  if (it.dep) return ['coin', '#13a040'];
+  if (it.wd) return ['coin', '#1f4f9e'];
   if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
   if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : 'sofa', '#2f6fe0'];
   if (it.sleep) return [it.sleep === 'morgen' ? 'sun' : 'moon', it.sleep === 'morgen' ? '#ff9a1a' : '#4b3fa8'];
@@ -1613,7 +1717,6 @@ function drawToast() {
   g.restore();
 }
 function drawMenu() {
-  drawPill();
   drawToast();
   drawAchPop(1 / 60);
   if (!menu.open) return;
@@ -2313,6 +2416,10 @@ function drawBuildUI() {
 // ---------- Handy mit Apps ----------
 let bank = { money: 100, log: [{ t: 'Startgeld', v: 100 }] };
 try { const b = JSON.parse(localStorage.getItem('bob-bank') || 'null'); if (b && typeof b.money === 'number') bank = b; } catch (e) {}
+function bankInterest() {
+  if (bank.saveDay == null) bank.saveDay = gDay();
+  while (bank.saveDay < gDay()) { bank.saveDay++; const z = Math.floor((bank.save || 0) * 0.02); if (z > 0) { bank.save += z; bank.lastZins = z; } }
+}
 function saveBank() { try { localStorage.setItem('bob-bank', JSON.stringify(bank)); } catch (e) {} }
 
 const phone = { open: false, app: null, a: 0, msg: '' };
@@ -2541,6 +2648,7 @@ function drawPhone(dt) {
     g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '600 20px system-ui'; g.fillText('BoB', cx + 24, cy + 28);
     g.font = '500 18px ui-monospace, monospace'; g.fillText('•••• •••• •••• 2024', cx + 24, cy + 118);
     g.font = '600 15px system-ui'; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('BOB', cx + 24, cy + 148);
+    g.textAlign = 'right'; g.font = '600 15px system-ui'; g.fillText('Sparkonto', cx + cw - 24, cy + 28); g.font = '700 20px system-ui'; g.fillStyle = '#ffcc1a'; g.fillText(money(bank.save || 0), cx + cw - 24, cy + 54); g.textAlign = 'left';
     g.fillStyle = '#13f000'; g.beginPath(); g.arc(cx + cw - 46, cy + 136, 14, 0, 7); g.fill();
     g.fillStyle = '#ffee00'; g.beginPath(); g.arc(cx + cw - 28, cy + 136, 14, 0, 7); g.fill();
     // Buchungen
@@ -4030,7 +4138,7 @@ function drawSettingsApp(s) {
 function fit() {
   const a = innerWidth / Math.max(1, innerHeight);
   VW = Math.max(W, Math.min(2600, Math.round(H * a)));
-  XL = -(VW - W) / 2; XR = W + (VW - W) / 2;
+  XL = -(VW - W) / 2; XR = W + (VW - W) / 2; SXL = XL; SXR = XR; SVW = VW;
   if (cv.width !== VW) cv.width = VW;
   cv.style.width = a >= W / H ? '100vw' : '100vw';
   cv.style.height = a >= W / H ? '100vh' : 'auto';
@@ -4042,7 +4150,10 @@ addEventListener('resize', fit); fit();
 let last = performance.now(), doorLock = false;
 function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
-  g.setTransform(1, 0, 0, 1, -XL, 0);
+  // große Räume: Kamera folgt Bob
+  { const RW = ROOMS[cur].wide; XL = SXL; XR = SXR; VW = SVW; camX = 0;
+    if (RW) { camX = Math.max(RW[0] - SXL, Math.min(RW[1] - SXR, bob.x - (SXL + SXR) / 2)); XL = RW[0]; XR = RW[1]; VW = XR - XL; } }
+  g.setTransform(1, 0, 0, 1, -(SXL + camX), 0);
   let vx = (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0);
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
@@ -4074,15 +4185,16 @@ function frame(t) {
   bob.x = cl(bob.x, ex.l && gy ? XL - 100 : XL + half + 4, ex.r && gy ? XR + 100 : XR - half - 4);
   bob.y = cl(bob.y, R.openTop ? R.top : FLOOR + 40, (ex.d && gx) || R.openBottom ? H + 100 : maxY);
 
-  if (bob.x < XL + 10 && ex.l) go(ex.l, [XR - 40, bob.y]);
-  else if (bob.x > XR - 10 && ex.r) go(ex.r, [XL + 40, bob.y]);
+  const rb = id => ROOMS[id].wide || [SXL, SXR];
+  if (bob.x < XL + 10 && ex.l) go(ex.l, [rb(ex.l)[1] - 40, bob.y]);
+  else if (bob.x > XR - 10 && ex.r) go(ex.r, [rb(ex.r)[0] + 40, bob.y]);
   else if (bob.y > H + 40 && ex.d) go(ex.d, ROOMS[ex.d].openTop ? [bob.x, ROOMS[ex.d].top + 70] : ROOMS[ex.d].door ? [ROOMS[ex.d].door.x + ROOMS[ex.d].door.w / 2, FLOOR + 70] : [W / 2, FLOOR + 70]);
   if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); checkJobs(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); checkJobs(); bankInterest(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -4096,7 +4208,9 @@ function frame(t) {
   if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: drawBob });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
-  drawLeash(); drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawOverlay(dt); drawDeviceAsk();
+  drawLeash(); drawPill();
+  XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
