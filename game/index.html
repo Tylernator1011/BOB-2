@@ -4921,7 +4921,7 @@ const TIME_SPEED = 1; // Spielminuten pro echter Sekunde (ein Tag = 24 Minuten)
 let gt = { T: 8 * 60 };
 try { const v = JSON.parse(localStorage.getItem('bob-zeit') || 'null'); if (v && typeof v.T === 'number') gt = v; } catch (e) {}
 let gtSave = 0;
-// ---------- Computer: Online-Laden „bobnet 2.0“ – Essen bestellen, kommt nach einer Weile ----------
+// ---------- Computer: Online-Laden „bobnet“ – Essen bestellen, kommt nach einer Weile ----------
 const WEB_ITEMS = [
   { id: 'tf1',  cat: 'tier', name: 'Futter Lv1',    price: 5,   desc: ['1× Futter Lv1', '+30 % satt, +10 XP'], food: [1, 1] },
   { id: 'tf1x', cat: 'tier', name: 'Futter Lv1 ×10', price: 35,  desc: ['Vorratspack', 'billiger als im Laden'], food: [1, 10] },
@@ -5012,7 +5012,7 @@ function drawWeb(dt) {
   g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(XL, 0, VW, H);
   g.fillStyle = 'rgba(48,48,50,.94)'; g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.roundRect(P.x, P.y, P.w, P.h, 18); g.fill(); g.stroke();
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  outl('bobnet 2.0', P.x + P.w / 2, P.y + 62, '800 62px "Trebuchet MS", system-ui', '#fff', 8);
+  outl('bobnet', P.x + P.w / 2, P.y + 62, '800 62px "Trebuchet MS", system-ui', '#fff', 8);
   // rotes X
   const xb = { x: P.x + P.w - 92, y: P.y + 20, w: 74, h: 74 }; g.strokeStyle = '#111'; g.lineWidth = 18; g.lineCap = 'round'; g.beginPath(); g.moveTo(xb.x + 14, xb.y + 14); g.lineTo(xb.x + 60, xb.y + 60); g.moveTo(xb.x + 60, xb.y + 14); g.lineTo(xb.x + 14, xb.y + 60); g.stroke(); g.strokeStyle = '#ff2a3a'; g.lineWidth = 11; g.stroke(); g.lineCap = 'butt';
   btns.push({ b: xb, act: () => { web.open = false; } });
