@@ -28,7 +28,7 @@ jobs:
         run: |
           V=$(node -p "require('./package.json').version")
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if [ "$(gh release view "v$V" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>/dev/null)" = "false" ]; then
             echo "Version $V gibt es schon – nichts zu tun."
             echo "neu=nein" >> "$GITHUB_OUTPUT"
           else
@@ -39,8 +39,25 @@ jobs:
         if: steps.ver.outputs.neu == 'ja'
         run: npm install
 
-      - name: Installer bauen und als Release hochladen
+      - name: Release als Entwurf anlegen
+        if: steps.ver.outputs.neu == 'ja'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V=${{ steps.ver.outputs.version }}
+          gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "v$V" --repo "$GITHUB_REPOSITORY" --draft --title "$V" --notes "BOB 2 Version $V" --target "$GITHUB_SHA"
+
+      - name: Installer bauen und hochladen
         if: steps.ver.outputs.neu == 'ja'
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release veröffentlichen
+        if: steps.ver.outputs.neu == 'ja'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "v${{ steps.ver.outputs.version }}" --repo "$GITHUB_REPOSITORY" --draft=false --latest
