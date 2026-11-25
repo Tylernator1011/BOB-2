@@ -62,7 +62,18 @@ const ROOMS = {
   kanal3: { name: 'Kanalisation', kind: 'kanal', seed: 3, exits: {}, wide: [-500, 1700], maxY: 650,
             arches: [{ x: 300, to: 'kanal1', ax: 1450 }, { x: 1300, to: 'kanal6', ax: -200 }] },
   kanal4: { name: 'Kanalisation', kind: 'kanal', seed: 4, exits: { l: 'kanal1' }, wide: [-700, 2200], maxY: 650,
-            arches: [{ x: 1000, to: 'kanal5', ax: 1500 }] },
+            arches: [{ x: 1000, to: 'kanal5', ax: 1500 }, { x: 1900, to: 'schwarzmarkt', ax: -350 }] },
+  schwarzmarkt: { name: 'Schwarzmarkt', kind: 'markt', exits: {}, wide: [-800, 2150],
+            arches: [{ x: -350, to: 'kanal4', ax: 1900 }],
+            objs: [
+              { type: 'stand', shop: 'kleider', dealer: 'gangster', col: '#7a3e9e', x: 200, w: 300, base: 600, h: 110, depth: 60 },
+              { type: 'stand', shop: 'ware', dealer: 'mantel', col: '#e0262b', x: 800, w: 300, base: 600, h: 110, depth: 60 },
+              { type: 'bar', x: 1460, w: 560, base: 640, h: 140, depth: 70 },
+              { type: 'npc', outfit: 'punk', x: -150, base: 700, w: 120, depth: 30, t: 1 },
+              { type: 'npc', outfit: 'hoodie', x: 640, base: 760, w: 120, depth: 30, t: -1 },
+              { type: 'npc', outfit: 'gangster', x: 1250, base: 720, w: 120, depth: 30, t: 1 },
+              { type: 'npc', outfit: 'mantel', x: -480, base: 760, w: 120, depth: 30, t: 1 },
+            ] },
   kanal5: { name: 'Kanalisation', kind: 'kanal', seed: 5, exits: {}, wide: [-600, 2000], maxY: 650,
             ladder: { x: 800, to: 'haltestelle', at: [420, 672] }, arches: [{ x: 400, to: 'kanal2', ax: 1700 }, { x: 1500, to: 'kanal4', ax: 1000 }] },
   kanal6: { name: 'Kanalisation', kind: 'kanal', seed: 6, exits: {}, wide: [-500, 1500], maxY: 650,
@@ -477,6 +488,9 @@ function drawObj(o) {
   else if (o.type === 'schalter') drawSchalter(o);
   else if (o.type === 'gulli') drawGulli(o);
   else if (o.type === 'schatz') drawSchatz(o);
+  else if (o.type === 'npc') drawNpc(o);
+  else if (o.type === 'stand') drawStand(o);
+  else if (o.type === 'bar') drawBar(o);
 }
 function drawGulli(o) {
   g.save(); g.translate(o.x, o.y); g.scale(1, 0.34);
@@ -498,6 +512,144 @@ function openSchatz() {
   toast = { text: 'Ein Schatz in der Kanalisation! +' + money(v) + ' Bargeld', t: 4 };
 }
 function drawSchatz(o) { drawFurn(schatz.open ? 'truhe_auf' : 'truhe_zu', o.x, o.base, scaleAt(o.base), 1, 0); }
+// ---------- Schwarzmarkt in der Kanalisation ----------
+const MARKT_KLEIDER = { hoodie: 120, punk: 180, gangster: 250, mantel: 220, barkeeper: 150 };
+const NPC_LINES = {
+  gangster: ['Psst… nur Bargeld hier.', 'Die Bullen kommen hier nie runter.', 'Schicke Klamotten hast du. Fast so schick wie meine.'],
+  punk: ['Oi! Was guckst du?', 'Die Musik oben ist langweilig.', 'Kanal-Limo macht dich schnell, glaub mir.'],
+  hoodie: ['…', 'Ich war nie hier. Du auch nicht.', 'Hab gehört, irgendwo hier unten steht eine Truhe.'],
+  mantel: ['Ein Glücks-Shot und du bist reich. Oder pleite.', 'Ich handel mit allem. Fast allem.', 'Die Augen im Tunnel? Frag lieber nicht.'],
+  barkeeper: ['Was darf es sein?', 'Hier unten fragt keiner, woher das Geld kommt.'],
+};
+let boostUntil = 0;
+function npcObj() { return (ROOMS[cur].objs || []).filter(o => o.type === 'npc'); }
+function nearNpc() { return !fade.dir && npcObj().find(o => Math.abs(bob.x - o.x) < 150 && Math.abs(bob.y - o.base) < 110); }
+function nearStand() { return !fade.dir && (ROOMS[cur].objs || []).find(o => (o.type === 'stand' || o.type === 'bar') && Math.abs(bob.x - (o.x + o.w / 2)) < o.w / 2 + 60 && Math.abs(bob.y - o.base) < 160); }
+function drawNpc(o) {
+  const s = scaleAt(o.base), k = BASE_W / BODY.w * s, ph = performance.now() / 1000 + o.x;
+  drawBobFig(o.x, o.base, k, o.t || 1, Math.sin(ph * 2) * 1.5 * s, 1, o.outfit, true);
+  if (o.say && o.sayT > 0) {
+    o.sayT -= 1 / 60;
+    g.font = '700 22px system-ui'; const tw = g.measureText(o.say).width + 34, bx = o.x - tw / 2, by = o.base - 330 * s - 60;
+    g.globalAlpha = Math.min(1, o.sayT * 2);
+    g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 46, 16); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(o.x - 10, by + 46); g.lineTo(o.x, by + 62); g.lineTo(o.x + 10, by + 46); g.fill();
+    g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.say, o.x, by + 24); g.globalAlpha = 1;
+  }
+}
+function npcTalk(o) { const l = NPC_LINES[o.outfit] || ['…']; o.say = l[Math.floor(Math.random() * l.length)]; o.sayT = 3.2; }
+function drawStand(o) {
+  const top = o.base - o.h, cx = o.x + o.w / 2;
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  // Stangen und Plane
+  g.fillStyle = '#5a3a1a'; g.fillRect(o.x + 6, top - 170, 14, 170); g.strokeRect(o.x + 6, top - 170, 14, 170); g.fillRect(o.x + o.w - 20, top - 170, 14, 170); g.strokeRect(o.x + o.w - 20, top - 170, 14, 170);
+  for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#2a2a2a' : o.col; g.fillRect(o.x - 20 + i * (o.w + 40) / 6, top - 200, (o.w + 40) / 6 + 1, 46); }
+  g.strokeRect(o.x - 20, top - 200, o.w + 40, 46);
+  for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#2a2a2a' : o.col; g.beginPath(); const x = o.x - 20 + i * (o.w + 40) / 6, w = (o.w + 40) / 6; g.moveTo(x, top - 154); g.lineTo(x + w, top - 154); g.lineTo(x + w / 2, top - 132); g.closePath(); g.fill(); g.stroke(); }
+  // Händler
+  drawBobFig(cx, top + 30, BASE_W / BODY.w * scaleAt(o.base) * 0.9, 1, Math.sin(performance.now() / 500) * 1.5, 1, o.dealer, false);
+  // Tisch mit Ware
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#6b4220'; g.fillRect(o.x, top + 20, o.w, o.h - 20); g.strokeRect(o.x, top + 20, o.w, o.h - 20);
+  g.fillStyle = '#3a2d4a'; g.fillRect(o.x - 8, top, o.w + 16, 26); g.strokeRect(o.x - 8, top, o.w + 16, 26);
+  if (o.shop === 'kleider') {
+    [['#5a5f6a', -90], ['#1c1c1c', -30], ['#8a6a3a', 30], ['#f4f4f4', 90]].forEach(([c, dx]) => { g.fillStyle = c; g.fillRect(cx + dx - 24, top - 26, 48, 30); g.strokeRect(cx + dx - 24, top - 26, 48, 30); });
+  } else {
+    g.fillStyle = '#ffc400'; g.beginPath(); g.arc(cx - 70, top - 12, 16, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#c8955a'; g.fillRect(cx - 30, top - 40, 60, 44); g.strokeRect(cx - 30, top - 40, 60, 44); g.fillStyle = '#111'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', cx, top - 17);
+    g.fillStyle = '#7a3e9e'; g.beginPath(); g.roundRect(cx + 50, top - 44, 40, 48, [12, 12, 4, 4]); g.fill(); g.stroke();
+  }
+  g.fillStyle = '#ffcc1a'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.shop === 'kleider' ? 'KLAMOTTEN' : 'WARE', cx, top + 60);
+}
+function drawBar(o) {
+  const top = o.base - o.h;
+  // Barkeeper
+  drawBobFig(o.x + o.w / 2, top + 30, BASE_W / BODY.w * scaleAt(o.base) * 0.9, -1, Math.sin(performance.now() / 600) * 1.5, 1, 'barkeeper', false);
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#3b1f12'; g.fillRect(o.x, top + 24, o.w, o.h - 24); g.strokeRect(o.x, top + 24, o.w, o.h - 24);
+  g.strokeStyle = 'rgba(255,60,200,.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(o.x + 10, top + 44); g.lineTo(o.x + o.w - 10, top + 44); g.stroke();
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#1a1a1a'; g.fillRect(o.x - 12, top, o.w + 24, 28); g.strokeRect(o.x - 12, top, o.w + 24, 28);
+  // Gläser
+  for (const [dx, c] of [[60, '#8fd14a'], [o.w - 90, '#ff6bd0']]) { g.fillStyle = 'rgba(220,240,255,.6)'; g.fillRect(o.x + dx, top - 34, 26, 34); g.strokeRect(o.x + dx, top - 34, 26, 34); g.fillStyle = c; g.fillRect(o.x + dx + 3, top - 20, 20, 17); }
+  // Hocker
+  for (let x = o.x + 60; x < o.x + o.w - 40; x += 150) {
+    g.fillStyle = '#555'; g.fillRect(x - 5, o.base + 20, 10, 60); g.strokeRect(x - 5, o.base + 20, 10, 60);
+    g.fillStyle = '#c0392b'; g.beginPath(); g.ellipse(x, o.base + 18, 34, 12, 0, 0, 7); g.fill(); g.stroke();
+  }
+}
+function drawMarkt(R) {
+  const t = performance.now() / 1000;
+  // Wand: dunkler Beton mit Ziegeln
+  g.fillStyle = '#2b2533'; g.fillRect(XL, 0, VW, FLOOR);
+  g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 3;
+  for (let y = 0, r = 0; y < FLOOR; y += 40, r++) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); for (let x = XL + (r % 2) * 50; x < XR; x += 100) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 40); g.stroke(); } }
+  // Tunnel zurück
+  for (const a of R.arches || []) {
+    g.fillStyle = '#0d0b10'; g.beginPath(); g.moveTo(a.x - 150, FLOOR); g.lineTo(a.x - 150, 230); g.arc(a.x, 230, 150, Math.PI, 0); g.lineTo(a.x + 150, FLOOR); g.closePath(); g.fill(); g.lineWidth = 8; g.strokeStyle = '#4a4352'; g.stroke();
+  }
+  // Graffiti
+  g.save(); g.translate(-520, 250); g.rotate(-0.08); marker('BoB WAS HERE', 0, 0, 52, '#39d0ff'); g.restore();
+  g.save(); g.translate(1150, 200); g.rotate(0.06); marker('NUR BAR!', 0, 0, 44, '#8fd14a'); g.restore();
+  // Neon-Schild
+  const fl = Math.sin(t * 23) > 0.92 ? 0.3 : 1;
+  g.save(); g.shadowColor = '#ff3fd0'; g.shadowBlur = 30 * fl; g.globalAlpha = 0.4 + 0.6 * fl;
+  g.font = "64px 'Permanent Marker', cursive"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ff6be0'; g.fillText('SCHWARZMARKT', 650, 110); g.restore();
+  g.save(); g.shadowColor = '#3fe0ff'; g.shadowBlur = 26; g.font = "70px 'Permanent Marker', cursive"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#7ff0ff'; g.fillText('BAR', 1740, 120); g.restore();
+  // Regal mit Flaschen hinter der Bar
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  for (const y of [240, 330]) { g.fillStyle = '#4a2a18'; g.fillRect(1460, y, 560, 16); g.strokeRect(1460, y, 560, 16); for (let x = 1480; x < 2000; x += 46) { const c = ['#8fd14a', '#ff6bd0', '#ffcc1a', '#39d0ff', '#e0262b'][(x / 46 | 0) % 5]; g.fillStyle = c; g.beginPath(); g.roundRect(x, y - 54, 22, 54, [8, 8, 2, 2]); g.fill(); g.stroke(); g.fillRect(x + 7, y - 70, 8, 18); g.strokeRect(x + 7, y - 70, 8, 18); } }
+  // Lichterkette
+  g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath();
+  for (let x = XL; x <= XR; x += 20) g.lineTo(x, 30 + 26 * Math.abs(Math.sin((x - XL) / 300 * Math.PI))); g.stroke();
+  for (let x = XL + 40, i = 0; x < XR; x += 80, i++) { const y = 34 + 26 * Math.abs(Math.sin((x - XL) / 300 * Math.PI)), on = Math.sin(t * 3 + i) > -0.6; g.fillStyle = on ? ['#ffd84a', '#ff6be0', '#7ff0ff', '#8fd14a'][i % 4] : '#444'; g.beginPath(); g.arc(x, y + 8, 8, 0, 7); g.fill(); }
+  // Boden
+  const fg = g.createLinearGradient(0, FLOOR, 0, H); fg.addColorStop(0, '#3a3540'); fg.addColorStop(1, '#4a4452');
+  g.fillStyle = fg; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+  g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; for (let x = Math.floor(XL / 140) * 140; x < XR; x += 140) { g.beginPath(); g.moveTo(x, FLOOR); g.lineTo(x - 60, H); g.stroke(); }
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  // Feuertonne
+  const fx = -620, fy = 640;
+  g.fillStyle = '#5d646c'; g.fillRect(fx - 40, fy - 100, 80, 100); g.lineWidth = 5; g.strokeStyle = LINE; g.strokeRect(fx - 40, fy - 100, 80, 100);
+  for (let i = 0; i < 5; i++) { const fh = 50 + 20 * Math.sin(t * 9 + i * 1.7); g.fillStyle = i % 2 ? '#ff9a1a' : '#ffd23a'; g.beginPath(); g.moveTo(fx - 34 + i * 17, fy - 100); g.quadraticCurveTo(fx - 26 + i * 17, fy - 100 - fh, fx - 18 + i * 17, fy - 100); g.fill(); }
+  const fire = g.createRadialGradient(fx, fy - 120, 10, fx, fy - 120, 260); fire.addColorStop(0, 'rgba(255,160,40,.35)'); fire.addColorStop(1, 'rgba(255,160,40,0)'); g.fillStyle = fire; g.fillRect(fx - 260, fy - 380, 520, 520);
+  // Wände an den Enden
+  g.fillStyle = '#1e1a24'; g.fillRect(XL, 0, 40, H); g.fillRect(XR - 40, 0, 40, H);
+}
+function openMarkt(o) {
+  const c = Math.floor(bank.cash || 0), it = [];
+  if (o.shop === 'kleider') {
+    menu.title = 'Klamotten – nur Bargeld: ' + money(c);
+    for (const [k, p] of Object.entries(MARKT_KLEIDER)) { const have = wear.owned.includes(k); it.push({ label: OUTFITS[k].name, mk: k, price: p, tag: have ? 'hast du' : money(p), tagCol: have ? '#777' : c >= p ? '#0a8a1f' : '#c0392b', disabled: have || c < p }); }
+  } else if (o.shop === 'ware') {
+    menu.title = 'Ware – nur Bargeld: ' + money(c);
+    for (const [label, key, p] of [['Goldfutter Lv4', 'food4', 90], ['Geldsamen', 'geld', 120], ['Mystery-Box', 'box', 50]]) it.push({ label, mw: key, price: p, tag: money(p), tagCol: c >= p ? '#0a8a1f' : '#c0392b', disabled: c < p });
+  } else {
+    menu.title = 'Bar – nur Bargeld: ' + money(c);
+    for (const [label, key, p] of [['Kanal-Limo (2 Std. schneller laufen)', 'limo', 6], ['Glücks-Shot (50 % Chance auf 60 €)', 'shot', 25], ['Glas Wasser', 'wasser', 1]]) it.push({ label, mb: key, price: p, tag: money(p), tagCol: c >= p ? '#0a8a1f' : '#c0392b', disabled: c < p });
+  }
+  if (c < 1) it.unshift({ label: 'Kein Bargeld dabei – hier zählt nur Bares!', disabled: true });
+  it.push({ label: 'Tschüss' });
+  menu.kind = o.type === 'bar' ? 'bar' : 'markt'; menu.items = it; MENU.row = Math.min(76, Math.floor((H - 220) / it.length)); menu.t0 = performance.now();
+  menu.open = true; menu.sel = Math.max(0, it.findIndex(i => !i.disabled)); keys.clear();
+}
+function marktBuy(it) {
+  if (!it.price || (bank.cash || 0) < it.price) return;
+  bank.cash -= it.price; saveBank();
+  if (it.mk) { wear.owned.push(it.mk); saveWear(); toast = { text: OUTFITS[it.mk].name + ' gekauft! Im Kleiderschrank anziehen.', t: 3.5 }; }
+  else if (it.mw === 'food4') { garden.food[4] = (garden.food[4] || 0) + 1; saveGarden(); toast = { text: 'Goldfutter Lv4 gekauft – psst!', t: 3 }; }
+  else if (it.mw === 'geld') { garden.seeds.geld = (garden.seeds.geld || 0) + 1; saveGarden(); toast = { text: 'Geldsamen gekauft!', t: 3 }; }
+  else if (it.mw === 'box') {
+    const r = Math.random();
+    if (r < 0.35) { const v = 20 + Math.floor(Math.random() * 120); earn(v); toast = { text: 'In der Box: ' + money(v) + '!', t: 3.5 }; }
+    else if (r < 0.6) { garden.food[3] = (garden.food[3] || 0) + 2; saveGarden(); toast = { text: 'In der Box: 2x Futter Lv3', t: 3.5 }; }
+    else if (r < 0.75) { garden.seeds.geld = (garden.seeds.geld || 0) + 1; saveGarden(); toast = { text: 'In der Box: ein Geldsamen!', t: 3.5 }; }
+    else toast = { text: 'In der Box: … ein alter Socke. Pech!', t: 3.5 };
+  }
+  else if (it.mb === 'limo') { boostUntil = gt.T + 120; toast = { text: 'Kanal-Limo! Du bist 2 Stunden lang schneller.', t: 3.5 }; }
+  else if (it.mb === 'shot') { if (Math.random() < 0.5) { earn(60); toast = { text: 'Glück gehabt! +60 € Bargeld', t: 3.5 }; } else toast = { text: 'Pech gehabt … das Geld ist weg.', t: 3.5 }; }
+  else if (it.mb === 'wasser') toast = { text: 'Erfrischend. Und billig.', t: 2.5 };
+}
 // Deko im Kanal so verteilen, dass nichts übereinanderliegt
 function kanalLayout(R) {
   if (R._lay) return R._lay;
@@ -771,6 +923,7 @@ function drawOutside() {
 function room() {
   const R = ROOMS[cur];
   if (R.kind === 'kanal') drawKanal(R);
+  else if (R.kind === 'markt') drawMarkt(R);
   else if (R.kind === 'house') drawOutside();
   else if (R.kind === 'street') drawStreet(R);
   else if (R.openTop) {
@@ -1311,6 +1464,60 @@ Object.assign(OUTFITS, {
       g.restore();
     } },
   mutant: { name: 'Demibob', custom: drawDemibob },
+  hoodie: { name: 'Mütze & Hoodie', bp: mkPal('#5a5f6a', '#6c7280'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.fillStyle = '#4a4f5a'; g.beginPath(); g.moveTo(x + 60, y + 80); g.lineTo(x + w - 60, y + 80); g.lineTo(x + w - 40, y + h); g.lineTo(x + 40, y + h); g.closePath(); g.fill(); g.lineWidth = 4; g.strokeStyle = '#111'; g.stroke();
+      g.strokeStyle = '#eee'; g.lineWidth = 5; g.lineCap = 'round'; for (const dx of [-30, 30]) { g.beginPath(); g.moveTo(x + w / 2 + dx, y + 4); g.lineTo(x + w / 2 + dx, y + 56); g.stroke(); }
+    },
+    front: (bx, by, hx, hy, t) => {
+      g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx + 10 + 4 * t, hy - 34, HEAD.w - 20, 40, DEPTH - 4, mkPal('#222', '#333'), true, t);
+      g.fillStyle = '#e0262b'; g.fillRect(hx + 10 + 4 * t, hy - 4, HEAD.w - 20, 12); g.strokeRect(hx + 10 + 4 * t, hy - 4, HEAD.w - 20, 12);
+    } },
+  gangster: { name: 'Gangster', bp: mkPal('#161616', '#262626'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#ffcc1a'; g.lineWidth = 7; g.beginPath(); g.moveTo(x + 66, y + 2); g.quadraticCurveTo(x + w / 2, y + 120, x + w - 66, y + 2); g.stroke();
+      g.fillStyle = '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.arc(x + w / 2, y + 66, 20, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = '#7a4a00'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('$', x + w / 2, y + 67);
+    },
+    headFront: (x, y, w, h) => {
+      bobFace(x, y);
+      g.fillStyle = '#111'; g.beginPath(); g.roundRect(x + 36, y + 34, 72, 38, 8); g.fill(); g.beginPath(); g.roundRect(x + 130, y + 34, 72, 38, 8); g.fill(); g.fillRect(x + 100, y + 42, 40, 8);
+      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + 46, y + 40, 18, 8); g.fillRect(x + 140, y + 40, 18, 8);
+    } },
+  barkeeper: { name: 'Barkeeper', bp: mkPal('#f4f4f4', '#ffffff'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.fillStyle = '#1b1b1b'; g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 96, y); g.lineTo(x + 112, y + h); g.lineTo(x, y + h); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(x + w, y); g.lineTo(x + w - 96, y); g.lineTo(x + w - 112, y + h); g.lineTo(x + w, y + h); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#e0262b'; g.beginPath(); g.moveTo(x + w / 2, y + 16); g.lineTo(x + w / 2 - 28, y + 2); g.lineTo(x + w / 2 - 28, y + 30); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(x + w / 2, y + 16); g.lineTo(x + w / 2 + 28, y + 2); g.lineTo(x + w / 2 + 28, y + 30); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#ffcc1a'; for (const yy of [60, 95, 130]) { g.beginPath(); g.arc(x + 104, y + yy, 5, 0, 7); g.fill(); }
+    } },
+  punk: { name: 'Punk', bp: mkPal('#1c1c1c', '#2c2c2c'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.fillStyle = '#c9d1d9'; for (let i = 0; i < 8; i++) { g.beginPath(); g.arc(x + 24 + i * 29, y + 14, 6, 0, 7); g.fill(); }
+      g.strokeStyle = '#ff3fa4'; g.lineWidth = 7; g.beginPath(); g.arc(x + w / 2, y + 85, 36, 0, 7); g.stroke();
+      g.beginPath(); g.moveTo(x + w / 2 - 30, y + 120); g.lineTo(x + w / 2, y + 48); g.lineTo(x + w / 2 + 30, y + 120); g.moveTo(x + w / 2 - 24, y + 92); g.lineTo(x + w / 2 + 24, y + 92); g.stroke();
+    },
+    front: (bx, by, hx, hy, t) => {
+      const PK = mkPal('#ff3fa4', '#ff6bbd'); g.lineWidth = 4; g.strokeStyle = '#111';
+      for (let i = 0; i < 5; i++) cube(hx + 66 + i * 22 + 6 * t, hy - 40 - (i % 2) * 10, 20, 42 + (i % 2) * 10, DEPTH - 12, PK, true, t);
+    } },
+  mantel: { name: 'Trenchcoat & Hut', bp: mkPal('#8a6a3a', '#a07d48'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.fillStyle = '#6b5028'; g.beginPath(); g.moveTo(x + 70, y); g.lineTo(x + w / 2, y + 70); g.lineTo(x + w - 70, y); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#3a2a14'; g.fillRect(x, y + 98, w, 18); g.strokeRect(x - 2, y + 98, w + 4, 18);
+      g.fillStyle = '#c9a54a'; g.fillRect(x + w / 2 - 12, y + 96, 24, 22); g.strokeRect(x + w / 2 - 12, y + 96, 24, 22);
+      g.fillStyle = '#3a2a14'; for (const yy of [40, 70]) for (const dx of [-60, 60]) { g.beginPath(); g.arc(x + w / 2 + dx, y + yy, 6, 0, 7); g.fill(); }
+    },
+    front: (bx, by, hx, hy, t) => {
+      const HP = mkPal('#3a2e22', '#4a3c2e'); g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx - 24 + 6 * t, hy - 12, HEAD.w + 48, 14, DEPTH + 14, HP, true, t);
+      cube(hx + 34 + 6 * t, hy - 72, HEAD.w - 68, 62, DEPTH - 6, HP, true, t);
+      g.fillStyle = '#7a1f1f'; g.fillRect(hx + 34 + 6 * t, hy - 26, HEAD.w - 68, 12); g.strokeRect(hx + 34 + 6 * t, hy - 26, HEAD.w - 68, 12);
+    } },
   muell: { name: 'Müll-Bob', bp: mkPal('#b9b9b9', '#cfcfcf'), noText: true,
     headFront: (x, y, w, h) => {
       bobFace(x, y);
@@ -1441,7 +1648,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz()); }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -1593,6 +1800,8 @@ function openMenu() {
   if (nearGulli()) { const o = nearGulli(); go(o.to[0], [o.to[1], FLOOR + 80]); return; }
   if (nearLeiter()) { const l = nearLeiter(); go(l.to, l.at); return; }
   if (nearSchatz()) { openSchatz(); return; }
+  if (nearStand()) { openMarkt(nearStand()); return; }
+  if (nearNpc()) { npcTalk(nearNpc()); return; }
   { const tg = interactTarget(); if (tg && tg.pet) { openPetPanel(tg.pet); return; } }
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
@@ -1673,6 +1882,7 @@ function choose(i) {
   if (it.dest) bump('bus');
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
+  if (it.mk || it.mw || it.mb) marktBuy(it);
   if (it.dep) { bank.cash -= it.dep; bank.money += it.dep; bank.log.push({ t: 'Bargeld eingezahlt', v: it.dep }); saveBank(); toast = { text: money(it.dep) + ' eingezahlt – jetzt kannst du es ausgeben!', t: 3.5 }; }
   if (it.put && menu.regal) { const i = menu.regal.slots.indexOf(null); if (i >= 0) { menu.regal.slots[i] = it.troph; saveFurn(); toast = { text: TROPHIES[it.troph].name + ' steht jetzt im Regal!', t: 3 }; } }
   if (it.take && menu.regal) { const i = menu.regal.slots.indexOf(it.troph); if (i >= 0) { menu.regal.slots[i] = null; saveFurn(); } }
@@ -1717,6 +1927,10 @@ function interactTarget() {
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
   if (nearLeiter()) return { x: nearLeiter().x, y: FLOOR - 60, label: 'Hochklettern' };
+  const stn = nearStand();
+  if (stn) return { x: stn.x + stn.w / 2, y: stn.base - stn.h - (stn.type === 'bar' ? 150 : 230), label: stn.type === 'bar' ? 'Bestellen' : 'Kaufen' };
+  const npc = nearNpc();
+  if (npc) return { x: npc.x, y: npc.base - 330 * scaleAt(npc.base) - 70, label: 'Reden' };
   if (nearSchatz()) return { x: nearSchatz().x, y: nearSchatz().base - 190, label: 'Truhe öffnen' };
   const sc = nearSchalter();
   if (sc) return { x: sc.x + sc.w / 2, y: sc.base - sc.h - 220, label: 'Einzahlen' };
@@ -1769,6 +1983,8 @@ const MENU_STYLE = {
   napf:  { c: '#e0262b', icon: 'food' },
   troph: { c: '#e0a10f', icon: 'trophy' },
   bank:  { c: '#1f4f9e', icon: 'coin' },
+  markt: { c: '#3a2d4a', icon: 'cash' },
+  bar:   { c: '#9b2a8a', icon: 'cash' },
 };
 function menuStyle() { return MENU_STYLE[menu.kind] || { c: '#2f6fe0', icon: 'i' }; }
 function menuBox() { const h = 120 + menu.items.length * MENU.row + 52; return { x: W / 2 - MENU.w / 2, y: Math.max(16, (H - h) / 2), h }; }
@@ -1806,6 +2022,7 @@ function rowIcon(it) {
   if (it.foodBuy || it.fill) return ['food', FOODS[it.lvl].col];
   if (it.empty) return ['x', '#e0262b'];
   if (it.dep !== undefined) return ['cash', '#13a040'];
+  if (it.mk || it.mw || it.mb) return ['cash', '#3a2d4a'];
   if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
   if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : 'sofa', '#2f6fe0'];
   if (it.sleep) return [it.sleep === 'morgen' ? 'sun' : 'moon', it.sleep === 'morgen' ? '#ff9a1a' : '#4b3fa8'];
@@ -2239,7 +2456,7 @@ function furnBox(f) {
            left: f.x + (m.ext.fx0 - (m.L > 0 ? m.ext.d * KX : 0)) * s, right: f.x + (m.ext.fx1 + (m.L < 0 ? m.ext.d * KX : 0)) * s };
 }
 function solids(room) {
-  const list = (ROOMS[room].objs || []).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o);
+  const list = (ROOMS[room].objs || []).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o.type === 'npc' ? { x: o.x - o.w / 2, w: o.w, base: o.base, depth: o.depth } : o);
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall) list.push(furnBox(f));
   return list;
 }
@@ -4293,7 +4510,7 @@ function frame(t) {
   bob.moving = m > 0.01;
   if (bob.moving) {
     if (m > 1) { vx /= m; vy /= m; }
-    const sp = SPEED * (keys.has('run') ? 1.7 : 1) * scaleAt(bob.y);
+    const sp = SPEED * (keys.has('run') ? 1.7 : 1) * (gt.T < boostUntil ? 1.4 : 1) * scaleAt(bob.y);
     const nx = bob.x + vx * sp * dt, ny = bob.y + vy * sp * 0.8 * dt;
     if (!blocked(nx, bob.y)) bob.x = nx;
     if (!blocked(bob.x, ny)) bob.y = ny;
