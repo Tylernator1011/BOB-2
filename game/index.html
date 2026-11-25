@@ -751,7 +751,7 @@ function tresLock() {
   else { tres.strikes++; tres.shake = 0.4; if (tres.strikes >= 3) { tres.done = 'alarm'; tres.dt = 2.5; } }
 }
 function tresEnd() {
-  dw.appts.splice(dw.appts.indexOf(tres.a), 1); saveDw(); tres.on = false;
+  const ix = dw.appts.indexOf(tres.a); if (ix >= 0) dw.appts.splice(ix, 1); saveDw(); tres.on = false;
   // Chance auf Verfolgungsjagd: steigt mit jedem Fehler und wenn man zu langsam war
   const ok = tres.done === 'ok', p = ok ? 0.15 + tres.strikes * 0.25 + (tres.t < 15 ? 0.2 : 0) : 1;
   if (Math.random() < p) { startChase(ok ? tres.a.reward : 0); return; }
@@ -3235,6 +3235,8 @@ const ADMIN = {
     ['Job sofort kündigen', '#e0262b', () => { job = null; saveJob(); }],
     ['Darkweb: Termine jetzt', '#0b0f0c', () => { for (const a of dw.appts) { const d = a.t1 - a.t0; a.t0 = gt.T; a.t1 = gt.T + Math.max(60, d); } saveDw(); }],
     ['Darkweb: neue Aufträge', '#1f3a2a', () => { dw.jobDay = -1; saveDw(); }],
+    ['Verfolgungsjagd starten', '#2f6fff', () => { togglePhone(false); startChase(0); }],
+    ['Tresor-Spiel starten', '#4c535a', () => { togglePhone(false); startTresor({ kind: 'raub', reward: 700, t0: gt.T, t1: gt.T + 120 }); }],
     ['Darkweb: Termine löschen', '#7b8190', () => { dw.appts = []; dw.carry = null; saveDw(); }],
   ],
   tp: [
