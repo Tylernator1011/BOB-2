@@ -92,12 +92,12 @@ const ROOMS = {
   // ----- Karte der Apokalypse -----
   apo_lager: { name: 'Dein Unterschlupf', apo: true, theme: 'lager', exits: { r: 'apo_strasse' }, wide: [-400, 1600], maxY: H - 60,
               objs: [{ type: 'loot', k: 'tonne', x: 300, base: 560 }, { type: 'loot', k: 'kiste', x: 1200, base: 600 }, { type: 'versteck', k: 'busch', x: 0, w: 240, base: 720 }, { type: 'versteck', k: 'haus', x: 710, w: 200, base: 530 }] },
-  apo_strasse: { name: 'Zerstörte Straße', apo: true, theme: 'strasse', danger: 0.7, maxPat: 2, exits: { l: 'apo_lager', r: 'apo_markt' }, wide: [-800, 2400], maxY: H - 60,
-              arches: [{ x: 1700, to: 'apo_park', ax: 0, label: 'Park' }],
+  apo_strasse: { name: 'Zerstörte Straße', apo: true, theme: 'strasse', danger: 0.7, maxPat: 2, exits: { l: 'apo_lager', r: 'apo_markt' }, wide: [-800, 2400], maxY: H - 60, apoD: { x: 1450, to: 'apo_bahn', ax: 1400, label: 'Bahnhof' },
+              arches: [{ x: 1700, to: 'apo_park', ax: 0, label: 'Park' }, { x: 520, to: 'apo_wohn', ax: 600, ay: H - 90, label: '↑ Wohnviertel', gasse: true }],
               objs: [{ type: 'versteck', k: 'haus', hinter: true, x: -150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 200, w: 300, base: 700 }, { type: 'versteck', k: 'auto', x: 1100, w: 300, base: 760 }, { type: 'versteck', k: 'busch', x: -500, w: 260, base: 600 }, { type: 'versteck', k: 'busch', x: 2100, w: 240, base: 620 },
                      { type: 'loot', k: 'auto', x: 200, base: 700 }, { type: 'loot', k: 'auto', x: 1100, base: 760 }, { type: 'loot', k: 'kiste', x: 600, base: 560 }] },
-  apo_markt: { name: 'Am Supermarkt', apo: true, theme: 'markt', danger: 0.6, maxPat: 1, exits: { l: 'apo_strasse' }, wide: [-600, 2000], maxY: H - 60,
-              arches: [{ x: 750, to: 'apo_laden', ax: 600, label: 'Supermarkt' }],
+  apo_markt: { name: 'Am Supermarkt', apo: true, theme: 'markt', danger: 0.6, maxPat: 1, exits: { l: 'apo_strasse' }, wide: [-600, 2000], maxY: H - 60, apoD: { x: 250, to: 'apo_schrott', ax: 200, label: 'Schrottplatz' },
+              arches: [{ x: 750, to: 'apo_laden', ax: 600, label: 'Supermarkt' }, { x: 1760, to: 'apo_tanke', ax: 900, ay: H - 90, label: '↑ Tankstelle', gasse: true }],
               objs: [{ type: 'versteck', k: 'haus', hinter: true, x: 1150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1500, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: -300, w: 240, base: 640 }, { type: 'loot', k: 'auto', x: 1500, base: 720 }, { type: 'loot', k: 'kiste', x: 100, base: 580 }] },
   apo_laden: { name: 'Im Supermarkt', apo: true, theme: 'laden', danger: 0.45, maxPat: 1, exits: {}, wide: [-400, 1600], maxY: H - 60,
               arches: [{ x: 600, to: 'apo_markt', ax: 750, label: 'Ausgang' }],
@@ -109,6 +109,21 @@ const ROOMS = {
   apo_camp: { name: 'Affen-Lager', apo: true, theme: 'camp', danger: 1, maxPat: 3, exits: {}, wide: [-600, 2200], maxY: H - 60,
               arches: [{ x: -300, to: 'apo_park', ax: 2050, label: 'Park' }],
               objs: [{ type: 'versteck', k: 'haus', hinter: true, x: 400, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1700, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: 200, w: 240, base: 640 }, { type: 'versteck', k: 'gras', x: 1000, w: 360, base: 720 }, { type: 'loot', k: 'kiste', x: 600, base: 580 }, { type: 'loot', k: 'kiste', x: 1400, base: 600 }, { type: 'loot', k: 'kiste', x: 1900, base: 580 }] },
+  apo_wohn: { name: 'Wohnviertel', apo: true, theme: 'wohn', danger: 0.65, maxPat: 2, exits: { r: 'apo_tanke' }, wide: [-700, 2000], maxY: H - 60, apoD: { x: 600, to: 'apo_strasse', ax: 520, label: 'Straße' },
+              objs: [{ type: 'versteck', k: 'haus', x: -350, w: 200, base: 530 }, { type: 'versteck', k: 'haus', x: 200, w: 200, base: 530 }, { type: 'versteck', k: 'haus', x: 1050, w: 200, base: 530 }, { type: 'versteck', k: 'haus', x: 1600, w: 200, base: 530 },
+                     { type: 'versteck', k: 'auto', x: 1350, w: 300, base: 760 }, { type: 'loot', k: 'auto', x: 1350, base: 760 }, { type: 'versteck', k: 'busch', x: -620, w: 200, base: 700 }, { type: 'versteck', k: 'busch', x: 800, w: 220, base: 580 },
+                     { type: 'loot', k: 'tonne', x: -100, base: 560 }, { type: 'loot', k: 'tonne', x: 1850, base: 560 }, { type: 'loot', k: 'kiste', x: 450, base: 600 }, { type: 'loot', k: 'kuehl', x: 1300, base: 545 }] },
+  apo_tanke: { name: 'Tankstelle', apo: true, theme: 'tanke', danger: 0.7, maxPat: 2, exits: { l: 'apo_wohn' }, wide: [-500, 1900], maxY: H - 60, apoD: { x: 900, to: 'apo_markt', ax: 1760, label: 'Supermarkt' },
+              objs: [{ type: 'versteck', k: 'haus', x: 120, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 700, w: 300, base: 650 }, { type: 'versteck', k: 'auto', x: 1450, w: 300, base: 720 }, { type: 'loot', k: 'auto', x: 700, base: 650 }, { type: 'loot', k: 'auto', x: 1450, base: 720 },
+                     { type: 'loot', k: 'regal', x: -250, base: 560 }, { type: 'loot', k: 'kuehl', x: 380, base: 560 }, { type: 'loot', k: 'kiste', x: 1750, base: 600 }, { type: 'versteck', k: 'busch', x: 1800, w: 200, base: 760 }] },
+  apo_bahn: { name: 'Alter Bahnhof', apo: true, theme: 'bahn', danger: 0.75, maxPat: 2, exits: { r: 'apo_schrott' }, wide: [-800, 2200], maxY: H - 60,
+              arches: [{ x: 1400, to: 'apo_strasse', ax: 1450, ay: H - 90, label: '↑ Straße', gasse: true }],
+              objs: [{ type: 'versteck', k: 'waggon', x: -350, w: 420, base: 640 }, { type: 'versteck', k: 'waggon', x: 600, w: 420, base: 640 }, { type: 'versteck', k: 'waggon', x: 1900, w: 420, base: 640 },
+                     { type: 'loot', k: 'waggon', x: -350, base: 640 }, { type: 'loot', k: 'waggon', x: 600, base: 640 }, { type: 'loot', k: 'waggon', x: 1900, base: 640 }, { type: 'loot', k: 'kiste', x: 1100, base: 560 }, { type: 'loot', k: 'tonne', x: 150, base: 560 }, { type: 'versteck', k: 'gras', x: 1150, w: 360, base: 780 }] },
+  apo_schrott: { name: 'Schrottplatz', apo: true, theme: 'schrott', danger: 0.85, maxPat: 3, exits: { l: 'apo_bahn' }, wide: [-600, 2000], maxY: H - 60,
+              arches: [{ x: 200, to: 'apo_markt', ax: 250, ay: H - 90, label: '↑ Supermarkt', gasse: true }],
+              objs: [{ type: 'versteck', k: 'haus', hinter: true, x: 1250, w: 220, base: 530 }, { type: 'versteck', k: 'auto', x: -300, w: 300, base: 620 }, { type: 'versteck', k: 'auto', x: 650, w: 300, base: 720 }, { type: 'versteck', k: 'auto', x: 1650, w: 300, base: 660 },
+                     { type: 'loot', k: 'auto', x: -300, base: 620 }, { type: 'loot', k: 'auto', x: 650, base: 720 }, { type: 'loot', k: 'auto', x: 1650, base: 660 }, { type: 'loot', k: 'kiste', x: 950, base: 580 }, { type: 'loot', k: 'tonne', x: 400, base: 560 }, { type: 'loot', k: 'kiste', x: 1850, base: 760 }] },
   laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'labor', at: [600, FLOOR + 80], bank: true } },
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
@@ -1233,7 +1248,7 @@ function toggleHaus(o) {
   if (AP.inside) { const d = AP.inside; AP.inside = null; bob.y = d.base + 40; toast = { text: 'Du bist wieder draußen.', t: 1.5 }; return; }
   AP.inside = o; bob.x = o.x; bob.y = o.base; toast = { text: o.hinter ? 'Du versteckst dich hinter dem Haus. [E] zum Rauskommen.' : 'Du versteckst dich im Haus. [E] zum Rausgehen.', t: 2.5 };
 }
-function apoSheltered() { return !!AP.inside || ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => o.k === 'auto' && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
+function apoSheltered() { return !!AP.inside || ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => (o.k === 'auto' || o.k === 'waggon') && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
 // ----- Animationen: Essen, Trinken, Verband, Looten, Überwältigen -----
 function apoAct(k, dur, done, data) { AP.act = { k, t: 0, dur, done, data }; keys.clear(); }
 function apoActTick(dt) { const a = AP.act; if (!a) return; a.t += dt; if (a.t >= a.dur) { AP.act = null; a.done && a.done(); } }
@@ -1466,6 +1481,7 @@ function doLoot(o) {
   apoAct('loot', 1.3, () => doLootNow(o), o);
 }
 function doLootNow(o) {
+  if (o.k === 'waggon') o = Object.assign({}, o, { k: 'kiste', x: o.x });
   const r = Math.random(), got = [];
   const add = (k, n) => { apo.bag[k] = (apo.bag[k] || 0) + n; got.push(n + 'x ' + { dose: 'Dose', wasser: 'Wasser', medi: 'Verband' }[k]); };
   if (o.k === 'fluss') { apo.water = 100; toast = { text: 'Du trinkst aus dem Fluss. Durst gestillt!', t: 3 }; saveApo(); return; }
@@ -1630,6 +1646,45 @@ function drawApoRoom(R) {
       g.fillStyle = '#1b1a1a'; g.fillRect(620, 260, 180, FLOOR - 260); g.fillStyle = '#5a3a1a'; g.save(); g.translate(620, FLOOR); g.rotate(-0.35); g.fillRect(0, -170, 90, 170); g.restore();
       marker('BOB', 710, 200, 54, '#222');
     }
+    if (th === 'wohn') {
+      const cols = [['#c9a46a', '#8a3a2a'], ['#7aa0b8', '#4a4a5a'], ['#b8b07a', '#7a3a2a'], ['#a07ab0', '#3a3a4a']];
+      [-350, 200, 1050, 1600].forEach((hx, i) => {
+        const [wc, rc] = cols[i]; g.lineWidth = 6; g.strokeStyle = LINE;
+        g.fillStyle = shade(wc, -0.25); g.fillRect(hx - 210, 170, 420, FLOOR - 170); g.strokeRect(hx - 210, 170, 420, FLOOR - 170);
+        g.fillStyle = rc; g.beginPath(); g.moveTo(hx - 240, 175); g.lineTo(hx, 60); g.lineTo(hx + 240, 175); g.closePath(); g.fill(); g.stroke();
+        g.fillStyle = '#140e0a'; g.fillRect(hx - 70, FLOOR - 200, 140, 200); g.strokeRect(hx - 70, FLOOR - 200, 140, 200);
+        g.fillStyle = shade(wc, -0.45); g.save(); g.translate(hx - 70, FLOOR); g.rotate(-0.3 - i * 0.05); g.fillRect(0, -200, 60, 200); g.strokeRect(0, -200, 60, 200); g.restore();
+        for (const wx of [hx - 170, hx + 100]) { g.fillStyle = '#1b1a1a'; g.fillRect(wx, 230, 70, 70); g.strokeRect(wx, 230, 70, 70); g.strokeStyle = '#5a3a1a'; g.lineWidth = 6; g.beginPath(); g.moveTo(wx, 240); g.lineTo(wx + 70, 290); g.moveTo(wx + 70, 245); g.lineTo(wx, 285); g.stroke(); g.lineWidth = 6; g.strokeStyle = LINE; }
+        g.fillStyle = '#e8e0c8'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Nr. ' + (12 + i * 2), hx, FLOOR - 225);
+      });
+    }
+    if (th === 'tanke') {
+      g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#6a6a72'; g.fillRect(-150, 230, 480, FLOOR - 230); g.strokeRect(-150, 230, 480, FLOOR - 230);
+      g.fillStyle = '#140e0a'; g.fillRect(50, FLOOR - 200, 140, 200); g.strokeRect(50, FLOOR - 200, 140, 200);
+      g.fillStyle = 'rgba(120,200,255,.25)'; g.fillRect(220, FLOOR - 170, 90, 120); g.strokeRect(220, FLOOR - 170, 90, 120);
+      g.fillStyle = '#d0a020'; g.fillRect(-160, 200, 500, 44); g.strokeRect(-160, 200, 500, 44); g.fillStyle = '#3a2814'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SHOP 24/7', 90, 223);
+      g.fillStyle = '#ddd'; for (const px of [620, 1380]) { g.fillRect(px - 14, 150, 28, FLOOR - 150); g.strokeRect(px - 14, 150, 28, FLOOR - 150); }
+      g.fillStyle = '#e8e4da'; g.save(); g.translate(1000, 150); g.rotate(0.04); g.fillRect(-460, -60, 920, 60); g.strokeRect(-460, -60, 920, 60); g.fillStyle = '#c0392b'; g.fillRect(-460, -20, 920, 20); g.restore();
+      g.fillStyle = '#c0392b'; g.font = '900 34px system-ui'; g.fillText('TANKE', 1000, 116);
+      for (const px of [820, 1180]) { g.fillStyle = '#c0392b'; g.fillRect(px - 35, FLOOR - 140, 70, 140); g.strokeRect(px - 35, FLOOR - 140, 70, 140); g.fillStyle = '#1b1a1a'; g.fillRect(px - 22, FLOOR - 120, 44, 30); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(px + 35, FLOOR - 100); g.quadraticCurveTo(px + 70, FLOOR - 40, px + 50, FLOOR - 10); g.stroke(); g.lineWidth = 6; g.strokeStyle = LINE; }
+      g.fillStyle = '#5a5a60'; g.fillRect(1700, 60, 24, FLOOR - 60); g.fillStyle = '#d0a020'; g.fillRect(1640, 40, 150, 120); g.strokeRect(1640, 40, 150, 120); g.fillStyle = '#3a2814'; g.font = '900 26px system-ui'; g.fillText('9,99', 1715, 100);
+    }
+    if (th === 'bahn') {
+      g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#8a6a4a'; g.fillRect(-300, 150, 900, FLOOR - 150); g.strokeRect(-300, 150, 900, FLOOR - 150);
+      g.fillStyle = '#5a3a22'; g.beginPath(); g.moveTo(-330, 155); g.lineTo(150, 70); g.lineTo(630, 155); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#1b1a1a'; for (let k = 0; k < 5; k++) { g.beginPath(); g.moveTo(-230 + k * 170, FLOOR); g.lineTo(-230 + k * 170, 280); g.arc(-180 + k * 170, 280, 50, Math.PI, 0); g.lineTo(-130 + k * 170, FLOOR); g.closePath(); g.fill(); g.stroke(); }
+      g.fillStyle = '#e8e0c8'; g.fillRect(30, 180, 240, 50); g.strokeRect(30, 180, 240, 50); g.fillStyle = '#2a3a6a'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BAHNHOF', 150, 206);
+      g.fillStyle = '#4a4a50'; g.fillRect(1700, 120, 18, FLOOR - 120); g.fillStyle = '#222'; g.fillRect(1680, 120, 58, 120); g.strokeRect(1680, 120, 58, 120); for (const [cy, c] of [[150, '#5a1a1a'], [190, '#3aa03a']]) { g.fillStyle = c; g.beginPath(); g.arc(1709, cy, 14, 0, 7); g.fill(); }
+    }
+    if (th === 'schrott') {
+      g.lineWidth = 5; g.strokeStyle = LINE;
+      for (const [px, pw, ph] of [[-500, 500, 260], [150, 420, 200], [900, 560, 300], [1500, 440, 230]]) {
+        g.fillStyle = '#4a3e36'; g.beginPath(); g.moveTo(px, FLOOR); g.lineTo(px + pw * 0.15, FLOOR - ph * 0.7); g.lineTo(px + pw * 0.4, FLOOR - ph); g.lineTo(px + pw * 0.7, FLOOR - ph * 0.8); g.lineTo(px + pw, FLOOR); g.closePath(); g.fill(); g.stroke();
+        for (let k = 0; k < 6; k++) { g.fillStyle = ['#7a3a2a', '#3a5a7a', '#8a8a3a', '#555'][k % 4]; g.save(); g.translate(px + pw * (0.2 + k * 0.11), FLOOR - ph * (0.3 + (k % 3) * 0.15)); g.rotate((k - 3) * 0.3); g.fillRect(-40, -22, 80, 44); g.strokeRect(-40, -22, 80, 44); g.restore(); }
+      }
+      g.fillStyle = '#d0a020'; g.fillRect(1240, 60, 22, FLOOR - 60); g.strokeRect(1240, 60, 22, FLOOR - 60); g.fillRect(1100, 50, 420, 24); g.strokeRect(1100, 50, 420, 24); g.strokeStyle = '#222'; g.lineWidth = 3; g.beginPath(); g.moveTo(1480, 74); g.lineTo(1480, 230); g.stroke(); g.fillStyle = '#555'; g.beginPath(); g.arc(1480, 250, 26, 0, 7); g.fill();
+      g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#5a5a60'; g.fillRect(1140, 300, 220, FLOOR - 300); g.strokeRect(1140, 300, 220, FLOOR - 300); g.fillStyle = '#1b1a1a'; g.fillRect(1180, 340, 60, 50);
+    }
     if (th === 'camp') { // Wachturm
       g.fillStyle = '#5a3a1a'; g.fillRect(1500, 60, 24, FLOOR - 60); g.fillRect(1640, 60, 24, FLOOR - 60); g.fillRect(1480, 40, 204, 60); g.lineWidth = 5; g.strokeStyle = LINE; g.strokeRect(1480, 40, 204, 60);
       g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(1582, 0); g.lineTo(1582, -60); g.lineTo(1640, -30); g.closePath(); g.fill();
@@ -1639,12 +1694,28 @@ function drawApoRoom(R) {
   }
   // Durchgänge
   for (const a of R.arches || []) {
+    if (a.gasse) {
+      const gl = g.createLinearGradient(0, 200, 0, FLOOR); gl.addColorStop(0, '#2a1a10'); gl.addColorStop(1, '#0d0b08');
+      g.fillStyle = gl; g.fillRect(a.x - 95, 120, 190, FLOOR - 120); g.lineWidth = 6; g.strokeStyle = LINE; g.beginPath(); g.moveTo(a.x - 95, 120); g.lineTo(a.x - 95, FLOOR); g.moveTo(a.x + 95, 120); g.lineTo(a.x + 95, FLOOR); g.stroke();
+      g.fillStyle = 'rgba(255,190,110,.18)'; g.beginPath(); g.moveTo(a.x - 25, 200); g.lineTo(a.x + 25, 200); g.lineTo(a.x + 80, FLOOR); g.lineTo(a.x - 80, FLOOR); g.closePath(); g.fill();
+      g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(a.x - 95, 150, 190, 38, 8); g.fill(); g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(a.label, a.x, 170);
+      continue;
+    }
     g.fillStyle = '#0d0b08'; g.beginPath(); g.moveTo(a.x - 130, FLOOR); g.lineTo(a.x - 130, 260); g.arc(a.x, 260, 130, Math.PI, 0); g.lineTo(a.x + 130, FLOOR); g.closePath(); g.fill(); g.lineWidth = 8; g.strokeStyle = '#3a2814'; g.stroke();
     g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(a.x - 90, 150, 180, 38, 8); g.fill(); g.lineWidth = 3; g.strokeStyle = LINE; g.stroke();
     g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(a.label || '?', a.x, 170);
   }
   // Boden
   const fg = g.createLinearGradient(0, FLOOR, 0, H); fg.addColorStop(0, th === 'laden' ? '#6a6258' : '#4a5a2a'); fg.addColorStop(1, th === 'laden' ? '#7a7066' : '#5a6a32'); g.fillStyle = fg; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+  if (th === 'bahn') { for (const ry of [600, 740]) { g.fillStyle = '#5a4a3a'; for (let x = Math.floor(XL / 60) * 60; x < XR; x += 60) g.fillRect(x, ry - 8, 26, 34); g.fillStyle = '#9a9aa0'; g.fillRect(XL, ry - 2, VW, 7); g.fillRect(XL, ry + 18, VW, 7); } }
+  if (th === 'schrott' || th === 'tanke') { g.fillStyle = th === 'tanke' ? 'rgba(40,40,40,.85)' : 'rgba(90,70,50,.55)'; g.fillRect(XL, FLOOR + 10, VW, H - FLOOR); if (th === 'tanke') { g.fillStyle = '#ddd'; for (let x = Math.floor(XL / 260) * 260; x < XR; x += 260) g.fillRect(x, 690, 120, 8); } }
+  if (th === 'wohn') { g.fillStyle = '#8a8478'; g.fillRect(XL, FLOOR + 6, VW, 50); g.fillStyle = '#3a3a3a'; g.fillRect(XL, 680, VW, 140); }
+  if (R.apoD) {
+    const d = R.apoD; g.fillStyle = 'rgba(150,120,80,.75)'; g.beginPath(); g.moveTo(d.x - 70, H - 160); g.lineTo(d.x + 70, H - 160); g.lineTo(d.x + 110, H); g.lineTo(d.x - 110, H); g.closePath(); g.fill();
+    const dg = g.createLinearGradient(0, H - 90, 0, H); dg.addColorStop(0, 'rgba(0,0,0,0)'); dg.addColorStop(1, 'rgba(0,0,0,.7)'); g.fillStyle = dg; g.fillRect(d.x - 110, H - 90, 220, 90);
+    g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(d.x - 85, H - 52, 170, 34, 8); g.fill(); g.lineWidth = 3; g.strokeStyle = LINE; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('↓ ' + d.label, d.x, H - 35);
+  }
   if (th === 'strasse' || th === 'markt') { g.fillStyle = '#3a3a3a'; g.fillRect(XL, 640, VW, 160); g.fillStyle = '#c9b060'; for (let x = Math.floor(XL / 200) * 200; x < XR; x += 200) g.fillRect(x, 715, 100, 10); }
   if (th === 'park') { g.fillStyle = '#2a6a8a'; g.fillRect(XL, H - 90, VW, 90); g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 3; for (let x = XL + ((t * 60) % 120) - 120; x < XR; x += 120) { g.beginPath(); g.moveTo(x, H - 50); g.quadraticCurveTo(x + 30, H - 60, x + 60, H - 50); g.stroke(); } }
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
@@ -1666,6 +1737,18 @@ function drawVersteck(o) {
   g.save(); if (hid) g.globalAlpha = 0.75;
   g.lineWidth = 4; g.strokeStyle = LINE;
   if (o.k === 'haus') { g.restore(); return; }
+  if (o.k === 'waggon') {
+    const w = o.w, x = o.x - w / 2, y = o.base - 30;
+    g.fillStyle = '#7a2e22'; g.fillRect(x, y - 210, w, 190); g.strokeRect(x, y - 210, w, 190);
+    g.fillStyle = '#5a2018'; g.fillRect(x - 6, y - 222, w + 12, 16); g.strokeRect(x - 6, y - 222, w + 12, 16);
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3; for (let k = 30; k < w; k += 30) { g.beginPath(); g.moveTo(x + k, y - 205); g.lineTo(x + k, y - 25); g.stroke(); }
+    g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = '#140c08'; g.fillRect(o.x - 60, y - 180, 120, 160); g.strokeRect(o.x - 60, y - 180, 120, 160);
+    g.fillStyle = '#5a2018'; g.save(); g.translate(o.x + 60, y - 180); g.rotate(0.05); g.fillRect(0, 0, 70, 160); g.strokeRect(0, 0, 70, 160); g.restore();
+    g.fillStyle = 'rgba(70,140,40,.8)'; for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + 30 + k * 40, y - 30, 22, Math.PI, 0); g.fill(); }
+    g.fillStyle = '#222'; for (const wx of [x + 50, x + 110, x + w - 110, x + w - 50]) { g.beginPath(); g.arc(wx, y, 24, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#666'; g.beginPath(); g.arc(wx, y, 8, 0, 7); g.fill(); g.fillStyle = '#222'; }
+    g.fillStyle = '#d8d0b0'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CARGO 07', x + 80, y - 190);
+    g.restore(); return;
+  }
   if (o.k === 'auto') {
     const w = o.w, x = o.x - w / 2, y = o.base;
     g.fillStyle = '#6a3a2a'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 80); g.lineTo(x + w * 0.22, y - 90); g.lineTo(x + w * 0.32, y - 150); g.lineTo(x + w * 0.7, y - 150); g.lineTo(x + w * 0.82, y - 90); g.lineTo(x + w, y - 80); g.lineTo(x + w, y); g.closePath(); g.fill(); g.stroke();
@@ -2868,7 +2951,14 @@ Object.assign(OUTFITS, {
     front: (bx, by, hx, hy, t) => { for (let i = 0; i < 14; i++) { const lx = hx + 10 + i * 17 + 6 * t; g.strokeStyle = i % 2 ? '#2f4a18' : '#5a7a2a'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(lx, hy + 6); g.quadraticCurveTo(lx + 10, hy - 30, lx - 4, hy - 50 - (i % 3) * 10); g.stroke(); } g.lineCap = 'butt'; } },
   apo_bandit: { name: 'Endzeit-Bandit', bp: mkPal('#3a2a1a', '#4a3622'), noText: true,
     bodyFront: (x, y, w, h) => { g.fillStyle = '#c9d1d9'; g.strokeStyle = '#111'; g.lineWidth = 3; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(x + 10 + i * 20, y + 10); g.lineTo(x + 20 + i * 20, y - 22); g.lineTo(x + 30 + i * 20, y + 10); g.closePath(); g.fill(); g.stroke(); } g.fillStyle = '#eee'; g.beginPath(); g.arc(x + w - 70, y + 70, 26, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#111'; g.beginPath(); g.arc(x + w - 80, y + 66, 6, 0, 7); g.arc(x + w - 60, y + 66, 6, 0, 7); g.fill(); },
-    headFront: (x, y, w, h) => { bobFace(x, y); g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(x, y + 90); g.lineTo(x + w, y + 90); g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; for (let k = 20; k < w; k += 36) { g.beginPath(); g.arc(x + k, y + 130, 4, 0, 7); g.fill(); } } },
+    headFront: (x, y, w, h) => { bobFace(x, y); },
+    front: (bx, by, hx, hy, t) => {
+      const ox = hx - 5 + 5 * t, top = hy + 92, hh = HEAD.h - 92 + 4, ww = HEAD.w + 10;
+      g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(ox, top, ww, hh, DEPTH + 8, mkPal('#b8322a', '#c94236'), true, t);
+      g.fillStyle = 'rgba(255,255,255,.55)'; for (let k = 18; k < ww; k += 34) for (const r of [24, 56]) { g.beginPath(); g.arc(ox + k + (r === 56 ? 17 : 0), top + r, 4.5, 0, 7); g.fill(); }
+      // Knoten an der Seite
+      const kx = t > 0 ? ox : ox + ww; g.fillStyle = '#b8322a'; g.beginPath(); g.moveTo(kx, top + 30); g.lineTo(kx + (t > 0 ? -34 : 34), top + 50); g.lineTo(kx + (t > 0 ? -26 : 26), top + 80); g.closePath(); g.fill(); g.stroke();
+    } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -6138,7 +6228,9 @@ function frame(t) {
   if (inBottom && ex.d && !R.openBottom) bob.x = cl(bob.x, GAP_X[0], GAP_X[1]);
   const gy = bob.y >= GY[0] && bob.y <= GY[1], gx = bob.x >= GAP_X[0] && bob.x <= GAP_X[1];
   bob.x = cl(bob.x, ex.l && gy ? XL - 100 : XL + half + 4, ex.r && gy ? XR + 100 : XR - half - 4);
-  bob.y = cl(bob.y, R.openTop ? R.top : FLOOR + 40, (ex.d && gx) || R.openBottom ? H + 100 : maxY);
+  const apoDown = R.apoD && Math.abs(bob.x - R.apoD.x) < 110;
+  bob.y = cl(bob.y, R.openTop ? R.top : FLOOR + 40, (ex.d && gx) || R.openBottom || apoDown ? H + 100 : maxY);
+  if (apoDown && bob.y > H + 10 && !fade.dir) go(R.apoD.to, [R.apoD.ax, FLOOR + 70]);
 
   const rb = id => ROOMS[id].wide || [SXL, SXR];
   if (bob.x < XL + 10 && ex.l) go(ex.l, [rb(ex.l)[1] - 40, bob.y]);
@@ -6146,7 +6238,7 @@ function frame(t) {
   else if (bob.y > H + 40 && ex.d) go(ex.d, ROOMS[ex.d].openTop ? [bob.x, ROOMS[ex.d].top + 70] : ROOMS[ex.d].door ? [ROOMS[ex.d].door.x + ROOMS[ex.d].door.w / 2, FLOOR + 70] : [W / 2, FLOOR + 70]);
   if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
-  for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, FLOOR + 70]); doorLock = true; }
+  for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, a.ay || FLOOR + 70]); doorLock = true; }
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
