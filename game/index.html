@@ -589,7 +589,7 @@ function drawMarkt(R) {
     g.fillStyle = '#0d0b10'; g.beginPath(); g.moveTo(a.x - 150, FLOOR); g.lineTo(a.x - 150, 230); g.arc(a.x, 230, 150, Math.PI, 0); g.lineTo(a.x + 150, FLOOR); g.closePath(); g.fill(); g.lineWidth = 8; g.strokeStyle = '#4a4352'; g.stroke();
   }
   // Graffiti
-  g.save(); g.translate(-520, 250); g.rotate(-0.08); marker('BoB WAS HERE', 0, 0, 52, '#39d0ff'); g.restore();
+  g.save(); g.translate(-10, 250); g.rotate(-0.08); marker('BoB WAS HERE', 0, 0, 40, '#39d0ff'); g.restore();
   g.save(); g.translate(1150, 200); g.rotate(0.06); marker('NUR BAR!', 0, 0, 44, '#8fd14a'); g.restore();
   // Neon-Schild
   const fl = Math.sin(t * 23) > 0.92 ? 0.3 : 1;
@@ -618,6 +618,7 @@ function drawMarkt(R) {
 }
 function openMarkt(o) {
   const c = Math.floor(bank.cash || 0), it = [];
+  if (o.shop === 'kleider') { openWardrobe('shop'); return; }
   if (o.shop === 'kleider') {
     menu.title = 'Klamotten – nur Bargeld: ' + money(c);
     for (const [k, p] of Object.entries(MARKT_KLEIDER)) { const have = wear.owned.includes(k); it.push({ label: OUTFITS[k].name, mk: k, price: p, tag: have ? 'hast du' : money(p), tagCol: have ? '#777' : c >= p ? '#0a8a1f' : '#c0392b', disabled: have || c < p }); }
@@ -1656,12 +1657,13 @@ const WR = { gx: 70, gy: 175, cw: 172, ch: 150, gap: 12, cols: 3, rows: 4 };
 function wrPet() { return owned[wr.pi] || null; }
 function wrItems() {
   if (wr.mode === 'pet') { const p = wrPet(); return p ? petWearOf(p).owned.filter(k => PET_OUTFITS[k]) : []; }
+  if (wr.mode === 'shop') return Object.keys(MARKT_KLEIDER);
   return wear.owned.filter(k => OUTFITS[k]);
 }
 function wrOn() { return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
 function wrMaxScroll() { return Math.max(0, Math.ceil(wrItems().length / WR.cols) - WR.rows); }
 function openWardrobe(mode) {
-  wr.mode = mode || 'bob'; wr.open = true; wr.pi = Math.max(0, owned.indexOf(activePet));
+  wr.mode = mode || 'bob'; wr.open = true; wr.msg = ''; wr.pi = Math.max(0, owned.indexOf(activePet));
   wr.sel = Math.max(0, wrItems().indexOf(wrOn())); wr.scroll = 0; keys.clear(); joy.on = false;
 }
 function wrSwitchPet(d) {
@@ -1672,11 +1674,22 @@ function wrPickPet() { const p = wrPet(); if (p && p !== activePet) { activePet 
 function wrCell(i) { const r = Math.floor(i / WR.cols) - wr.scroll, c = i % WR.cols; return { x: WR.gx + c * (WR.cw + WR.gap), y: WR.gy + r * (WR.ch + WR.gap), vis: r >= 0 && r < WR.rows }; }
 const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CLOSE = { x: W - 70, y: 70, r: 40 };
 function wrEquip(i) {
-  const k = wrItems()[i]; if (!k) return; wr.sel = i;
+  const k = wrItems()[i]; if (!k) return; wr.sel = i; wr.msg = '';
+  if (wr.mode === 'shop' && !wear.owned.includes(k)) return;
   if (wr.mode === 'pet') { petWearOf(wrPet()).on = k; savePetWear(); } else { wear.on = k; saveWear(); }
 }
 function wrSetScroll(v) { wr.scroll = Math.max(0, Math.min(wrMaxScroll(), Math.round(v))); }
+function wrBuyNow() {
+  const k = wrItems()[wr.sel]; if (!k) return;
+  if (wear.owned.includes(k)) { wear.on = k; saveWear(); return; }
+  const p = MARKT_KLEIDER[k];
+  if ((bank.cash || 0) < p) { wr.msg = 'Zu wenig Bargeld!'; return; }
+  bank.cash -= p; saveBank(); wear.owned.push(k); wear.on = k; saveWear(); wr.msg = '';
+  toast = { text: OUTFITS[k].name + ' gekauft und angezogen!', t: 3 };
+}
+function wrBuyBtn() { const px = (WR_TRACK.x + 40 + SXR) / 2; return { x: px - 170, y: 800, w: 340, h: 64 }; }
 function wardrobeClick(x, y) {
+  if (wr.mode === 'shop') { const b = wrBuyBtn(); if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { wrBuyNow(); return; } }
   if (Math.hypot(x - WR_CLOSE.x, y - WR_CLOSE.y) < WR_CLOSE.r + 8) { wr.open = false; return; }
   if (x > WR_TRACK.x - 10 && x < WR_TRACK.x + WR_TRACK.w + 10 && y > WR_TRACK.y && y < WR_TRACK.y + WR_TRACK.h) {
     wrSetScroll((y - WR_TRACK.y) / WR_TRACK.h * (wrMaxScroll() + 1) - 0.5); wr.drag = true; return;
@@ -1702,7 +1715,7 @@ addEventListener('keydown', e => {
   else if (e.code === 'ArrowLeft' || e.code === 'KeyA') wr.sel = Math.max(0, wr.sel - 1);
   else if (e.code === 'ArrowDown' || e.code === 'KeyS') wr.sel = Math.min(n - 1, wr.sel + WR.cols);
   else if (e.code === 'ArrowUp' || e.code === 'KeyW') wr.sel = Math.max(0, wr.sel - WR.cols);
-  else if (e.code === 'Enter' || e.code === 'Space') wrEquip(wr.sel);
+  else if (e.code === 'Enter' || e.code === 'Space') { if (wr.mode === 'shop') wrBuyNow(); else wrEquip(wr.sel); }
   const row = Math.floor(wr.sel / WR.cols);
   if (row < wr.scroll) wrSetScroll(row); else if (row >= wr.scroll + WR.rows) wrSetScroll(row - WR.rows + 1);
   keys.clear();
@@ -1748,7 +1761,12 @@ function drawWardrobe() {
   g.lineWidth = 6; g.strokeStyle = LINE; g.lineJoin = 'round';
   // Titel-Schild
   g.fillStyle = '#ffe066'; g.beginPath(); g.moveTo(XL + 60, 22); g.lineTo(XL + 560, 22); g.lineTo(XL + 540, 122); g.lineTo(XL + 80, 122); g.closePath(); g.fill(); g.stroke();
-  marker(wr.mode === 'pet' ? 'Haustiere' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
+  marker(wr.mode === 'pet' ? 'Haustiere' : wr.mode === 'shop' ? 'Klamotten' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
+  if (wr.mode === 'shop') {
+    const ct = 'Bargeld: ' + money(Math.floor(bank.cash || 0)); g.font = '800 26px system-ui'; const cw = g.measureText(ct).width + 70;
+    g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 600, 46, cw, 54, 27); g.fill(); uiIcon('cash', XL + 630, 73, 30, '#5fd36a');
+    g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(ct, XL + 652, 74);
+  }
   // Raster
   g.fillStyle = '#ffe680'; g.lineWidth = 5;
   g.beginPath(); g.roundRect(WR.gx - 16, WR.gy - 16, 3 * (WR.cw + WR.gap) + 78, 4 * (WR.ch + WR.gap) + 22, 12); g.fill(); g.stroke();
@@ -1761,6 +1779,12 @@ function drawWardrobe() {
       if (wr.mode === 'pet') drawPetCube(wrPet(), x + WR.cw / 2, y + WR.ch - 14, 96, 1, 0);
       else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false);
       if (k === wrOn()) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
+      if (wr.mode === 'shop') {
+        const have = wear.owned.includes(k), lt = have ? 'hast du' : money(MARKT_KLEIDER[k]);
+        g.font = '800 17px system-ui'; const lw = g.measureText(lt).width + 18;
+        g.fillStyle = have ? '#13a000' : '#111'; g.beginPath(); g.roundRect(x + WR.cw - lw - 6, y + 6, lw, 26, 13); g.fill();
+        g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(lt, x + WR.cw - 6 - lw / 2, y + 20);
+      }
       if (i === wr.sel) { g.lineWidth = 3; g.strokeStyle = '#111'; g.setLineDash([8, 6]); g.strokeRect(x + 9, y + 9, WR.cw - 18, WR.ch - 18); g.setLineDash([]); }
     }
   }
@@ -1788,6 +1812,15 @@ function drawWardrobe() {
     g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = on ? '#13f000' : '#fff';
     g.beginPath(); g.roundRect(u.btn.x, u.btn.y, u.btn.w, u.btn.h, 18); g.fill(); g.stroke();
     marker(on ? 'Ist dabei ✓' : 'Auswählen', px, u.btn.y + u.btn.h / 2 + 2, 32, '#111');
+  }
+  // Klamotten-Laden: Preis zum Anziehen
+  if (wr.mode === 'shop' && items[wr.sel]) {
+    const k = items[wr.sel], have = wear.owned.includes(k), on = wear.on === k, b = wrBuyBtn(), p = MARKT_KLEIDER[k], ok = have || (bank.cash || 0) >= p;
+    marker(OUTFITS[k].name, px, 150, 40, '#fff');
+    g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = on ? '#13f000' : have ? '#fff' : ok ? '#ffd84a' : '#d1d5db';
+    g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 18); g.fill(); g.stroke();
+    marker(on ? 'Angezogen ✓' : have ? 'Anziehen' : 'Anziehen: ' + money(p), px, b.y + b.h / 2 + 2, 30, '#111');
+    if (wr.msg) marker(wr.msg, px, b.y - 26, 28, '#ff4d4d');
   }
   // Schließen
   g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d';
