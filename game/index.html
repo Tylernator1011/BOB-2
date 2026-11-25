@@ -3032,6 +3032,94 @@ Object.assign(OUTFITS, {
       g.fillStyle = '#1a1a1f'; g.fillRect(x0, ytop - 2, x1 - x0, 8); g.strokeRect(x0, ytop - 2, x1 - x0, 8);
       if (Math.abs(dx) > 1) { g.beginPath(); g.moveTo(ex, ytop - 2); g.lineTo(ex + dx, ytop - 2 + dy); g.lineTo(ex + dx, ytop + 6 + dy); g.lineTo(ex, ytop + 6); g.closePath(); g.fill(); g.stroke(); }
     } },
+  // ---------- Bob-Pass-Outfits ----------
+  koenig: { name: 'König', bp: mkPal('#e01818', '#f03030'),
+    bodyFront: (x, y, w, h) => { g.fillStyle = '#ffd21a'; g.fillRect(x, y + h - 14, w, 14); g.fillStyle = '#fff'; for (let k = x + 10; k < x + w; k += 22) { g.beginPath(); g.arc(k, y + h - 7, 4, 0, 7); g.fill(); } },
+    front: (bx, by, hx, hy, t) => {
+      const dx = -DEPTH * t, dy = -DEPTH * 0.55;
+      // Schulterpolster mit Goldrand (vorne + Tiefe)
+      for (const s of [-1, 1]) { const cx = s * (BODY.w / 2 - 22), cy = by + 40;
+        for (const [ox, oy, c] of [[dx, dy, '#a80c0c'], [0, 0, '#e01818']]) { g.fillStyle = c; g.lineWidth = 9; g.strokeStyle = '#ffd21a'; g.beginPath(); g.ellipse(cx + ox, cy + oy, 44, 62, s * 0.12, 0, 7); g.fill(); g.stroke(); }
+        g.lineWidth = 3; g.strokeStyle = '#111'; g.beginPath(); g.ellipse(cx, cy, 49, 67, s * 0.12, 0, 7); g.stroke(); }
+      // Krone als Würfel mit Zacken
+      g.lineWidth = 4; g.strokeStyle = '#111';
+      cube(hx + 40 + 4 * t, hy - 30, HEAD.w - 80, 34, DEPTH * 0.8, mkPal('#ffcc1a', '#ffe14a'), true, t);
+      g.fillStyle = '#ffcc1a'; for (let i = 0; i < 5; i++) { const px = hx + 46 + 4 * t + i * (HEAD.w - 92) / 4; g.beginPath(); g.moveTo(px - 16, hy - 28); g.lineTo(px, hy - 66); g.lineTo(px + 16, hy - 28); g.closePath(); g.fill(); g.stroke(); g.fillStyle = ['#e0262b', '#2f7bff', '#2fa84f'][i % 3]; g.beginPath(); g.arc(px, hy - 40, 6, 0, 7); g.fill(); g.fillStyle = '#ffcc1a'; }
+    } },
+  hundert: { name: '100', bp: mkPal('#e01818', '#f03030'), noText: true,
+    bodyFront: (x, y, w, h) => { g.font = `92px 'Permanent Marker', cursive`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 8; g.strokeStyle = '#8a6a00'; g.strokeText('100', x + w / 2, y + h / 2 + 6); g.fillStyle = '#ffe11a'; g.fillText('100', x + w / 2, y + h / 2 + 6); },
+    front: (bx, by, hx, hy, t) => {
+      const tt = performance.now() / 1000;
+      // Haarreif (vorne + Seite)
+      g.lineCap = 'round'; g.strokeStyle = '#111'; g.lineWidth = 16; g.beginPath(); g.moveTo(hx + 6, hy + 60); g.quadraticCurveTo(hx + HEAD.w / 2, hy - 34, hx + HEAD.w - 6, hy + 60); g.stroke();
+      g.strokeStyle = '#fff'; g.lineWidth = 10; g.stroke();
+      // Federn mit wackelnder 100
+      for (const s of [-1, 1]) {
+        const ax = hx + HEAD.w / 2 + s * 70, ay = hy + 4, wob = Math.sin(tt * 4 + s) * 10, ex = ax + s * 60 + wob, ey = hy - 120;
+        g.strokeStyle = '#111'; g.lineWidth = 8; g.beginPath(); g.moveTo(ax, ay); for (let i = 1; i <= 8; i++) { const u = i / 8; g.lineTo(ax + (ex - ax) * u + Math.sin(i * 2.2) * 9, ay + (ey - ay) * u); } g.stroke();
+        g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke();
+        g.save(); g.translate(ex, ey - 16); g.rotate(s * 0.35 + wob * 0.02); g.font = `40px 'Permanent Marker', cursive`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 6; g.strokeStyle = '#8a6a00'; g.strokeText('100', 0, 0); g.fillStyle = '#ffe11a'; g.fillText('100', 0, 0); g.restore();
+      }
+      g.lineCap = 'butt';
+    } },
+  oma: { name: 'Oma', bp: mkPal('#ff9ad6', '#ffb0e0'),
+    bodyFront: (x, y, w, h) => { g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 4; for (let k = x + 12; k < x + w; k += 18) { g.beginPath(); g.moveTo(k, y); g.lineTo(k, y + h); g.stroke(); } },
+    front: (bx, by, hx, hy, t) => { hairPuff(hx, hy, t, '#b4b2bc', [[-10, 20, 62], [40, -14, 70], [110, -26, 76], [180, -14, 70], [236, 20, 62], [-14, 80, 48], [250, 80, 48], [70, 10, 60], [160, 10, 60]]); } },
+  opa: { name: 'Opa', bp: mkPal('#8ab84a', '#9ccc58'),
+    bodyFront: (x, y, w, h) => { g.strokeStyle = 'rgba(230,230,40,.7)'; g.lineWidth = 4; for (let k = x + 14; k < x + w; k += 18) { g.beginPath(); g.moveTo(k, y); g.lineTo(k, y + h); g.stroke(); } },
+    front: (bx, by, hx, hy, t) => { hairPuff(hx, hy, t, '#a8a8ae', [[-30, 10, 40], [10, -6, 44], [50, 4, 36], [190, 4, 36], [230, -6, 44], [270, 10, 40]]); } },
+  timmy: { name: 'Timmy', bp: mkPal('#00e5ff', '#40efff'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#00e5ff' : '#ffe600'; g.fillRect(x, y + i * 24, w, 24); }
+      g.fillStyle = '#b0742e'; g.fillRect(x, y + 96, w, h - 96); g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.moveTo(x, y + 96); g.lineTo(x + w, y + 96); g.stroke();
+      g.strokeStyle = '#c8a070'; g.lineWidth = 16; g.lineCap = 'round'; for (const sx of [x + 60, x + w - 60]) { g.beginPath(); g.moveTo(sx, y - 4); g.lineTo(sx + (sx < x + w / 2 ? -4 : 4), y + 104); g.stroke(); } g.lineCap = 'butt';
+    },
+    front: (bx, by, hx, hy, t) => { hairPuff(hx, hy, t, '#ffa500', [[-8, 10, 60], [40, -30, 70], [110, -40, 78], [180, -30, 70], [240, 10, 60], [20, 40, 46], [220, 40, 46], [80, 20, 58], [150, 20, 58]]); } },
+  maryjane: { name: 'Mary Jane', bp: mkPal('#ffffff', '#f4f4f4'), noText: true,
+    bodyFront: (x, y, w, h) => { g.fillStyle = '#e8e8ee'; g.fillRect(x + w / 2 - 3, y, 6, 60); },
+    front: (bx, by, hx, hy, t) => {
+      const dx = -DEPTH * t, dy = -DEPTH * 0.55;
+      // Faltenrock, breiter als der Körper (mit Tiefe)
+      const top = by + 58, bot = by + BODY.h + 6, L = bx - 4, R = bx + BODY.w + 4, LL = bx - 56, RR = bx + BODY.w + 56;
+      g.fillStyle = '#0a2f7a'; g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.moveTo(L + dx, top + dy); g.lineTo(R + dx, top + dy); g.lineTo(RR + dx, bot + dy); g.lineTo(LL + dx, bot + dy); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#0d3e9c'; g.beginPath(); g.moveTo(L, top); g.lineTo(R, top); g.quadraticCurveTo(RR + 10, bot - 10, RR, bot); g.lineTo(LL, bot); g.quadraticCurveTo(LL - 10, bot - 10, L, top); g.closePath(); g.fill(); g.stroke();
+      g.strokeStyle = '#111'; g.lineWidth = 5; g.lineCap = 'round'; for (let i = 0; i < 6; i++) { const u = (i + 0.5) / 6, x0 = L + (R - L) * u, x1 = LL + (RR - LL) * u; g.beginPath(); g.moveTo(x0 + (x1 - x0) * 0.15, top + 12); g.lineTo(x0 + (x1 - x0) * 0.85, bot - 10); g.stroke(); } g.lineCap = 'butt';
+      // Haare: Pony über die Stirn, Pferdeschwanz mit rosa Haargummi
+      hairPuff(hx, hy, t, '#141418', [[14, 4, 30], [62, -10, 38], [120, -14, 40], [178, -10, 38], [226, 6, 30]]);
+      const tt = performance.now() / 1000, sw = Math.sin(tt * 2) * 6;
+      g.fillStyle = '#111'; g.beginPath(); g.moveTo(hx + 120, hy - 40); g.quadraticCurveTo(hx + 160, hy - 120, hx + 280 + sw, hy - 96); g.quadraticCurveTo(hx + 300 + sw, hy - 80, hx + 270 + sw, hy - 74); g.quadraticCurveTo(hx + 170, hy - 90, hx + 150, hy - 30); g.closePath(); g.fill();
+      g.fillStyle = '#ff9ad6'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(hx + 136, hy - 52, 26, 14, -0.4, 0, 7); g.fill(); g.stroke();
+    } },
+  blitzgott: { name: 'Blitzgott', hp: mkPal('#18181c', '#24242a'), bp: mkPal('#18181c', '#24242a'), noText: true, noFace: true,
+    back: (bx, by, hx, hy, t) => {
+      const tt = performance.now() / 1000;
+      const gr = g.createRadialGradient(0, by - 60, 40, 0, by - 60, 380); gr.addColorStop(0, `rgba(40,230,255,${0.32 + 0.12 * Math.sin(tt * 6)})`); gr.addColorStop(1, 'rgba(40,230,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, by - 60, 380, 0, 7); g.fill();
+      blitzSmoke(bx, by, hx, hy, tt, 0.9);
+    },
+    headFront: (x, y, w, h) => {
+      const tt = performance.now() / 1000, fl = 0.75 + 0.25 * Math.sin(tt * 17) * Math.sin(tt * 5);
+      g.shadowColor = '#28e6ff'; g.shadowBlur = 22; g.strokeStyle = `rgba(60,240,255,${fl})`; g.fillStyle = `rgba(60,240,255,${fl})`; g.lineCap = 'round'; g.lineJoin = 'round';
+      for (const [ex, s] of [[x + 70, 1], [x + w - 70, -1]]) { g.beginPath(); g.moveTo(ex - 26 * s, y + 52); g.lineTo(ex + 22 * s, y + 66); g.lineTo(ex - 10 * s, y + 80); g.closePath(); g.fill(); }
+      g.lineWidth = 9; g.beginPath(); const my = y + 120; g.moveTo(x + 46, my - 18); for (let i = 0; i <= 8; i++) g.lineTo(x + 46 + i * (w - 92) / 8, my + (i % 2 ? 14 : -4) + Math.sin(tt * 9 + i) * 3); g.stroke();
+      g.shadowBlur = 0; g.lineCap = 'butt';
+    },
+    bodyFront: (x, y, w, h) => { const tt = performance.now() / 1000; g.strokeStyle = 'rgba(40,230,255,.25)'; g.lineWidth = 3; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(x + 20 + i * 42, y + h); g.quadraticCurveTo(x + 40 + i * 42 + Math.sin(tt * 3 + i) * 20, y + h / 2, x + 20 + i * 42, y); g.stroke(); } },
+    front: (bx, by, hx, hy, t) => {
+      const tt = performance.now() / 1000;
+      blitzSmoke(bx, by, hx, hy, tt, 1);
+      // Blitze zucken um ihn herum
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      const seed = Math.floor(tt * 12);
+      for (let i = 0; i < 9; i++) {
+        const r = ((seed * 31 + i * 97) % 100) / 100; if (r < 0.35) continue;
+        const ang = i / 9 * 6.283 + seed * 0.3, cx = Math.cos(ang) * 150, cy = by - 60 + Math.sin(ang) * 170;
+        g.shadowColor = '#28e6ff'; g.shadowBlur = 16; g.strokeStyle = `rgba(60,240,255,${0.5 + r * 0.5})`; g.lineWidth = 6;
+        g.beginPath(); g.moveTo(cx, cy); let px = cx, py = cy; for (let k = 0; k < 5; k++) { px += Math.cos(ang) * 14 + (((seed + k * 13 + i) % 7) - 3) * 6; py += Math.sin(ang) * 14 + (((seed * 3 + k * 7 + i) % 7) - 3) * 6; g.lineTo(px, py); } g.stroke();
+      }
+      // fliegende Funken
+      for (let i = 0; i < 14; i++) { const a = tt * (1 + i % 3) + i, rr = 170 + 60 * Math.sin(tt * 2 + i), sx = Math.cos(a) * rr * 0.7, sy = by - 70 + Math.sin(a) * rr; g.fillStyle = `rgba(160,250,255,${0.5 + 0.5 * Math.sin(tt * 8 + i)})`; g.beginPath(); g.arc(sx, sy, 4, 0, 7); g.fill(); }
+      g.shadowBlur = 0; g.lineCap = 'butt';
+    } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -6451,6 +6539,7 @@ function drawSeasonAir(dt) {
 }
 // Große Updates
 const BIG_UPDATES = [
+  ['1.39', 'Bob-Pass Outfits', 'König, 100, Oma, Opa, Timmy, Mary Jane, Bobi und der animierte Blitzgott'],
   ['1.38', 'Pässe & Bob-Pass', 'Pässe-Tab im Kalender, Bob-Pass mit 100 Leveln'],
   ['1.37', 'Kalender & Jahreszeiten', 'Kalender im Garten, 4 Jahreszeiten mit eigenem Aussehen'],
   ['1.36', 'Streicheln & Autoklicker', 'Tier anklicken bringt Geld, Autoklicker alle 5 Sekunden'],
@@ -6561,6 +6650,24 @@ const PASSES = [
   { id: 'affe', name: 'Affen-Pass', col: '#c98a4a', dark: '#2a2016', sub: 'Bald verfügbar', open: false },
   { id: 'gold', name: 'Gold-Pass', col: '#ffcc1a', dark: '#2a2208', sub: 'Bald verfügbar', open: false },
 ];
+// Haare/Wolken als Puffs mit Tiefe (dreht sich mit Bob)
+function hairPuff(hx, hy, t, col, blobs) {
+  const dx = -DEPTH * t, dy = -DEPTH * 0.55;
+  g.lineWidth = 4; g.strokeStyle = '#111';
+  g.fillStyle = shade(col, -0.3); g.beginPath(); for (const [x, y, r] of blobs) { g.moveTo(hx + x + dx + r, hy + y + dy); g.arc(hx + x + dx, hy + y + dy, r, 0, 7); } g.fill(); g.stroke();
+  g.fillStyle = col; g.beginPath(); for (const [x, y, r] of blobs) { g.moveTo(hx + x + r, hy + y); g.arc(hx + x, hy + y, r, 0, 7); } g.fill(); g.stroke();
+  g.beginPath(); for (const [x, y, r] of blobs) { g.moveTo(hx + x + r - 2, hy + y); g.arc(hx + x, hy + y, r - 2, 0, 7); } g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 3; for (const [x, y, r] of blobs) { g.beginPath(); g.arc(hx + x - r * 0.2, hy + y - r * 0.2, r * 0.55, 3.6, 4.8); g.stroke(); }
+}
+function blitzSmoke(bx, by, hx, hy, tt, front) {
+  const pts = [];
+  for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283, rx = 150 + 20 * Math.sin(tt * 1.3 + i * 2), ry = 190 + 18 * Math.cos(tt * 1.1 + i); pts.push([Math.cos(a + tt * 0.25) * rx, by - 70 + Math.sin(a + tt * 0.25) * ry, 46 + 10 * Math.sin(tt * 2 + i)]); }
+  const list = pts.filter(p => front ? p[1] > by - 30 || Math.abs(p[0]) > 120 : true);
+  for (const [k, c] of [[1.15, '#0c0c10'], [1, '#26262c']]) { g.fillStyle = c; g.beginPath(); for (const [x, y, r] of list) { g.moveTo(x + r * k, y); g.arc(x, y, r * k, 0, 7); } g.fill(); }
+  g.strokeStyle = 'rgba(40,230,255,.18)'; g.lineWidth = 3; for (const [x, y, r] of list) { g.beginPath(); g.arc(x, y, r * 0.7, 3.5, 5); g.stroke(); }
+}
+// Bob-Pass Belohnungen (Outfits), der Rest kommt noch
+const PASS_REWARDS = { 5: 'bobi', 15: 'timmy', 25: 'maryjane', 35: 'opa', 45: 'oma', 60: 'koenig', 80: 'hundert', 100: 'blitzgott' };
 const PASS_LV = 100, PASS_XP = 100;
 let bobpass = { xp: 0, claimed: [] };
 try { const d = JSON.parse(localStorage.getItem('bob-pass') || 'null'); if (d) bobpass = Object.assign(bobpass, d); } catch (e) {}
@@ -6569,7 +6676,7 @@ function passLevel() { return Math.min(PASS_LV, Math.floor(bobpass.xp / PASS_XP)
 function passXp(v) { if (!lief.paesse) return; const b = passLevel(); bobpass.xp += v; savePass(); if (passLevel() > b) toast = { text: '🎟️ Bob-Pass Level ' + passLevel() + ' erreicht! Im Kalender freischalten.', t: 3.5 }; }
 const PP = { parts: [], burst: [] };
 function passGo(d) { kal.bpSel = Math.max(1, Math.min(PASS_LV, (kal.bpSel || 1) + d)); }
-function passUnlock() { const i = kal.bpSel; if (passLevel() < i || bobpass.claimed.includes(i)) return; bobpass.claimed.push(i); savePass(); for (let k = 0; k < 40; k++) { const a = Math.random() * 6.283, v = 120 + Math.random() * 260; PP.burst.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 1 }); } toast = { text: 'Level ' + i + ' freigeschaltet!', t: 2 }; }
+function passUnlock() { const i = kal.bpSel; if (passLevel() < i || bobpass.claimed.includes(i)) return; bobpass.claimed.push(i); savePass(); const of = PASS_REWARDS[i]; if (of && !wear.owned.includes(of)) { wear.owned.push(of); saveWear(); } for (let k = 0; k < 40; k++) { const a = Math.random() * 6.283, v = 120 + Math.random() * 260; PP.burst.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 1 }); } toast = { text: PASS_REWARDS[i] ? 'Neues Outfit: ' + OUTFITS[PASS_REWARDS[i]].name + '! Im Kleiderschrank.' : 'Level ' + i + ' freigeschaltet!', t: 3 }; }
 function drawPassTab(C, btns, txt) {
   const t = performance.now() / 1000, dt = 1 / 60;
   if (!kal.pass) {
@@ -6628,8 +6735,10 @@ function drawPassTab(C, btns, txt) {
     if (sel && reached && !got) { const hg = g.createRadialGradient(x, cy, sz * 0.3, x, cy, sz); hg.addColorStop(0, `rgba(255,236,60,${0.35 + 0.15 * Math.sin(t * 4)})`); hg.addColorStop(1, 'rgba(255,236,60,0)'); g.fillStyle = hg; g.beginPath(); g.arc(x, cy, sz, 0, 7); g.fill(); }
     g.fillStyle = got ? '#4a4a3a' : '#404040'; g.fillRect(x - sz / 2, cy - sz / 2, sz, sz); g.lineWidth = sel ? 9 : 3; g.strokeStyle = sel ? '#fff' : '#111'; g.strokeRect(x - sz / 2, cy - sz / 2, sz, sz);
     txt('LEVEL ' + i, x, cy - sz / 2 + 24, '900 ' + (sel ? 20 : 16) + 'px system-ui', reached ? '#ffe14a' : '#9a9a9a', 'center');
-    txt(got ? '✓' : reached ? '🎁' : '🔒', x, cy + 6, '400 ' + (sel ? 62 : 46) + 'px system-ui', '#fff', 'center');
-    txt(got ? 'Freigeschaltet' : 'Belohnung folgt', x, cy + sz / 2 - 22, '700 ' + (sel ? 16 : 13) + 'px system-ui', got ? '#9aff9a' : '#cfcfcf', 'center');
+    const rof = PASS_REWARDS[i];
+    if (rof) { g.save(); g.beginPath(); g.rect(x - sz / 2 + 4, cy - sz / 2 + 4, sz - 8, sz - 8); g.clip(); if (!reached) g.globalAlpha *= 0.55; drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, rof, false); g.restore(); if (got) txt('✓', x + sz / 2 - 24, cy - sz / 2 + 26, '900 26px system-ui', '#9aff9a', 'center'); else if (!reached) txt('🔒', x + sz / 2 - 24, cy - sz / 2 + 26, '400 20px system-ui', '#fff', 'center'); }
+    else txt(got ? '✓' : reached ? '🎁' : '🔒', x, cy + 6, '400 ' + (sel ? 62 : 46) + 'px system-ui', '#fff', 'center');
+    txt(rof ? OUTFITS[rof].name : got ? 'Freigeschaltet' : 'Belohnung folgt', x, cy + sz / 2 - 22, '700 ' + (sel ? 16 : 13) + 'px system-ui', rof ? (i === 100 ? '#5ff0ff' : '#ffe14a') : got ? '#9aff9a' : '#cfcfcf', 'center');
     if (!sel && Math.abs(d) < 1.5) btns.push({ b: { x: x - sz / 2, y: cy - sz / 2, w: sz, h: sz }, act: () => passGo(i > kal.bpSel ? 1 : -1) });
     g.restore();
   }
