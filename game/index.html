@@ -3795,7 +3795,16 @@ function updateBus(dt) {
 // Touch-/Maus-Joystick
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
-cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
+const petClicks = [];
+let autoAcc = 0;
+function autoClickTick(dt) {
+  if (!lief.auto || !lief.klick || apo.on) return;
+  const id = activeList()[0]; if (!id) return;
+  autoAcc += dt; if (autoAcc < 5) return; autoAcc -= 5;
+  earn(1); const p = petFor(id); if (p.room === cur) petClicks.push({ x: p.x, y: p.y - PETS[id].w * scaleAt(p.y) * 0.9, t: 0.9, auto: true });
+}
+cv.addEventListener('contextmenu', e => { if (!lief.klick) return; e.preventDefault(); const [x, y] = toCanvas(e); const pt = petAt(x, y); if (pt && !menu.open && !phone.open) openPetPanel(pt.id); });
+cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, y] = toCanvas(e);
   if (!device) { deviceClick(x, y); return; }
   if (stz.on) { stzClick(x, y); return; }
   if (apoClick(x, y)) return;
@@ -3803,7 +3812,7 @@ cv.addEventListener('pointerdown', e => { const [x, y] = toCanvas(e);
   if (tres.on) { tresClick(x, y); return; }
   if (wk.on) { workDown(x, y); return; }
   if (pp.open) { petPanelClick(x, y); return; }
-  if (!build.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !sleepFx && !bus) { const pt = petAt(x, y); if (pt) { openPetPanel(pt.id); return; } }
+  if (!build.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !sleepFx && !bus) { const pt = petAt(x, y); if (pt) { if (lief.klick) { earn(1); petClicks.push({ x: pt.x + (Math.random() - 0.5) * 40, y: pt.y - PETS[pt.id].w * scaleAt(pt.y) * 0.9, t: 0.9 }); pt.hopT = 0.25; } else openPetPanel(pt.id); return; } }
   if (sleepFx) return;
   if (web.open) { webClick(x, y); return; }
   if (shopCat.open) { catalogClick(x, y); return; }
@@ -4555,6 +4564,8 @@ const ADMIN = {
     ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
+    ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
+    ['Streichel-Bonus', '#ffcc1a', () => { lief.klick = true; saveLief(); }],
     ['Gold-Rezept Lv3', '#9b5de5', () => { lief.lv3gold = true; saveLief(); }],
     ['Goldenes Klo', '#e6b422', () => { lief.garten = true; lief.hundehaus = true; lief.klo = true; saveLief(); gartenSetup(); }],
     ['Gemüsefeld', '#7a4a24', () => { lief.garten = true; lief.feld = true; saveLief(); gartenSetup(); }],
@@ -4994,6 +5005,8 @@ const WEB_ITEMS = [
   { id: 'maid2', cat: 'haus', name: 'Maid: Goldkacke', price: 1500, desc: ['Die Maid sammelt die goldene', 'Kacke ein – direkt aufs Konto'], once: true, needs: 'maid' },
   { id: 'klo', cat: 'haus', name: 'Goldenes Tier-Klo', price: 3000, desc: ['Jede goldene Kacke', 'bringt 10 € mehr'], once: true, needs: 'hundehaus' },
   { id: 'lv3gold', cat: 'haus', name: 'Gold-Rezept Lv3', price: 4000, desc: ['Auch Futter Lv3 macht', 'Goldkacke (halb so lang)'], once: true, needs: 'klo' },
+  { id: 'klick', cat: 'haus', name: 'Streichel-Bonus', price: 2500, desc: ['Jeder Klick aufs Tier:', '+1 € Bargeld (Rechtsklick: Infos)'], once: true, needs: 'hundehaus' },
+  { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
@@ -5013,7 +5026,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5064,6 +5077,8 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
+  if (id === 'klick') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.arc(18, -14, 22, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 18, -13); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-30, -20); g.lineTo(-30, 30); g.lineTo(-18, 18); g.lineTo(-8, 38); g.lineTo(0, 34); g.lineTo(-10, 14); g.lineTo(6, 14); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'lv3gold') { webPic('tf3', 0, 0, 100); g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.ellipse(30, 38, 16, 9, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.ellipse(30, 29, 10, 6, 0, 0, 7); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'klo') { g.lineWidth = 3; g.strokeStyle = '#3a2a00'; g.fillStyle = '#ffd84a'; g.fillRect(-20, -46, 40, 40); g.strokeRect(-20, -46, 40, 40); g.fillStyle = '#e6b422'; g.fillRect(-12, 0, 24, 40); g.strokeRect(-12, 0, 24, 40); g.fillStyle = '#ffd84a'; g.beginPath(); g.ellipse(0, -2, 34, 12, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#6ad0ff'; g.beginPath(); g.ellipse(0, -2, 18, 5, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(30, -36, 4, 0, 7); g.arc(-32, -20, 3, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'feld') { g.fillStyle = '#45c43a'; g.fillRect(-50, -50, 100, 100); g.fillStyle = '#7a4a24'; g.fillRect(-42, -30, 84, 70); g.lineWidth = 3; g.strokeStyle = '#3a2010'; g.strokeRect(-42, -30, 84, 70); for (const [a, b] of [[-24, -10], [0, -10], [24, -10], [-24, 22], [0, 22], [24, 22]]) { g.fillStyle = '#5a3416'; g.beginPath(); g.ellipse(a, b, 10, 4, 0, 0, 7); g.fill(); g.strokeStyle = '#2a8a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(a, b); g.lineTo(a, b - 14); g.stroke(); g.fillStyle = '#2fb84f'; g.beginPath(); g.ellipse(a - 5, b - 10, 5, 3, -0.5, 0, 7); g.ellipse(a + 5, b - 12, 5, 3, 0.5, 0, 7); g.fill(); } g.fillStyle = '#e0262b'; g.beginPath(); g.arc(24, -24, 4, 0, 7); g.fill(); g.restore(); return; }
@@ -7065,7 +7080,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); kryptoTick(dt); liefTick(); maidTick(dt); maidCoinTick(); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); kryptoTick(dt); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -7080,6 +7095,7 @@ function frame(t) {
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
   if (cur === 'garten' && lief.hundehaus) list.push({ y: HH.y, f: drawHundehaus });
   if (cur === 'garten' && lief.klo) list.push({ y: KLO.y, f: drawKlo });
+  if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+1 €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+1 €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
   if (cur === 'garten' && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
