@@ -4554,6 +4554,7 @@ const ADMIN = {
     ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
+    ['Goldenes Klo', '#e6b422', () => { lief.garten = true; lief.hundehaus = true; lief.klo = true; saveLief(); gartenSetup(); }],
     ['Gemüsefeld', '#7a4a24', () => { lief.garten = true; lief.feld = true; saveLief(); gartenSetup(); }],
     ['Maid + Goldkacke', '#1a1a1f', () => { lief.garten = true; lief.hundehaus = true; lief.maid = true; lief.maid2 = true; saveLief(); gartenSetup(); }],
     ['Haustier-Haus', '#c0392b', () => { lief.garten = true; lief.hundehaus = true; saveLief(); gartenSetup(); }],
@@ -4989,6 +4990,7 @@ const WEB_ITEMS = [
   { id: 'hundehaus', cat: 'haus', name: 'Haustier-Haus', price: 1500, desc: ['Für den Garten: mit Napf,', 'dort wählst du dein Tier'], once: true, needs: 'garten' },
   { id: 'maid', cat: 'haus', name: 'Haus-Maid', price: 2000, desc: ['Passt auf dein Tier auf:', 'füllt den Napf mit bestem Futter'], once: true, needs: 'hundehaus' },
   { id: 'maid2', cat: 'haus', name: 'Maid: Goldkacke', price: 1500, desc: ['Die Maid sammelt die goldene', 'Kacke ein – direkt aufs Konto'], once: true, needs: 'maid' },
+  { id: 'klo', cat: 'haus', name: 'Goldenes Tier-Klo', price: 3000, desc: ['Jede goldene Kacke', 'bringt 10 € mehr'], once: true, needs: 'hundehaus' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
@@ -5008,7 +5010,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5059,6 +5061,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'klo') { g.lineWidth = 3; g.strokeStyle = '#3a2a00'; g.fillStyle = '#ffd84a'; g.fillRect(-20, -46, 40, 40); g.strokeRect(-20, -46, 40, 40); g.fillStyle = '#e6b422'; g.fillRect(-12, 0, 24, 40); g.strokeRect(-12, 0, 24, 40); g.fillStyle = '#ffd84a'; g.beginPath(); g.ellipse(0, -2, 34, 12, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#6ad0ff'; g.beginPath(); g.ellipse(0, -2, 18, 5, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(30, -36, 4, 0, 7); g.arc(-32, -20, 3, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'feld') { g.fillStyle = '#45c43a'; g.fillRect(-50, -50, 100, 100); g.fillStyle = '#7a4a24'; g.fillRect(-42, -30, 84, 70); g.lineWidth = 3; g.strokeStyle = '#3a2010'; g.strokeRect(-42, -30, 84, 70); for (const [a, b] of [[-24, -10], [0, -10], [24, -10], [-24, 22], [0, 22], [24, 22]]) { g.fillStyle = '#5a3416'; g.beginPath(); g.ellipse(a, b, 10, 4, 0, 0, 7); g.fill(); g.strokeStyle = '#2a8a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(a, b); g.lineTo(a, b - 14); g.stroke(); g.fillStyle = '#2fb84f'; g.beginPath(); g.ellipse(a - 5, b - 10, 5, 3, -0.5, 0, 7); g.ellipse(a + 5, b - 12, 5, 3, 0.5, 0, 7); g.fill(); } g.fillStyle = '#e0262b'; g.beginPath(); g.arc(24, -24, 4, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'maid' || id === 'maid2') {
     g.fillStyle = '#1a1a1f'; g.fillRect(-24, 4, 48, 40); g.fillStyle = '#fff'; g.fillRect(-14, 10, 28, 30); g.fillStyle = '#ffee00'; g.fillRect(-26, -40, 52, 44); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(-26, -40, 52, 44); g.strokeRect(-24, 4, 48, 40);
@@ -5233,6 +5236,23 @@ function drawFeld() {
   g.fillStyle = '#6a3e1c'; for (let y = FELD.y0 + 18; y < FELD.y1 - 10; y += 26) g.fillRect(FELD.x0 + 14, y, FELD.x1 - FELD.x0 - 28, 7);
   g.fillStyle = '#c98a4a'; g.fillRect(FELD.x0 - 8, FELD.y0 - 8, FELD.x1 - FELD.x0 + 16, 12); g.strokeRect(FELD.x0 - 8, FELD.y0 - 8, FELD.x1 - FELD.x0 + 16, 12);
   for (const [x, y] of FELD.slots) { g.fillStyle = '#5a3416'; g.beginPath(); g.ellipse(x, y, 46, 16, 0, 0, 7); g.fill(); g.fillStyle = '#8a5428'; g.beginPath(); g.ellipse(x, y - 4, 38, 11, 0, 0, 7); g.fill(); }
+}
+const KLO = { x: 860, y: 600 };
+function drawKlo() {
+  const s = scaleAt(KLO.y), x = KLO.x, y = KLO.y, t = performance.now() / 1000;
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE; g.lineJoin = 'round';
+  const gl = g.createRadialGradient(x, y - 80 * s, 10, x, y - 80 * s, 150 * s); gl.addColorStop(0, `rgba(255,220,90,${0.3 + 0.1 * Math.sin(t * 2)})`); gl.addColorStop(1, 'rgba(255,220,90,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, y - 80 * s, 150 * s, 0, 7); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x, y + 3, 70 * s, 14 * s, 0, 0, 7); g.fill();
+  const G = mkPal('#e6b422', '#ffd84a');
+  cube(x - 42 * s, y - 175 * s, 84 * s, 95 * s, 34 * s, G, true, 0.5);   // Spülkasten
+  g.fillStyle = '#fff2a8'; g.fillRect(x - 12 * s + 8 * s, y - 182 * s, 24 * s, 7 * s); g.strokeRect(x - 12 * s + 8 * s, y - 182 * s, 24 * s, 7 * s);
+  cube(x - 26 * s, y - 70 * s, 52 * s, 70 * s, 30 * s, G, false, 0.5);    // Fuß
+  g.fillStyle = '#ffd84a'; g.beginPath(); g.ellipse(x, y - 72 * s, 60 * s, 22 * s, 0, 0, 7); g.fill(); g.stroke(); // Sitz
+  g.fillStyle = '#c99a10'; g.beginPath(); g.ellipse(x, y - 74 * s, 40 * s, 13 * s, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#6ad0ff'; g.beginPath(); g.ellipse(x, y - 72 * s, 26 * s, 7 * s, 0, 0, 7); g.fill();
+  g.fillStyle = '#7a5a00'; g.font = `900 ${Math.round(18 * s)}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('+10', x, y - 130 * s);
+  for (let i = 0; i < 3; i++) { const a = t * 1.3 + i * 2.1, sx = x + Math.cos(a) * 60 * s, sy = y - 120 * s + Math.sin(a * 1.7) * 50 * s, k = (6 + 3 * Math.sin(t * 6 + i)) * s; g.fillStyle = '#fff'; g.beginPath(); g.moveTo(sx, sy - k); g.lineTo(sx + k * 0.3, sy); g.lineTo(sx, sy + k); g.lineTo(sx - k * 0.3, sy); g.closePath(); g.fill(); g.beginPath(); g.moveTo(sx - k, sy); g.lineTo(sx, sy + k * 0.3); g.lineTo(sx + k, sy); g.lineTo(sx, sy - k * 0.3); g.closePath(); g.fill(); }
+  g.restore();
 }
 function gartenSetup() {
   if (!gartenOwned()) return;
@@ -6629,7 +6649,7 @@ function goldTick(id, d) {
     s.goldAcc -= 20;
     const p = petFor(id), room = p.mode === 'home' ? p.room : cur;
     const x = p.mode === 'tragen' ? bob.x + 80 : p.x - 40 * p.face, y = p.mode === 'tragen' ? bob.y + 10 : p.y + 4;
-    (garden.coins[room] = garden.coins[room] || []).push({ x, y, v: 10 + Math.floor(Math.random() * 16) });
+    (garden.coins[room] = garden.coins[room] || []).push({ x, y, v: 10 + Math.floor(Math.random() * 16) + (lief.klo ? 10 : 0), klo: !!lief.klo });
     saveGarden();
   }
   if (s.goldUntil <= gt.T) { s.goldAcc = 0; toast = { text: 'Der Goldmodus von ' + PETS[id].name + ' ist vorbei.', t: 3 }; s.goldUntil = 0; }
@@ -7055,6 +7075,7 @@ function frame(t) {
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
   if (cur === 'garten' && lief.hundehaus) list.push({ y: HH.y, f: drawHundehaus });
+  if (cur === 'garten' && lief.klo) list.push({ y: KLO.y, f: drawKlo });
   if (cur === 'garten' && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
