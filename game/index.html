@@ -3034,13 +3034,18 @@ Object.assign(OUTFITS, {
     } },
   // ---------- Bob-Pass-Outfits ----------
   koenig: { name: 'König', bp: mkPal('#e01818', '#f03030'),
-    bodyFront: (x, y, w, h) => { g.fillStyle = '#ffd21a'; g.fillRect(x, y + h - 14, w, 14); g.fillStyle = '#fff'; for (let k = x + 10; k < x + w; k += 22) { g.beginPath(); g.arc(k, y + h - 7, 4, 0, 7); g.fill(); } },
+    bodyFront: (x, y, w, h) => { g.fillStyle = '#ffd21a'; g.fillRect(x, y + h - 12, w, 12); },
     front: (bx, by, hx, hy, t) => {
-      const dx = -DEPTH * t, dy = -DEPTH * 0.55;
-      // Schulterpolster mit Goldrand (vorne + Tiefe)
-      for (const s of [-1, 1]) { const cx = s * (BODY.w / 2 - 22), cy = by + 40;
-        for (const [ox, oy, c] of [[dx, dy, '#a80c0c'], [0, 0, '#e01818']]) { g.fillStyle = c; g.lineWidth = 9; g.strokeStyle = '#ffd21a'; g.beginPath(); g.ellipse(cx + ox, cy + oy, 44, 62, s * 0.12, 0, 7); g.fill(); g.stroke(); }
-        g.lineWidth = 3; g.strokeStyle = '#111'; g.beginPath(); g.ellipse(cx, cy, 49, 67, s * 0.12, 0, 7); g.stroke(); }
+      // offene Königsweste: zwei rote Vorderteile mit dickem Goldrand, stehen etwas vom Körper ab
+      const dx = -DEPTH * t * 0.35, dy = -DEPTH * 0.2;
+      for (const s of [-1, 1]) {
+        const x0 = s < 0 ? bx - 6 : bx + BODY.w - 74, x1 = x0 + 80, y0 = by - 6, y1 = by + BODY.h + 4;
+        const shape = (ox, oy) => { g.beginPath(); g.moveTo(x0 + ox, y0 + 10 + oy); g.quadraticCurveTo(x0 + ox, y0 + oy, x0 + 14 + ox, y0 + oy); g.lineTo(x1 - 14 + ox, y0 + oy); g.quadraticCurveTo(x1 + ox, y0 + oy, x1 + ox, y0 + 14 + oy); g.lineTo(x1 + ox + (s < 0 ? -18 : 0), y1 + oy); g.lineTo(x0 + ox + (s > 0 ? 18 : 0), y1 + oy); g.closePath(); };
+        g.fillStyle = '#9a0c0c'; shape(dx, dy); g.fill();
+        g.lineWidth = 14; g.strokeStyle = '#ffd21a'; g.fillStyle = '#e01818'; shape(0, 0); g.fill(); g.stroke();
+        g.lineWidth = 3; g.strokeStyle = '#111'; shape(0, 0); g.stroke();
+        g.fillStyle = '#ffd21a'; for (const yy of [y0 + 50, y0 + 100]) { g.beginPath(); g.arc(s < 0 ? x1 - 12 : x0 + 12, yy, 7, 0, 7); g.fill(); g.lineWidth = 2; g.stroke(); }
+      }
       // Krone als Würfel mit Zacken
       g.lineWidth = 4; g.strokeStyle = '#111';
       cube(hx + 40 + 4 * t, hy - 30, HEAD.w - 80, 34, DEPTH * 0.8, mkPal('#ffcc1a', '#ffe14a'), true, t);
@@ -3064,7 +3069,14 @@ Object.assign(OUTFITS, {
     } },
   oma: { name: 'Oma', bp: mkPal('#ff9ad6', '#ffb0e0'),
     bodyFront: (x, y, w, h) => { g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 4; for (let k = x + 12; k < x + w; k += 18) { g.beginPath(); g.moveTo(k, y); g.lineTo(k, y + h); g.stroke(); } },
-    front: (bx, by, hx, hy, t) => { hairPuff(hx, hy, t, '#b4b2bc', [[-10, 20, 62], [40, -14, 70], [110, -26, 76], [180, -14, 70], [236, 20, 62], [-14, 80, 48], [250, 80, 48], [70, 10, 60], [160, 10, 60]]); } },
+    front: (bx, by, hx, hy, t) => {
+      // Oma-Dauerwelle: viele kleine Löckchen eng am Kopf + Dutt oben
+      const curls = []; for (let i = 0; i < 11; i++) curls.push([4 + i * 23.2, 2 - Math.sin(i / 10 * Math.PI) * 18, 20]); for (const yy of [30, 56, 82]) { curls.push([-8, yy, 18]); curls.push([HEAD.w + 8, yy, 18]); } for (let i = 0; i < 9; i++) curls.push([16 + i * 26, -22 - Math.sin(i / 8 * Math.PI) * 12, 18]);
+      curls.push([HEAD.w / 2 - 20, -62, 30], [HEAD.w / 2 + 20, -62, 30], [HEAD.w / 2, -84, 30]);
+      hairPuff(hx, hy, t, '#c9c7d2', curls);
+      g.strokeStyle = 'rgba(90,88,100,.6)'; g.lineWidth = 2.5; for (const [x, y, r] of curls) { g.beginPath(); g.arc(hx + x, hy + y, r * 0.45, 0.5, 5.2); g.stroke(); }
+      g.fillStyle = '#ff9ad6'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(hx + HEAD.w / 2 + 34, hy - 46, 12, 7, -0.5, 0, 7); g.fill(); g.stroke();
+    } },
   opa: { name: 'Opa', bp: mkPal('#8ab84a', '#9ccc58'),
     bodyFront: (x, y, w, h) => { g.strokeStyle = 'rgba(230,230,40,.7)'; g.lineWidth = 4; for (let k = x + 14; k < x + w; k += 18) { g.beginPath(); g.moveTo(k, y); g.lineTo(k, y + h); g.stroke(); } },
     front: (bx, by, hx, hy, t) => { hairPuff(hx, hy, t, '#a8a8ae', [[-30, 10, 40], [10, -6, 44], [50, 4, 36], [190, 4, 36], [230, -6, 44], [270, 10, 40]]); } },
@@ -3090,34 +3102,40 @@ Object.assign(OUTFITS, {
       g.fillStyle = '#111'; g.beginPath(); g.moveTo(hx + 120, hy - 40); g.quadraticCurveTo(hx + 160, hy - 120, hx + 280 + sw, hy - 96); g.quadraticCurveTo(hx + 300 + sw, hy - 80, hx + 270 + sw, hy - 74); g.quadraticCurveTo(hx + 170, hy - 90, hx + 150, hy - 30); g.closePath(); g.fill();
       g.fillStyle = '#ff9ad6'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(hx + 136, hy - 52, 26, 14, -0.4, 0, 7); g.fill(); g.stroke();
     } },
-  blitzgott: { name: 'Blitzgott', hp: mkPal('#18181c', '#24242a'), bp: mkPal('#18181c', '#24242a'), noText: true, noFace: true,
+  blitzgott: { name: 'Blitzgott', hp: mkPal('#1a1a1e', '#222228'), bp: mkPal('#1a1a1e', '#222228'), noText: true, noFace: true,
     back: (bx, by, hx, hy, t) => {
       const tt = performance.now() / 1000;
-      const gr = g.createRadialGradient(0, by - 60, 40, 0, by - 60, 380); gr.addColorStop(0, `rgba(40,230,255,${0.32 + 0.12 * Math.sin(tt * 6)})`); gr.addColorStop(1, 'rgba(40,230,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, by - 60, 380, 0, 7); g.fill();
-      blitzSmoke(bx, by, hx, hy, tt, 0.9);
+      const gr = g.createRadialGradient(0, by - 60, 60, 0, by - 60, 300); gr.addColorStop(0, `rgba(40,230,255,${0.16 + 0.08 * Math.sin(tt * 5)})`); gr.addColorStop(1, 'rgba(40,230,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, by - 60, 300, 0, 7); g.fill();
     },
-    headFront: (x, y, w, h) => {
-      const tt = performance.now() / 1000, fl = 0.75 + 0.25 * Math.sin(tt * 17) * Math.sin(tt * 5);
-      g.shadowColor = '#28e6ff'; g.shadowBlur = 22; g.strokeStyle = `rgba(60,240,255,${fl})`; g.fillStyle = `rgba(60,240,255,${fl})`; g.lineCap = 'round'; g.lineJoin = 'round';
-      for (const [ex, s] of [[x + 70, 1], [x + w - 70, -1]]) { g.beginPath(); g.moveTo(ex - 26 * s, y + 52); g.lineTo(ex + 22 * s, y + 66); g.lineTo(ex - 10 * s, y + 80); g.closePath(); g.fill(); }
-      g.lineWidth = 9; g.beginPath(); const my = y + 120; g.moveTo(x + 46, my - 18); for (let i = 0; i <= 8; i++) g.lineTo(x + 46 + i * (w - 92) / 8, my + (i % 2 ? 14 : -4) + Math.sin(tt * 9 + i) * 3); g.stroke();
-      g.shadowBlur = 0; g.lineCap = 'butt';
-    },
-    bodyFront: (x, y, w, h) => { const tt = performance.now() / 1000; g.strokeStyle = 'rgba(40,230,255,.25)'; g.lineWidth = 3; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(x + 20 + i * 42, y + h); g.quadraticCurveTo(x + 40 + i * 42 + Math.sin(tt * 3 + i) * 20, y + h / 2, x + 20 + i * 42, y); g.stroke(); } },
     front: (bx, by, hx, hy, t) => {
-      const tt = performance.now() / 1000;
-      blitzSmoke(bx, by, hx, hy, tt, 1);
-      // Blitze zucken um ihn herum
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      const seed = Math.floor(tt * 12);
-      for (let i = 0; i < 9; i++) {
-        const r = ((seed * 31 + i * 97) % 100) / 100; if (r < 0.35) continue;
-        const ang = i / 9 * 6.283 + seed * 0.3, cx = Math.cos(ang) * 150, cy = by - 60 + Math.sin(ang) * 170;
-        g.shadowColor = '#28e6ff'; g.shadowBlur = 16; g.strokeStyle = `rgba(60,240,255,${0.5 + r * 0.5})`; g.lineWidth = 6;
-        g.beginPath(); g.moveTo(cx, cy); let px = cx, py = cy; for (let k = 0; k < 5; k++) { px += Math.cos(ang) * 14 + (((seed + k * 13 + i) % 7) - 3) * 6; py += Math.sin(ang) * 14 + (((seed * 3 + k * 7 + i) % 7) - 3) * 6; g.lineTo(px, py); } g.stroke();
-      }
-      // fliegende Funken
-      for (let i = 0; i < 14; i++) { const a = tt * (1 + i % 3) + i, rr = 170 + 60 * Math.sin(tt * 2 + i), sx = Math.cos(a) * rr * 0.7, sy = by - 70 + Math.sin(a) * rr; g.fillStyle = `rgba(160,250,255,${0.5 + 0.5 * Math.sin(tt * 8 + i)})`; g.beginPath(); g.arc(sx, sy, 4, 0, 7); g.fill(); }
+      const tt = performance.now() / 1000, dx = -DEPTH * t, dy = -DEPTH * 0.55;
+      // dichter Rauch über der ganzen Figur (mit Tiefe), wabert langsam
+      const blobs = [];
+      const top = hy - 10, bot = by + BODY.h + 10, L = bx - 20, R = bx + BODY.w + 20;
+      for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++) { const x = L + c * (R - L) / 4 + Math.sin(tt * 1.1 + r * 1.7 + c) * 8, y = top + r * (bot - top) / 5 + Math.cos(tt * 0.9 + c * 1.3 + r) * 8; const edge = (c === 0 || c === 4); blobs.push([x, y, (edge ? 44 : 56) + 6 * Math.sin(tt * 1.6 + r + c * 2)]); }
+      blobs.push([L - 16, top + 90, 40], [R + 16, top + 70, 36], [L + 10, bot + 6, 54], [R - 10, bot + 10, 50], [0, bot + 18, 56], [L + 30, top - 26, 40], [R - 40, top - 30, 42], [0, top - 34, 46]);
+      g.fillStyle = '#0b0b0e'; g.beginPath(); for (const [x, y, r] of blobs) { g.moveTo(x + dx + r, y + dy); g.arc(x + dx, y + dy, r, 0, 7); } g.fill();
+      g.fillStyle = '#1c1c20'; g.beginPath(); for (const [x, y, r] of blobs) { g.moveTo(x + r, y); g.arc(x, y, r, 0, 7); } g.fill();
+      g.fillStyle = '#2a2a30'; for (const [x, y, r] of blobs) { g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.55, 0, 7); g.fill(); }
+      g.fillStyle = 'rgba(70,160,120,.35)'; for (const [x, y] of [[L + 70, top + 40], [R - 60, top + 120], [L + 120, bot - 40]]) { g.beginPath(); g.ellipse(x, y, 22, 12, 0.4, 0, 7); g.fill(); }
+      // türkise Krakel, zucken wie Strom
+      g.lineCap = 'round'; g.lineJoin = 'round'; g.shadowColor = '#28e6ff'; g.shadowBlur = 14;
+      const seed = Math.floor(tt * 8);
+      const sq = [[-90, -300], [-30, -310], [40, -300], [90, -290], [-120, -170], [130, -150], [-110, -60], [-60, -40], [0, -20], [60, -50], [110, -30], [-80, 10], [30, 20], [150, -230], [-150, -230]];
+      sq.forEach(([x, y], i) => {
+        const fl = ((seed * 7 + i * 13) % 10) / 10; if (fl < 0.15) return;
+        g.strokeStyle = `rgba(60,240,255,${0.55 + fl * 0.45})`; g.lineWidth = 7; g.beginPath(); let px = x, py = y + by * 0; g.moveTo(px, py);
+        for (let k = 0; k < 4; k++) { px += Math.sin(tt * 6 + i + k) * 6 + (k % 2 ? 8 : -8); py += 14; g.lineTo(px, py); } g.stroke();
+      });
+      // Gesicht obendrauf: schräge Augen und Zickzack-Grinsen
+      const fl = 0.8 + 0.2 * Math.sin(tt * 19) * Math.sin(tt * 4), fx = hx + 4 * t, fy = hy;
+      g.fillStyle = 'rgba(10,10,14,.55)'; g.beginPath(); g.ellipse(fx + HEAD.w / 2, fy + 92, 118, 74, 0, 0, 7); g.fill();
+      g.shadowBlur = 30; g.fillStyle = `rgba(90,245,255,${fl})`; g.strokeStyle = `rgba(90,245,255,${fl})`;
+      for (const [ex, s] of [[fx + 70, 1], [fx + HEAD.w - 70, -1]]) { g.beginPath(); g.moveTo(ex - 34 * s, fy + 44); g.quadraticCurveTo(ex + 8 * s, fy + 52, ex + 28 * s, fy + 78); g.quadraticCurveTo(ex - 8 * s, fy + 86, ex - 34 * s, fy + 44); g.fill(); }
+      g.lineWidth = 14; g.beginPath(); const my = fy + 126; g.moveTo(fx + 50, my - 20);
+      for (let i = 0; i <= 6; i++) g.lineTo(fx + 50 + i * (HEAD.w - 100) / 6, my + (i % 2 ? 16 : -2) + Math.sin(tt * 7 + i) * 2); g.lineTo(fx + HEAD.w - 44, my - 26); g.stroke();
+      // ein paar Funken
+      for (let i = 0; i < 8; i++) { const a = tt * (1.2 + i % 3 * 0.4) + i * 0.8, rr = 200 + 30 * Math.sin(tt * 2 + i), sx = Math.cos(a) * rr * 0.75, sy = by - 90 + Math.sin(a) * rr; g.fillStyle = `rgba(160,250,255,${0.4 + 0.5 * Math.sin(tt * 9 + i)})`; g.beginPath(); g.arc(sx, sy, 3.5, 0, 7); g.fill(); }
       g.shadowBlur = 0; g.lineCap = 'butt';
     } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
