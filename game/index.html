@@ -5089,7 +5089,7 @@ function webClick(x, y) {
   for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(); return; }
   const { P, F } = webLayout(); if (x < P.x || x > F.x + F.w || y < P.y || y > P.y + P.h) web.open = false;
 }
-cv.addEventListener('wheel', e => { if (!web.open) return; e.preventDefault(); web.scroll += Math.sign(e.deltaY); }, { passive: false });
+cv.addEventListener('wheel', e => { if (phone.open && phone.app === 'jobs' && !job) { e.preventDefault(); phone.jobScroll = (phone.jobScroll || 0) + e.deltaY * 0.8; return; } if (!web.open) return; e.preventDefault(); web.scroll += Math.sign(e.deltaY); }, { passive: false });
 addEventListener('keydown', e => {
   if (!web.open || performance.now() - web.t0 < 150) return;
   if (e.code === 'Escape' || e.code === 'KeyE') { web.open = false; e.preventDefault(); e.stopImmediatePropagation(); }
@@ -5324,7 +5324,7 @@ function drawSleep(dt) {
 // ---------- Jobs ----------
 const JOBS = {
   kasse:  { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60, outfit: 'tierladen', go: 'ab zur Kasse!', extra: '+ Trinkgeld' },
-  polizei: { name: 'Polizist auf der Wache', place: 'Polizeiwache', wage: 22, days: [1, 2, 4, 6], from: 8 * 60, to: 12 * 60, outfit: 'polizist', mode: 'polizei', go: 'ab zur Wache an die Theke!', extra: '+ 8 € pro Einsatz' },
+  polizei: { name: 'Polizist auf der Wache', place: 'Polizeiwache', wage: 22, days: [1, 2, 4, 6], from: 8 * 60, to: 12 * 60, outfit: 'polizist', ranks: ['polizist', 'swat', 'kommissar'], mode: 'polizei', go: 'ab zur Wache an die Theke!', extra: '+ 8 €/Einsatz' },
   liefer: { name: 'Lieferfahrer im Möbelhaus', place: 'Möbelhaus', wage: 18, days: [1, 3, 6], from: 12 * 60, to: 16 * 60, outfit: 'liefer', mode: 'liefer', go: 'ab ins Möbelhaus zu den Paketen!', extra: '+ 4 € pro Paket' },
 };
 const MAX_WARN = 3, MAX_SICK = 3, BAN_DAYS = 30, UNEMP_PAY = 40;
@@ -5365,7 +5365,11 @@ function checkJobs() {
   if (job) {
     const J = JOBS[job.id], last = gMin() >= J.to ? gDay() : gDay() - 1;
     // nach einer Woche im Job gibt es das Job-Outfit
-    if (J.outfit && !job.outfitGiven && gDay() >= job.start + 7) {
+    if (J.ranks) {
+      // jede Woche eine neue Uniform: Woche 1 Polizist, Woche 2 SWAT, Woche 3 Kommissar
+      const wks = Math.min(J.ranks.length, Math.floor((gDay() - job.start) / 7)); job.rank = job.rank || 0;
+      while (job.rank < wks) { const o = J.ranks[job.rank]; job.rank++; if (!wear.owned.includes(o)) { wear.owned.push(o); saveWear(); } saveJob(); toast = { text: 'Beförderung nach Woche ' + job.rank + '! Neue Uniform: ' + OUTFITS[o].name + ' – im Kleiderschrank.', t: 6 }; }
+    } else if (J.outfit && !job.outfitGiven && gDay() >= job.start + 7) {
       job.outfitGiven = true;
       if (!wear.owned.includes(J.outfit)) { wear.owned.push(J.outfit); saveWear(); }
       saveJob(); toast = { text: 'Neues Outfit: ' + OUTFITS[J.outfit].name + '! Im Kleiderschrank anziehen.', t: 5 };
@@ -5408,7 +5412,9 @@ function drawJobsApp(s) {
   const txt = (t, x, y, f, c, a) => { g.font = f; g.fillStyle = c; g.textAlign = a || 'left'; g.fillText(t, x, y); };
   if (!job) {
     const banned = unemp && gDay() < unemp.banUntil;
-    let y = s.y + 175;
+    phone.jobScroll = Math.max(0, Math.min(phone.jobMax || 0, phone.jobScroll || 0));
+    g.save(); g.beginPath(); g.rect(s.x, s.y + 150, s.w, s.h - 150); g.clip();
+    const y0 = s.y + 175; let y = y0 - phone.jobScroll;
     if (unemp) {
       card(y, banned ? 150 : 110, '#fff0f0');
       txt(banned ? 'Du wurdest gefeuert' : 'Du bist arbeitslos', L + 18, y + 30, '700 20px system-ui', '#c0392b');
@@ -5423,10 +5429,14 @@ function drawJobsApp(s) {
       txt(J.name, L + 18, y + 30, '700 19px system-ui', '#111');
       txt('📍 ' + J.place + ' · ' + J.wage + ' €/Std. ' + J.extra, L + 18, y + 60, '500 15px system-ui', '#444');
       txt(J.days.map(d => WDK[d]).join(', ') + ' · ' + hm(J.from) + '–' + hm(J.to), L + 18, y + 86, '500 15px system-ui', '#444');
-      txt('Nach 1 Woche: Uniform 🎁', L + 18, y + 112, '500 15px system-ui', '#444');
+      txt(J.ranks ? 'Woche 1, 2 und 3: je eine Uniform 🎁' : 'Nach 1 Woche: Uniform 🎁', L + 18, y + 112, '500 15px system-ui', '#444');
       btn(y + 140, banned ? 'Gesperrt bis ' + dayName(unemp.banUntil) : 'Job annehmen', '#7a4ae0', !banned, () => takeJob(id), 50);
       y += 220;
     }
+    g.restore();
+    phone.jobMax = Math.max(0, (y + phone.jobScroll) - (s.y + s.h - 10));
+    for (const bb of btns) if (bb.b.y < s.y + 150 || bb.b.y + bb.b.h > s.y + s.h) bb.b = { x: -9999, y: -9999, w: 0, h: 0 };
+    if (phone.jobMax > 0) { const th = (s.h - 170) * (s.h - 150) / (s.h - 150 + phone.jobMax); const ty = s.y + 160 + (s.h - 170 - th) * (phone.jobScroll / phone.jobMax); g.fillStyle = 'rgba(122,74,224,.5)'; g.beginPath(); g.roundRect(s.x + s.w - 10, ty, 5, th, 3); g.fill(); }
     return;
   }
   const J = JOBS[job.id];
@@ -5839,7 +5849,7 @@ function drawPolice() {
     g.save(); const tb = Math.abs(Math.sin(t * 12)) * 10; drawPerson(polPal('#222'), thx, 700 - tb, 0.5); g.restore();
     g.fillStyle = '#ffcc1a'; g.beginPath(); g.ellipse(thx - 50, 610 - tb, 18, 12, 0, 0, 7); g.fill(); g.lineWidth = 3; g.strokeStyle = LINE; g.stroke();
     // Polizist (Bob)
-    const bb = Math.abs(Math.sin(t * 12)) * 8; drawBobFig(bx, 700 + m.y - bb, 0.5, 1, 0, 1, 'polizist', true);
+    const bb = Math.abs(Math.sin(t * 12)) * 8; drawBobFig(bx, 700 + m.y - bb, 0.5, 1, 0, 1, JOBS.polizei.ranks[Math.max(0, (job.rank || 1) - 1)], true);
     if (m.bump) pill('Autsch!', bx, 400, 22, 'rgba(200,40,40,.85)');
     // Abstand
     const p = Math.max(0, Math.min(1, 1 - (m.dist - 60) / 700)); g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(W / 2 - 200, 100, 400, 26, 13); g.fill(); g.fillStyle = '#3cff5a'; g.beginPath(); g.roundRect(W / 2 - 196, 104, 392 * p, 18, 9); g.fill(); g.fillStyle = '#fff'; g.font = '700 16px system-ui'; g.textAlign = 'center'; g.fillText('Abstand zum Dieb', W / 2, 146);
