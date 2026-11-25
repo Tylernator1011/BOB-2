@@ -1231,7 +1231,7 @@ function nearBox() {
 }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell()); }
+function canInteract() { return !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal')); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -1384,6 +1384,18 @@ function openMenu() {
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
   if (nearKasse()) { startWork(); return; }
+  const tr = nearFurn('trophaeenregal');
+  if (tr) {
+    tr.slots = tr.slots || [null, null, null, null, null];
+    const n = tr.slots.filter(Boolean).length, full = n >= 5;
+    menu.kind = 'troph'; menu.regal = tr; menu.title = 'Trophäenregal – ' + n + ' von 5 Plätzen belegt';
+    menu.items = freeTrophies().map(k => ({ label: TROPHIES[k].name + ' aufstellen', troph: k, put: true, tag: full ? 'Regal voll' : null, tagCol: '#c0392b', disabled: full }));
+    menu.items.push(...tr.slots.filter(Boolean).map(k => ({ label: TROPHIES[k].name + ' wegnehmen', troph: k, take: true })));
+    if (!menu.items.length) menu.items.push({ label: 'Noch keine Trophäen – schau in die Erfolge-App', disabled: true });
+    menu.items.push({ label: 'Abbrechen' });
+    MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now();
+    menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear(); return;
+  }
   if (nearMuell()) { wuehlen(); return; }
   const nap = nearFurn('napf');
   if (nap) {
@@ -1397,7 +1409,7 @@ function openMenu() {
   }
   const tp = nearFurn('topf');
   if (tp) {
-    if (tp.plant && plantProgress(tp) >= 1) { const k = tp.plant.type; garden.plants[k] = (garden.plants[k] || 0) + 1; tp.plant = null; saveFurn(); saveGarden(); toast = { text: 'Geerntet: ' + SEEDS[k].name + '!', t: 3 }; return; }
+    if (tp.plant && plantProgress(tp) >= 1) { const k = tp.plant.type; garden.plants[k] = (garden.plants[k] || 0) + 1; tp.plant = null; bump('harvest'); saveFurn(); saveGarden(); toast = { text: 'Geerntet: ' + SEEDS[k].name + '!', t: 3 }; return; }
     if (tp.plant) { toast = { text: SEEDS[tp.plant.type].name + ' wächst noch (' + Math.floor(plantProgress(tp) * 100) + ' %)', t: 2.5 }; return; }
     menu.kind = 'plant'; menu.title = 'Was pflanzen? – Wächst in ' + GROW_MIN / 60 + ' Stunden'; menu.topf = tp;
     menu.items = Object.keys(SEEDS).filter(k => garden.seeds[k] > 0).map(k => ({ label: SEEDS[k].name, tag: '× ' + garden.seeds[k], seed: k }));
@@ -1438,12 +1450,15 @@ function openMenu() {
 function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
+  if (it.dest) bump('bus');
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
+  if (it.put && menu.regal) { const i = menu.regal.slots.indexOf(null); if (i >= 0) { menu.regal.slots[i] = it.troph; saveFurn(); toast = { text: TROPHIES[it.troph].name + ' steht jetzt im Regal!', t: 3 }; } }
+  if (it.take && menu.regal) { const i = menu.regal.slots.indexOf(it.troph); if (i >= 0) { menu.regal.slots[i] = null; saveFurn(); } }
   if (it.fill && menu.napf) fillNapf(menu.napf, it.fill);
   if (it.empty && menu.napf && menu.napf.food) { garden.food[menu.napf.food]++; menu.napf.food = null; saveFurn(); saveGarden(); }
   if (it.seed && menu.topf) { garden.seeds[it.seed]--; menu.topf.plant = { type: it.seed, t0: gt.T }; saveFurn(); saveGarden(); toast = { text: SEEDS[it.seed].name + ' gepflanzt! Wächst in ' + GROW_MIN / 60 + ' Stunden.', t: 3 }; }
-  if (it.cook) { garden.food[3]--; garden.plants.geld--; garden.food[4] = (garden.food[4] || 0) + 1; saveGarden(); toast = { text: 'Goldfutter gekocht! Füttere es deinem Tier.', t: 3.5 }; }
+  if (it.cook) { bump('cook'); garden.food[3]--; garden.plants.geld--; garden.food[4] = (garden.food[4] || 0) + 1; saveGarden(); toast = { text: 'Goldfutter gekocht! Füttere es deinem Tier.', t: 3.5 }; }
   if (it.pet) {
     if (it.price) { bank.money -= it.price; bank.log.push({ t: PETS[it.pet].name + ' gekauft', v: -it.price }); saveBank(); }
     owned.push(it.pet); activePet = it.pet; saveOwned(); petFor(it.pet);
@@ -1480,6 +1495,8 @@ function interactTarget() {
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  const trg = nearFurn('trophaeenregal');
+  if (trg) return { x: trg.x, y: furnBox(trg).top - 16, label: 'Trophäen' };
   const nap = nearFurn('napf');
   if (nap) return { x: nap.x, y: furnBox(nap).top - 30, label: nap.food ? 'Napf: ' + FOODS[nap.food].name : 'Napf füllen' };
   const tp = nearFurn('topf');
@@ -1523,6 +1540,7 @@ const MENU_STYLE = {
   cook:  { c: '#ff7a1a', icon: 'pot' },
   plant: { c: '#2fa84f', icon: 'sprout' },
   napf:  { c: '#e0262b', icon: 'food' },
+  troph: { c: '#e0a10f', icon: 'trophy' },
 };
 function menuStyle() { return MENU_STYLE[menu.kind] || { c: '#2f6fe0', icon: 'i' }; }
 function menuBox() { const h = 120 + menu.items.length * MENU.row + 52; return { x: W / 2 - MENU.w / 2, y: Math.max(16, (H - h) / 2), h }; }
@@ -1540,6 +1558,8 @@ function uiIcon(name, x, y, s, col) {
   g.fillStyle = col || '#fff'; g.strokeStyle = col || '#fff';
   const P = () => g.beginPath();
   if (name === 'bus') { P(); g.roundRect(-16, -14, 32, 24, 5); g.fill(); g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(-12, -10, 10, 8); g.fillRect(2, -10, 10, 8); g.fillStyle = col || '#fff'; P(); g.arc(-9, 13, 4, 0, 7); g.arc(9, 13, 4, 0, 7); g.fill(); }
+  else if (name === 'trophy') { P(); g.moveTo(-12, -15); g.lineTo(12, -15); g.lineTo(9, 1); g.quadraticCurveTo(0, 8, -9, 1); g.closePath(); g.fill(); P(); g.arc(-12, -8, 5, Math.PI * 0.5, Math.PI * 1.5); g.stroke(); P(); g.arc(12, -8, 5, -Math.PI * 0.5, Math.PI * 0.5); g.stroke(); g.fillRect(-2.5, 4, 5, 8); P(); g.roundRect(-10, 11, 20, 6, 2); g.fill(); }
+  else if (name === 'coin') { P(); g.arc(0, 0, 14, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.9)'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 0, 1); }
   else if (name === 'paw') { P(); g.ellipse(0, 6, 10, 8, 0, 0, 7); g.fill(); for (const [a, b] of [[-12, -4], [-5, -11], [5, -11], [12, -4]]) { P(); g.arc(a, b, 4.5, 0, 7); g.fill(); } }
   else if (name === 'moon') { g.save(); P(); g.arc(0, 0, 14, 0, 7); g.clip(); P(); g.arc(0, 0, 14, 0, 7); g.arc(7, -5, 12, 0, 7); g.fill('evenodd'); g.restore(); }
   else if (name === 'sun') { P(); g.arc(0, 0, 8, 0, 7); g.fill(); for (let a = 0; a < 6.28; a += 0.785) { P(); g.moveTo(Math.cos(a) * 12, Math.sin(a) * 12); g.lineTo(Math.cos(a) * 17, Math.sin(a) * 17); g.stroke(); } }
@@ -1556,6 +1576,7 @@ function uiIcon(name, x, y, s, col) {
 function rowIcon(it) {
   if (it.foodBuy || it.fill) return ['food', FOODS[it.lvl].col];
   if (it.empty) return ['x', '#e0262b'];
+  if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
   if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : 'sofa', '#2f6fe0'];
   if (it.sleep) return [it.sleep === 'morgen' ? 'sun' : 'moon', it.sleep === 'morgen' ? '#ff9a1a' : '#4b3fa8'];
   if (it.seed) return ['seed', SEEDS[it.seed].col];
@@ -1576,6 +1597,7 @@ function drawToast() {
 function drawMenu() {
   drawPill();
   drawToast();
+  drawAchPop(1 / 60);
   if (!menu.open) return;
   const b = menuBox(), st = menuStyle(), t = Math.min(1, (performance.now() - (menu.t0 || 0)) / 170), e = 1 - (1 - t) ** 3;
   g.fillStyle = `rgba(8,12,24,${0.5 * e})`; g.fillRect(XL, 0, VW, H);
@@ -1827,7 +1849,37 @@ Object.assign(FURN, {
     B(-82, 82, 0, 52, 150, 158, '#333'),
   ] },
 });
+const RW = '#7a4520', RD = '#55301a';
+FURN.trophaeenregal = { name: 'Trophäenregal', boxes: [
+  B(-160, 160, 48, 56, 0, 282, RW),
+  B(-160, 160, 0, 56, 0, 16, RD), B(-160, 160, 0, 56, 130, 144, RD), B(-170, 170, -4, 58, 264, 282, RD),
+  B(-170, -160, 0, 56, 0, 264, RD), B(160, 170, 0, 56, 0, 264, RD),
+  B(-60, 60, -6, -2, 266, 280, '#ffcc1a'),
+] };
+const TROPHY_SLOTS = [[-100, 16], [0, 16], [100, 16], [-55, 144], [55, 144]];
+const TROPHIES = {
+  pfote:        { name: 'Bronze-Pfote',  col: '#cd7f32', kind: 'pfote' },
+  pokal_silber: { name: 'Silberpokal',   col: '#c9d1d9', kind: 'pokal' },
+  pokal_gold:   { name: 'Goldpokal',     col: '#ffcc1a', kind: 'pokal' },
+  euro:         { name: 'Goldener Euro', col: '#ffcc1a', kind: 'euro' },
+  stern:        { name: 'Kochstern',     col: '#ffcc1a', kind: 'stern' },
+  tonne:        { name: 'Goldene Tonne', col: '#ffcc1a', kind: 'tonne' },
+};
+function trophyBoxes(k, cx, y0) {
+  const T = TROPHIES[k], c = T.col, Q = (a, b, z0, z1, y1, y2, col, d) => B(cx + a, cx + b, 22 + z0, 22 + z1, y0 + y1, y0 + y2, col, d);
+  const out = [Q(-28, 28, -16, 16, 0, 12, '#2e2420')];
+  if (T.kind === 'pokal') out.push(Q(-7, 7, -6, 6, 12, 32, c), Q(-24, 24, -15, 15, 32, 84, c, 'glanz'), Q(-34, -24, -4, 4, 44, 72, c), Q(24, 34, -4, 4, 44, 72, c));
+  else if (T.kind === 'tonne') out.push(Q(-20, 20, -14, 14, 12, 70, c, 'tonne'), Q(-24, 24, -16, 16, 70, 78, '#d9a800'), Q(-8, 8, -4, 4, 78, 86, c));
+  else out.push(Q(-28, 28, -5, 5, 12, 80, c, T.kind));
+  return out;
+}
+function regalExtra(f) {
+  if (!f.slots || !f.slots.some(Boolean)) return null;
+  const boxes = []; f.slots.forEach((k, i) => { if (k && TROPHIES[k]) boxes.push(...trophyBoxes(k, ...TROPHY_SLOTS[i])); });
+  return { key: f.slots.join(','), boxes };
+}
 const SHOP_FURN = {
+  trophaeenregal: ['deko', 150],
   bett: ['schlafen', 150], schrank: ['schlafen', 120], regal: ['wohnen', 90], tisch: ['wohnen', 80], stuhl: ['wohnen', 40],
   lampe: ['deko', 60], pflanze: ['deko', 35], teppich: ['deko', 70],
   sofa: ['wohnen', 320], sessel: ['wohnen', 180], fernseher: ['wohnen', 420], couchtisch: ['wohnen', 90],
@@ -1906,9 +1958,9 @@ function saveFurn() { try { localStorage.setItem('bob-moebel', JSON.stringify({ 
 // Drehen um 90°: Seiten wandern vorne → links → hinten → rechts
 const FACES = ['front', 'left', 'back', 'right'];
 const modelCache = {};
-function model(t, r) {
-  const key = t + r; if (modelCache[key]) return modelCache[key];
-  const d = FURN[t], L = r >= 8 ? 0 : r >= 4 ? -1 : 1, rot = r % 4; // L = -1: gespiegelt, ragt nach rechts oben (für die linke Wand)
+function model(t, r, extra) {
+  const key = t + r + (extra ? '|' + extra.key : ''); if (modelCache[key]) return modelCache[key];
+  const d0 = FURN[t], d = extra ? { ...d0, boxes: d0.boxes.concat(extra.boxes) } : d0, L = r >= 8 ? 0 : r >= 4 ? -1 : 1, rot = r % 4; // L = -1: gespiegelt, ragt nach rechts oben (für die linke Wand)
   let boxes = d.boxes.map(b => {
     let { x0, x1, z0, z1 } = b;
     for (let i = 0; i < rot; i++) [x0, x1, z0, z1] = [z0, z1, -x1, -x0];
@@ -1952,9 +2004,9 @@ function shade(hex, k) {
   const f = v => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k));
   return `rgb(${f(r)},${f(gg)},${f(b)})`;
 }
-function drawFurn(t, x, y, s, alpha, r) {
+function drawFurn(t, x, y, s, alpha, r, extra) {
   r = r || 0;
-  const d = FURN[t], m = model(t, r);
+  const d = FURN[t], m = model(t, r, extra);
   g.save(); g.globalAlpha = alpha ?? 1; g.translate(x, y); g.scale(s, s);
   g.lineWidth = 4; g.strokeStyle = LINE; g.lineJoin = 'round';
   const LL = m.L, P = (X, Y, Z) => [X - LL * Z * KX, -Y - Z * KY];
@@ -1991,7 +2043,16 @@ function drawFurn(t, x, y, s, alpha, r) {
       const knob = (u, v, r, c) => { const [kx, ky] = at(u, v); g.fillStyle = c || '#ffee00'; g.beginPath(); g.arc(kx, ky, r || 8, 0, 7); g.fill(); g.stroke(); };
       g.lineWidth = 4; g.strokeStyle = LINE;
       const dc = b.deco;
-      if (dc === 'gitter') {
+      if (dc === 'glanz') { quad(0.12, 0.12, 0.26, 0.85, 'rgba(255,255,255,.55)'); }
+      else if (dc === 'pfote' || dc === 'euro' || dc === 'stern' || dc === 'tonne') {
+        quad(0.1, 0.08, 0.9, 0.92, shade(b.c, 0.25));
+        const [cx, cy] = at(0.5, 0.48), r = Math.min(x1 - x0, y1 - y0) * 0.3;
+        g.fillStyle = shade(b.c, -0.35); g.strokeStyle = LINE; g.lineWidth = 2.5;
+        if (dc === 'pfote') { g.beginPath(); g.ellipse(cx, cy + r * 0.35, r * 0.55, r * 0.45, 0, 0, 7); g.fill(); for (const [a, bb] of [[-0.7, -0.25], [-0.27, -0.7], [0.27, -0.7], [0.7, -0.25]]) { g.beginPath(); g.arc(cx + a * r, cy + bb * r, r * 0.22, 0, 7); g.fill(); } }
+        else if (dc === 'euro') { g.font = '900 ' + Math.round(r * 2) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', cx, cy + 2); }
+        else if (dc === 'stern') { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); g.fill(); }
+        else { g.lineWidth = 2.5; g.strokeStyle = shade(b.c, -0.4); for (const u of [0.32, 0.5, 0.68]) line(u, 0.2, u, 0.84); }
+      } else if (dc === 'gitter') {
         g.lineWidth = 3; quad(0.16, 0.14, 0.84, 0.94, '#3a3f45'); quad(0.24, 0.24, 0.76, 0.86, '#15171a');
         g.strokeStyle = '#cfd4da'; g.lineWidth = 4;
         for (let u = 0.31; u < 0.72; u += 0.075) line(u, 0.26, u, 0.84);
@@ -2328,6 +2389,7 @@ const APPS = [
   { id: 'bauen', name: 'Bauen', col: '#ff8a1a' },
   { id: 'bank',  name: 'Bank',  col: '#13b84a' },
   { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
+  { id: 'erfolge', name: 'Erfolge', col: '#ffb21a' },
   { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 function canPhone() { return !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
@@ -2345,7 +2407,7 @@ function phoneClick(x, y) {
   // Home-Leiste unten
   if (y > s.y + s.h - 40 && !phone.locked) { phone.app = null; return; }
   if (phone.locked) { lockClick(x, y); return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst') jobsClick(x, y); return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
@@ -2368,6 +2430,11 @@ function appIcon(id, x, y, sz) {
     g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-34, -18, 68, 48, 8); g.fill(); g.stroke();
     g.beginPath(); g.roundRect(-14, -30, 28, 14, 5); g.stroke();
     g.fillStyle = '#ffd23a'; g.fillRect(-6, -2, 12, 10); g.strokeRect(-6, -2, 12, 10);
+  } else if (id === 'erfolge') {
+    g.fillStyle = '#fff2a8'; g.beginPath(); g.moveTo(-26, -30); g.lineTo(26, -30); g.lineTo(20, 4); g.quadraticCurveTo(0, 18, -20, 4); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.arc(-26, -14, 10, Math.PI * 0.5, Math.PI * 1.5); g.stroke(); g.beginPath(); g.arc(26, -14, 10, -Math.PI * 0.5, Math.PI * 0.5); g.stroke();
+    g.fillStyle = '#fff2a8'; g.fillRect(-5, 10, 10, 14); g.strokeRect(-5, 10, 10, 14);
+    g.fillStyle = '#7a4a00'; g.beginPath(); g.roundRect(-20, 22, 40, 12, 3); g.fill(); g.stroke();
   } else if (id === 'bauen') {
     g.rotate(-0.7);
     g.fillStyle = '#9a4a1a'; g.fillRect(-7, -8, 14, 44); g.strokeRect(-7, -8, 14, 44);
@@ -2448,6 +2515,8 @@ function drawPhone(dt) {
       g.fillStyle = l.v >= 0 ? '#0a8a2f' : '#d12'; g.font = '700 18px system-ui'; g.textAlign = 'right';
       g.fillText((l.v >= 0 ? '+' : '') + money(l.v), s.x + s.w - 34, ly + 25);
     });
+  } else if (phone.app === 'erfolge') {
+    drawErfolgeApp(s);
   } else if (phone.app === 'inventar') {
     drawInventarApp(s);
   } else if (phone.app === 'einst') {
@@ -2644,6 +2713,7 @@ function nearBett() {
 }
 function canSleepNight() { const m = gMin(); return m >= 5 * 60 && m < 21 * 60; }
 function sleepTo(kind) {
+  bump('sleep');
   const target = kind === 'morgen' ? (gMin() < 5 * 60 ? gDay() : gDay() + 1) * 1440 + 7 * 60 : gDay() * 1440 + 22 * 60;
   sleepFx = { t: 0, target, kind, done: false }; keys.clear();
 }
@@ -2802,7 +2872,7 @@ const CUST_COLS = ['#ff7a1a', '#2f6fe0', '#9b5de5', '#e0262b', '#13c000', '#ff7a
 const ITEM_COL2 = ['#ff4d4d', '#3b82f6', '#ffb000', '#9b5de5', '#13c000', '#ff7ac6', '#00b3b3'];
 const SCAN = { x0: W / 2 - 300, x1: W / 2 - 150, y0: 560, y1: 690 }, BELT_Y = 650;
 function startWork() {
-  if (!job.worked.includes(gDay())) { job.worked.push(gDay()); saveJob(); }
+  if (!job.worked.includes(gDay())) { job.worked.push(gDay()); bump('work'); saveJob(); }
   Object.assign(wk, { on: true, t0: performance.now(), start: gt.T, bonus: 0, items: [], cust: null, phase: 'wait', wait: 0.8, drag: null, flash: 0, end: false, served: 0, bag: [] });
   keys.clear(); joy.on = false;
 }
@@ -3037,7 +3107,97 @@ function feedPet(id) {
   const lvl = pp.food; garden.food[lvl]--; saveGarden();
   p.eat = { x: f.x + 80 * scaleAt(f.y), y: f.y + 6, t: 2.5, eating: false, lvl };
 }
+// ---------- Erfolge ----------
+let ach = { done: {}, cnt: {}, regal: false };
+try { const a = JSON.parse(localStorage.getItem('bob-erfolge') || 'null'); if (a && a.done) ach = Object.assign(ach, a); } catch (e) {}
+function saveAch() { try { localStorage.setItem('bob-erfolge', JSON.stringify(ach)); } catch (e) {} }
+function bump(k) { ach.cnt[k] = (ach.cnt[k] || 0) + 1; saveAch(); }
+const cnt = k => ach.cnt[k] || 0;
+const ACH = [
+  { id: 'tier1',   name: 'Erstes Haustier',  desc: 'Hol dir ein Tier',            prog: () => [owned.length, 1], money: 50 },
+  { id: 'tier3',   name: 'Tierfreund',       desc: 'Besitze 3 Tiere',             prog: () => [owned.length, 3], troph: 'pfote' },
+  { id: 'tierlv',  name: 'Bester Freund',    desc: 'Ein Tier auf Level 5',        prog: () => [Math.max(0, ...Object.values(petStats).map(p => p.lvl || 1)), 5], troph: 'pokal_gold' },
+  { id: 'gassi',   name: 'Gassi-Profi',      desc: '5x Gassi gehen',              prog: () => [cnt('gassi'), 5], money: 40 },
+  { id: 'arbeit1', name: 'Erster Arbeitstag', desc: 'Arbeite eine Schicht',       prog: () => [cnt('work'), 1], money: 60 },
+  { id: 'arbeit7', name: 'Fleißige Biene',   desc: 'Arbeite 7 Schichten',         prog: () => [cnt('work'), 7], troph: 'pokal_silber' },
+  { id: 'reich',   name: 'Reich!',           desc: 'Hab 1.000 € auf dem Konto',   prog: () => [Math.floor(bank.money), 1000], troph: 'euro' },
+  { id: 'garten',  name: 'Grüner Daumen',    desc: 'Ernte eine Pflanze',          prog: () => [cnt('harvest'), 1], money: 40 },
+  { id: 'koch',    name: 'Sternekoch',       desc: 'Koch Goldfutter',             prog: () => [cnt('cook'), 1], troph: 'stern' },
+  { id: 'muell',   name: 'Müllwühler',       desc: 'Find das Müll-Kostüm',        prog: () => [wear.owned.includes('muell') ? 1 : 0, 1], troph: 'tonne' },
+  { id: 'mode',    name: 'Modebewusst',      desc: 'Besitze 5 Outfits',           prog: () => [wear.owned.length, 5], money: 80 },
+  { id: 'bauen',   name: 'Innenarchitekt',   desc: 'Stell 15 Möbel auf',          prog: () => [Object.values(furn).reduce((a, l) => a + l.length, 0), 15], money: 100 },
+  { id: 'bus',     name: 'Busfahrer',        desc: '5x Bus fahren',               prog: () => [cnt('bus'), 5], money: 40 },
+  { id: 'schlaf',  name: 'Langschläfer',     desc: '7x schlafen',                 prog: () => [cnt('sleep'), 7], money: 50 },
+];
+const achPops = []; let achT = 0;
+function checkAch(dt) {
+  achT -= dt; if (achT > 0) return; achT = 0.5;
+  for (const a of ACH) {
+    if (ach.done[a.id]) continue;
+    const [c, m] = a.prog(); if (c < m) continue;
+    ach.done[a.id] = true;
+    if (a.money) { bank.money += a.money; bank.log.push({ t: 'Erfolg: ' + a.name, v: a.money }); saveBank(); }
+    let extra = '';
+    if (a.troph && !ach.regal) { ach.regal = true; inv.trophaeenregal = (inv.trophaeenregal || 0) + 1; saveFurn(); extra = 'Gratis: Trophäenregal (Bauen → Deko)'; }
+    achPops.push({ a, t: 4.5, extra }); saveAch();
+  }
+}
+function placedTrophies() { const l = []; for (const r in furn) for (const f of furn[r]) if (f.slots) l.push(...f.slots.filter(Boolean)); return l; }
+function freeTrophies() { const pl = placedTrophies(); return ACH.filter(a => a.troph && ach.done[a.id] && !pl.includes(a.troph)).map(a => a.troph); }
+function drawAchPop(dt) {
+  const p = achPops[0]; if (!p) return;
+  p.t -= dt; if (p.t <= 0) { achPops.shift(); return; }
+  const a = Math.min(1, p.t * 2, (4.5 - p.t) * 4), w = 520, h = p.extra ? 112 : 90, x = W / 2 - w / 2, y = 24 - (1 - a) * 40;
+  g.save(); g.globalAlpha = Math.max(0, a);
+  softShadow(24, 8); const gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, '#ffd23a'); gr.addColorStop(1, '#ff9a1a');
+  g.fillStyle = gr; g.beginPath(); g.roundRect(x, y, w, h, 22); g.fill(); noShadow();
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.arc(x + 52, y + 45, 32, 0, 7); g.fill();
+  uiIcon('trophy', x + 52, y + 45, 40, '#7a4a00');
+  g.fillStyle = '#5a3200'; g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.font = '700 15px system-ui'; g.fillText('ERFOLG GESCHAFFT', x + 100, y + 26);
+  g.font = '800 23px system-ui'; g.fillText(p.a.name, x + 100, y + 52);
+  g.font = '600 16px system-ui'; g.fillText('Belohnung: ' + (p.a.money ? money(p.a.money) : TROPHIES[p.a.troph].name), x + 100, y + 76);
+  if (p.extra) { g.font = '700 15px system-ui'; g.fillText(p.extra, x + 100, y + 99); }
+  g.restore();
+}
+function drawErfolgeApp(s) {
+  g.fillStyle = '#f2f3f7'; g.fillRect(s.x, s.y, s.w, s.h);
+  const hg = g.createLinearGradient(s.x, s.y, s.x + s.w, s.y + 120); hg.addColorStop(0, '#ffcc1a'); hg.addColorStop(1, '#ff9a1a');
+  g.fillStyle = hg; g.fillRect(s.x, s.y, s.w, 120);
+  backBtn(s);
+  const nDone = ACH.filter(a => ach.done[a.id]).length;
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '700 26px system-ui'; g.fillText('Erfolge', s.x + s.w / 2, s.y + 58);
+  g.font = '600 16px system-ui'; g.fillText(nDone + ' von ' + ACH.length + ' geschafft', s.x + s.w / 2, s.y + 92);
+  const per = 7, pages = Math.ceil(ACH.length / per); phone.achPage = Math.min(phone.achPage || 0, pages - 1);
+  const btns = []; phone.ui = { btns };
+  ACH.slice(phone.achPage * per, phone.achPage * per + per).forEach((a, i) => {
+    const y = s.y + 130 + i * 70, x = s.x + 16, w = s.w - 32, d = ach.done[a.id], [c, m] = a.prog();
+    g.fillStyle = d ? '#fff8db' : '#fff'; g.beginPath(); g.roundRect(x, y, w, 64, 14); g.fill();
+    if (d) { g.strokeStyle = '#ffcc1a'; g.lineWidth = 2.5; g.stroke(); }
+    g.fillStyle = d ? '#ffcc1a' : '#e5e7eb'; g.beginPath(); g.arc(x + 30, y + 33, 20, 0, 7); g.fill();
+    uiIcon(a.troph ? 'trophy' : 'coin', x + 30, y + 33, 22, d ? '#7a4a00' : '#9aa0a8');
+    g.textAlign = 'left'; g.fillStyle = '#1b1d22'; g.font = '700 16px system-ui'; g.fillText(a.name, x + 60, y + 18);
+    g.fillStyle = '#6b7280'; g.font = '500 13px system-ui'; g.fillText(a.desc, x + 60, y + 37);
+    g.textAlign = 'right'; g.fillStyle = a.troph ? '#b7791f' : '#0a8a2f'; g.font = '700 13px system-ui';
+    g.fillText(a.money ? '+' + money(a.money) : TROPHIES[a.troph].name, x + w - 12, y + 18);
+    const pr = d ? 1 : Math.min(1, c / m), bx = x + 60, bw = w - 72;
+    g.fillStyle = '#e5e7eb'; g.beginPath(); g.roundRect(bx, y + 50, bw, 7, 4); g.fill();
+    g.fillStyle = d ? '#13b84a' : '#ffb21a'; if (pr > 0) { g.beginPath(); g.roundRect(bx, y + 50, Math.max(7, bw * pr), 7, 4); g.fill(); }
+    g.fillStyle = '#6b7280'; g.font = '600 12px system-ui'; g.fillText(d ? 'Geschafft ✓' : Math.min(c, m) + ' / ' + m, x + w - 12, y + 37);
+  });
+  if (pages > 1) {
+    const by = s.y + s.h - 66;
+    [[-1, '‹'], [1, '›']].forEach(([dd, lab], i) => {
+      const b = { x: s.x + (i ? s.w - 76 : 20), y: by, w: 56, h: 40 }, on = dd < 0 ? phone.achPage > 0 : phone.achPage < pages - 1;
+      g.fillStyle = on ? '#ff9a1a' : '#d1d5db'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill();
+      g.fillStyle = '#fff'; g.font = '800 26px system-ui'; g.textAlign = 'center'; g.fillText(lab, b.x + b.w / 2, b.y + 19);
+      if (on) btns.push({ b, act: () => { phone.achPage += dd; } });
+    });
+    g.fillStyle = '#6b7280'; g.font = '600 15px system-ui'; g.textAlign = 'center'; g.fillText('Seite ' + (phone.achPage + 1) + ' / ' + pages, s.x + s.w / 2, by + 20);
+  }
+}
 function setPetMode(id, mode) {
+  if (mode === 'gassi') bump('gassi');
   const p = petFor(id);
   if (mode === 'home' && !BUILD_ROOMS.includes(cur)) {
     p.mode = 'home'; p.room = 'spawn'; p.x = 300 + Math.random() * 600; p.y = 620 + Math.random() * 120; p.wait = 1;
@@ -3278,7 +3438,7 @@ function drawPlant(f) {
   g.restore();
 }
 function drawFurnItem(f) {
-  drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r); if (f.t === 'topf') drawPlant(f);
+  drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r, f.t === 'trophaeenregal' ? regalExtra(f) : null); if (f.t === 'topf') drawPlant(f);
   if (f.t === 'napf' && f.food) {
     const m = model('napf', f.r || 0), s = scaleAt(f.y), zc = m.ext.d / 2;
     const cx = f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - m.L * zc * KX * s, cy = f.y - (22 + zc * KY) * s, F = FOODS[f.food];
@@ -3633,7 +3793,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); checkJobs(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); checkJobs(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
