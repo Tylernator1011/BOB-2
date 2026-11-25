@@ -7727,8 +7727,7 @@ function drawAbilHud() {
     g.fillStyle = '#9aa3b2'; g.beginPath(); g.roundRect(r.x + 8, r.y + 10, kw, 34, 7); g.fill();
     g.fillStyle = '#eef1f6'; g.beginPath(); g.roundRect(r.x + 8, r.y + 6, kw, 32, 7); g.fill();
     g.fillStyle = '#1b1d22'; g.font = '900 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(kn, r.x + 8 + kw / 2, r.y + 23);
-    const ix = r.x + kw + 34; abilIcon(id, ix, r.y + 25, 34, t);
-    g.fillStyle = cd > 0 ? '#9aa3b2' : '#fff'; g.font = '800 17px system-ui'; g.textAlign = 'left'; g.fillText(A.name, ix + 24, r.y + 25);
+    g.fillStyle = cd > 0 ? '#9aa3b2' : '#fff'; g.font = '800 17px system-ui'; g.textAlign = 'left'; g.fillText(A.name, r.x + kw + 22, r.y + 25);
     if (cd > 0) {
       g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.roundRect(r.x, r.y, r.w * cd / A.cd, r.h, 12); g.fill();
       g.fillStyle = '#ffd23a'; g.font = '900 16px system-ui'; g.textAlign = 'right'; g.fillText(Math.ceil(cd) + ' s', r.x + r.w - 12, r.y + 25);
