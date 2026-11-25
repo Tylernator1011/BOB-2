@@ -4498,6 +4498,8 @@ const ADMIN = {
     ['Futter & Samen', '#2fa84f', () => { for (const l of [1, 2, 3, 4]) garden.food[l] = (garden.food[l] || 0) + 5; for (const k in SEEDS) garden.seeds[k] = (garden.seeds[k] || 0) + 2; saveGarden(); }],
     ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
+    ['Krypto: Kurse +50 %', '#16a36b', () => { for (const k in COINS) { kr.p[k] *= 1.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
+    ['Krypto: Crash −50 %', '#d6334a', () => { for (const k in COINS) { kr.p[k] *= 0.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
     ['Alle Erfolge', '#e0a10f', () => { for (const a of ACH) ach.done[a.id] = true; ach.regal = true; inv.trophaeenregal = (inv.trophaeenregal || 0) + 2; saveFurn(); saveAch(); }],
     ['Erfolge zurücksetzen', '#7b8190', () => { ach = { done: {}, cnt: {}, regal: false }; saveAch(); }],
   ],
@@ -4600,6 +4602,7 @@ const APPS = [
   { id: 'bank',  name: 'Bank',  col: '#13b84a' },
   { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
   { id: 'erfolge', name: 'Erfolge', col: '#ffb21a' },
+  { id: 'krypto', name: 'Krypto', col: '#141a26' },
   { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 setTimeout(() => { if (dw.access && !APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); });
@@ -4618,7 +4621,7 @@ function phoneClick(x, y) {
   // Home-Leiste unten
   if (y > s.y + s.h - 40 && !phone.locked) { phone.app = null; return; }
   if (phone.locked) { lockClick(x, y); return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge' || phone.app === 'darkweb') jobsClick(x, y); return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge' || phone.app === 'darkweb' || phone.app === 'krypto') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
@@ -4641,6 +4644,11 @@ function appIcon(id, x, y, sz) {
     g.fillStyle = '#8a4316'; g.beginPath(); g.roundRect(-34, -18, 68, 48, 8); g.fill(); g.stroke();
     g.beginPath(); g.roundRect(-14, -30, 28, 14, 5); g.stroke();
     g.fillStyle = '#ffd23a'; g.fillRect(-6, -2, 12, 10); g.strokeRect(-6, -2, 12, 10);
+  } else if (id === 'krypto') {
+    g.fillStyle = '#f7931a'; g.beginPath(); g.arc(0, 0, 30, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#fff'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('B', 2, 2);
+    g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(-4, -22); g.lineTo(-4, -16); g.moveTo(6, -22); g.lineTo(6, -16); g.moveTo(-4, 18); g.lineTo(-4, 24); g.moveTo(6, 18); g.lineTo(6, 24); g.stroke();
+    g.strokeStyle = '#16c784'; g.lineWidth = 4; g.beginPath(); g.moveTo(-36, 30); g.lineTo(-20, 20); g.lineTo(-8, 26); g.lineTo(12, 8); g.stroke();
   } else if (id === 'darkweb') {
     g.strokeStyle = '#3cff5a'; g.lineWidth = 4; g.beginPath(); g.arc(0, -4, 26, 0, 7); g.stroke();
     g.beginPath(); g.ellipse(0, -4, 11, 26, 0, 0, 7); g.stroke(); g.beginPath(); g.moveTo(-26, -4); g.lineTo(26, -4); g.stroke();
@@ -4735,6 +4743,8 @@ function drawPhone(dt) {
     drawErfolgeApp(s);
   } else if (phone.app === 'darkweb') {
     drawDarkwebApp(s);
+  } else if (phone.app === 'krypto') {
+    drawKryptoApp(s);
   } else if (phone.app === 'inventar') {
     drawInventarApp(s);
   } else if (phone.app === 'einst') {
@@ -4905,6 +4915,104 @@ const TIME_SPEED = 1; // Spielminuten pro echter Sekunde (ein Tag = 24 Minuten)
 let gt = { T: 8 * 60 };
 try { const v = JSON.parse(localStorage.getItem('bob-zeit') || 'null'); if (v && typeof v.T === 'number') gt = v; } catch (e) {}
 let gtSave = 0;
+// ---------- Krypto-App ----------
+const COINS = {
+  btb:  { name: 'BitBob',      sym: 'BTB',  col: '#f7931a', start: 31000, vol: 0.012, drift: 0.0002 },
+  ape:  { name: 'AffenCoin',   sym: 'APE',  col: '#8a5a2a', start: 2.4,   vol: 0.03,  drift: 0.0001 },
+  pfote:{ name: 'PfotenToken', sym: 'PFT',  col: '#ff7ac6', start: 0.085, vol: 0.05,  drift: 0 },
+  moon: { name: 'Mondrakete',  sym: 'MOON', col: '#7a5cff', start: 140,   vol: 0.022, drift: 0.0003 },
+};
+const KR_STEP = 10, KR_HIST = 144; // alle 10 Spielminuten ein neuer Kurs, Verlauf = 1 Tag
+let kr = { p: {}, h: {}, hold: {}, paid: {}, T: 0, tab: null, news: null };
+try { const d = JSON.parse(localStorage.getItem('bob-krypto') || 'null'); if (d) kr = Object.assign(kr, d); } catch (e) {}
+for (const [k, c] of Object.entries(COINS)) { if (!(kr.p[k] > 0)) kr.p[k] = c.start; if (!kr.h[k] || !kr.h[k].length) { kr.h[k] = []; let v = c.start; for (let i = 0; i < KR_HIST; i++) { v *= Math.exp((Math.random() - 0.5) * 2 * c.vol); kr.h[k].push(v); } kr.p[k] = v; } }
+if (!kr.T) kr.T = Math.floor(gt.T / KR_STEP);
+let krSave = 0;
+function saveKr() { try { localStorage.setItem('bob-krypto', JSON.stringify(kr)); } catch (e) {} }
+function krRand() { return (Math.random() + Math.random() + Math.random() - 1.5) * 1.4; }
+function krStep() {
+  for (const [k, c] of Object.entries(COINS)) {
+    let f = Math.exp(c.drift + c.vol * krRand());
+    if (Math.random() < 0.004) { const up = Math.random() < 0.5; f *= up ? 1.25 + Math.random() * 0.6 : 0.55 + Math.random() * 0.2; kr.news = { k, up, t: gt.T }; }
+    kr.p[k] = Math.max(c.start * 0.001, kr.p[k] * f); kr.h[k].push(kr.p[k]); if (kr.h[k].length > KR_HIST) kr.h[k].shift();
+  }
+}
+function kryptoTick(dt) {
+  const now = Math.floor(gt.T / KR_STEP); let n = now - kr.T;
+  if (n > 0) { n = Math.min(n, 600); for (let i = 0; i < n; i++) krStep(); kr.T = now; krSave = 99; }
+  krSave += dt; if (krSave > 5) { krSave = 0; saveKr(); }
+}
+function krFmt(v) { return v >= 1000 ? v.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €' : v >= 1 ? v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €' : v.toLocaleString('de-DE', { maximumFractionDigits: 4 }) + ' €'; }
+function krChange(k) { const h = kr.h[k]; return h.length ? (kr.p[k] / h[0] - 1) * 100 : 0; }
+function krWorth() { return Object.keys(COINS).reduce((a, k) => a + (kr.hold[k] || 0) * kr.p[k], 0); }
+function krBuy(k, eur) {
+  eur = Math.floor(Math.min(eur, bank.money)); if (eur < 1) { toast = { text: 'Nicht genug Geld auf dem Konto.', t: 2 }; return; }
+  const fee = Math.ceil(eur * 0.01), amt = (eur - fee) / kr.p[k];
+  bank.money -= eur; bank.log.push({ t: COINS[k].sym + ' gekauft', v: -eur }); saveBank();
+  kr.hold[k] = (kr.hold[k] || 0) + amt; kr.paid[k] = (kr.paid[k] || 0) + eur; saveKr();
+  toast = { text: 'Gekauft: ' + amt.toLocaleString('de-DE', { maximumFractionDigits: 6 }) + ' ' + COINS[k].sym + ' (1 % Gebühr)', t: 2.5 };
+}
+function krSell(k, part) {
+  const have = kr.hold[k] || 0; if (have <= 0) return;
+  const amt = have * part, eur = Math.floor(amt * kr.p[k] * 0.99);
+  kr.hold[k] = have - amt; kr.paid[k] = (kr.paid[k] || 0) * (1 - part); if (kr.hold[k] < 1e-9) { kr.hold[k] = 0; kr.paid[k] = 0; }
+  bank.money += eur; bank.log.push({ t: COINS[k].sym + ' verkauft', v: eur }); saveBank(); saveKr();
+  if (part === 1 && eur >= 1000) bump('krypto');
+  toast = { text: 'Verkauft für ' + money(eur) + ' – aufs Konto.', t: 2.5 };
+}
+function krChart(k, x, y, w, h, thick) {
+  const d = kr.h[k]; if (!d || d.length < 2) return;
+  const mn = Math.min(...d), mx = Math.max(...d), up = d[d.length - 1] >= d[0], col = up ? '#16c784' : '#ea3943';
+  const px = i => x + i / (d.length - 1) * w, py = v => y + h - (mx > mn ? (v - mn) / (mx - mn) : 0.5) * h;
+  if (thick) { const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, up ? 'rgba(22,199,132,.35)' : 'rgba(234,57,67,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(x, y + h); d.forEach((v, i) => g.lineTo(px(i), py(v))); g.lineTo(x + w, y + h); g.closePath(); g.fill(); }
+  g.strokeStyle = col; g.lineWidth = thick ? 3 : 2; g.lineJoin = 'round'; g.beginPath(); d.forEach((v, i) => i ? g.lineTo(px(i), py(v)) : g.moveTo(px(i), py(v))); g.stroke();
+  if (thick) { g.fillStyle = col; g.beginPath(); g.arc(px(d.length - 1), py(d[d.length - 1]), 5, 0, 7); g.fill(); g.fillStyle = '#8a93a6'; g.font = '500 12px system-ui'; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(krFmt(mx), x + w, y - 8); g.fillText(krFmt(mn), x + w, y + h + 10); }
+}
+function krCoinIcon(k, x, y, r) {
+  const c = COINS[k]; g.fillStyle = c.col; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 2; g.stroke();
+  g.fillStyle = '#fff'; g.font = `900 ${Math.round(r * 1.05)}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText({ btb: 'B', ape: '🐒', pfote: '🐾', moon: '🚀' }[k], x, y + 1);
+}
+function drawKryptoApp(s) {
+  g.fillStyle = '#0b0e14'; g.fillRect(s.x, s.y, s.w, s.h);
+  backBtn(s);
+  const btns = []; phone.ui = { btns }; const L = s.x + 18, Wd = s.w - 36;
+  const txt = (t, x, yy, f, c, a) => { g.font = f; g.fillStyle = c; g.textAlign = a || 'left'; g.textBaseline = 'middle'; g.fillText(t, x, yy); };
+  const btn = (b, lab, col, on, act) => { g.fillStyle = on ? col : '#1c2230'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill(); txt(lab, b.x + b.w / 2, b.y + b.h / 2, '700 15px system-ui', on ? '#fff' : '#4a5468', 'center'); if (on) btns.push({ b, act }); };
+  if (!kr.tab) {
+    txt('Krypto', s.x + s.w / 2, s.y + 62, '800 26px system-ui', '#fff', 'center');
+    const worth = krWorth(), paid = Object.values(kr.paid).reduce((a, v) => a + (v || 0), 0), pl = worth - paid;
+    g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(L, s.y + 92, Wd, 96, 14); g.fill();
+    txt('Dein Depot', L + 16, s.y + 114, '600 14px system-ui', '#8a93a6'); txt(krFmt(worth), L + 16, s.y + 144, '800 28px system-ui', '#fff');
+    if (paid > 0) txt((pl >= 0 ? '+' : '') + krFmt(pl) + ' (' + (pl >= 0 ? '+' : '') + (pl / paid * 100).toFixed(1) + ' %)', L + 16, s.y + 174, '700 14px system-ui', pl >= 0 ? '#16c784' : '#ea3943');
+    txt('Konto: ' + money(Math.floor(bank.money)), L + Wd - 16, s.y + 114, '600 13px system-ui', '#8a93a6', 'right');
+    let y = s.y + 204;
+    for (const [k, c] of Object.entries(COINS)) {
+      const b = { x: L, y, w: Wd, h: 86 }, ch = krChange(k);
+      g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill();
+      krCoinIcon(k, L + 30, y + 43, 20);
+      txt(c.name, L + 60, y + 30, '700 16px system-ui', '#fff'); txt(c.sym + (kr.hold[k] > 0 ? ' · ' + krFmt(kr.hold[k] * kr.p[k]) : ''), L + 60, y + 54, '500 13px system-ui', '#8a93a6');
+      krChart(k, L + 175, y + 22, 70, 40, false);
+      txt(krFmt(kr.p[k]), L + Wd - 14, y + 30, '700 15px system-ui', '#fff', 'right'); txt((ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(1) + ' %', L + Wd - 14, y + 54, '700 13px system-ui', ch >= 0 ? '#16c784' : '#ea3943', 'right');
+      btns.push({ b, act: () => { kr.tab = k; } }); y += 96;
+    }
+    if (kr.news && gt.T - kr.news.t < 240) { const n = kr.news; txt((n.up ? '🚀 ' : '💥 ') + COINS[n.k].sym + (n.up ? ' schießt nach oben!' : ' stürzt ab!'), s.x + s.w / 2, y + 14, '700 14px system-ui', n.up ? '#16c784' : '#ea3943', 'center'); }
+    else txt('Kurse ändern sich alle 10 Spielminuten · 1 % Gebühr', s.x + s.w / 2, y + 14, '500 12px system-ui', '#4a5468', 'center');
+  } else {
+    const k = kr.tab, c = COINS[k], ch = krChange(k), have = kr.hold[k] || 0;
+    btns.push({ b: { x: s.x, y: s.y + 30, w: 90, h: 60 }, act: () => { kr.tab = null; } });
+    krCoinIcon(k, s.x + s.w / 2 - 70, s.y + 62, 16); txt(c.name, s.x + s.w / 2 - 46, s.y + 62, '800 22px system-ui', '#fff');
+    txt(krFmt(kr.p[k]), L, s.y + 112, '800 30px system-ui', '#fff'); txt((ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(2) + ' % (24 h)', L, s.y + 142, '700 14px system-ui', ch >= 0 ? '#16c784' : '#ea3943');
+    krChart(k, L + 4, s.y + 180, Wd - 8, 170, true);
+    g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(L, s.y + 372, Wd, 66, 12); g.fill();
+    txt('Du hast', L + 14, s.y + 392, '600 13px system-ui', '#8a93a6'); txt(have.toLocaleString('de-DE', { maximumFractionDigits: 6 }) + ' ' + c.sym, L + 14, s.y + 416, '700 16px system-ui', '#fff');
+    txt(krFmt(have * kr.p[k]), L + Wd - 14, s.y + 404, '800 18px system-ui', '#fff', 'right');
+    txt('Kaufen (vom Konto: ' + money(Math.floor(bank.money)) + ')', L, s.y + 460, '700 14px system-ui', '#8a93a6');
+    const bw = (Wd - 16) / 3;
+    [[100, '100 €'], [1000, '1.000 €'], [0, 'Alles']].forEach(([v, lab], i) => btn({ x: L + i * (bw + 8), y: s.y + 474, w: bw, h: 44 }, lab, '#16a36b', v ? bank.money >= v : bank.money >= 1, () => krBuy(k, v || bank.money)));
+    txt('Verkaufen', L, s.y + 540, '700 14px system-ui', '#8a93a6');
+    [[0.25, '25 %'], [0.5, '50 %'], [1, 'Alles']].forEach(([p, lab], i) => btn({ x: L + i * (bw + 8), y: s.y + 554, w: bw, h: 44 }, lab, '#d6334a', have > 0, () => krSell(k, p)));
+  }
+}
 function saveTime() { try { localStorage.setItem('bob-zeit', JSON.stringify(gt)); } catch (e) {} }
 const gDay = () => Math.floor(gt.T / 1440), gMin = () => gt.T % 1440, gWd = () => gDay() % 7;
 const hm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(Math.floor(m % 60)).padStart(2, '0');
@@ -5607,6 +5715,7 @@ const ACH = [
   { id: 'dw',      name: 'Unterwelt',        desc: 'Erledige einen Darkweb-Auftrag', prog: () => [cnt('dw'), 1], money: 100 },
   { id: 'flucht',  name: 'Fluchtwagen? Nö.',  desc: 'Entkomme der Polizei',        prog: () => [cnt('flucht'), 1], money: 150 },
   { id: 'apo',     name: 'Planet der Bobs',   desc: 'Besiege deinen mutierten Affen', prog: () => [cnt('apo'), 1], money: 500 },
+  { id: 'krypto',  name: 'To the Moon',       desc: 'Verkaufe Krypto auf einmal für 1.000 € oder mehr', prog: () => [cnt('krypto'), 1], money: 300 },
   { id: 'bus',     name: 'Busfahrer',        desc: '5x Bus fahren',               prog: () => [cnt('bus'), 5], money: 40 },
   { id: 'schlaf',  name: 'Langschläfer',     desc: '7x schlafen',                 prog: () => [cnt('sleep'), 7], money: 50 },
 ];
@@ -6281,7 +6390,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); kryptoTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
