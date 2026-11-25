@@ -510,7 +510,7 @@ function wuehlen() {
   m.done = true; try { localStorage.setItem('bob-muell', JSON.stringify(m)); } catch (e) {}
   if (!m.full) { toast = { text: 'Nur leere Dosen … Die Tonne ist heute leer. Schlaf drüber und schau morgen wieder.', t: 4 }; return; }
   if (!wear.owned.includes('muell')) { wear.owned.push('muell'); saveWear(); toast = { text: 'Igitt! Du hast das Müll-Kostüm gefunden! Im Kleiderschrank anziehen.', t: 5 }; }
-  else { const v = 5 + Math.floor(Math.random() * 16); bank.money += v; bank.log.push({ t: 'Im Müll gefunden', v }); saveBank(); toast = { text: 'Die Tonne war voll – du findest ' + v + ' € zwischen Bananenschalen!', t: 4 }; }
+  else { const v = 5 + Math.floor(Math.random() * 16); earn(v); toast = { text: 'Die Tonne war voll – du findest ' + v + ' € zwischen Bananenschalen!', t: 4 }; }
 }
 function drawMuell(o) {
   const m = muellToday(), full = m.full && !m.done, s = scaleAt(o.base), cx = o.x + o.w / 2;
@@ -1486,14 +1486,9 @@ function openMenu() {
   if (nearSchrank()) { openWardrobe('bob'); return; }
   if (nearKasse() || nearPakete()) { startWork(); return; }
   if (nearSchalter()) {
-    bankInterest(); const sv = bank.save || 0, m = bank.money;
-    menu.kind = 'bank'; menu.title = 'Sparkonto: ' + money(sv) + ' – 2 % Zinsen jeden Tag' + (bank.lastZins ? ' · zuletzt +' + money(bank.lastZins) : '');
-    const it = [];
-    for (const v of [50, 200, 1000]) it.push({ label: money(v) + ' einzahlen', dep: v, disabled: m < v, tag: m < v ? 'zu wenig Geld' : null, tagCol: '#c0392b' });
-    it.push({ label: 'Alles einzahlen', dep: Math.floor(m), disabled: m < 1, tag: money(Math.floor(m)) });
-    for (const v of [50, 200]) it.push({ label: money(v) + ' abheben', wd: v, disabled: sv < v });
-    it.push({ label: 'Alles abheben', wd: sv, disabled: sv < 1, tag: money(sv) });
-    it.push({ label: 'Tschüss' });
+    const c = Math.floor(bank.cash || 0);
+    menu.kind = 'bank'; menu.title = 'Bank – Konto: ' + money(bank.money) + ' · Bargeld: ' + money(c);
+    const it = [{ label: c > 0 ? 'Bargeld einzahlen' : 'Kein Bargeld dabei', dep: c, disabled: c < 1, tag: c > 0 ? money(c) : null }, { label: 'Tschüss' }];
     menu.items = it; MENU.row = Math.min(76, Math.floor((H - 220) / it.length)); menu.t0 = performance.now();
     menu.open = true; menu.sel = Math.max(0, it.findIndex(i => !i.disabled)); keys.clear(); return;
   }
@@ -1542,7 +1537,7 @@ function openMenu() {
   } else if (nearHaendler() && haendler().shop === 'moebel') { openCatalog(); return;
   } else if (nearHaendler()) {
     const first = owned.length === 0;
-    menu.kind = 'shop'; menu.title = 'Tierladen – ' + (first ? 'Dein erstes Tier ist gratis!' : 'Kontostand ' + money(bank.money));
+    menu.kind = 'shop'; menu.title = 'Tierladen – ' + (first ? 'Dein erstes Tier ist gratis!' : 'Kontostand ' + money(bank.money) + (bank.cash >= 1 ? ' (+' + money(Math.floor(bank.cash)) + ' Bargeld – erst zur Bank!)' : ''));
     menu.items = Object.keys(PETS).map(k => {
       const have = owned.includes(k), p = PETS[k].price, ok = bank.money >= p;
       if (have) return { label: PETS[k].name, tag: 'Hast du', pet: k, disabled: true };
@@ -1566,8 +1561,7 @@ function choose(i) {
   if (it.dest) bump('bus');
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
-  if (it.dep) { bankInterest(); bank.money -= it.dep; bank.save = (bank.save || 0) + it.dep; bank.log.push({ t: 'Aufs Sparkonto', v: -it.dep }); saveBank(); toast = { text: money(it.dep) + ' liegen jetzt auf dem Sparkonto.', t: 3 }; }
-  if (it.wd) { bankInterest(); bank.save -= it.wd; bank.money += it.wd; bank.log.push({ t: 'Vom Sparkonto', v: it.wd }); saveBank(); toast = { text: money(it.wd) + ' abgehoben.', t: 3 }; }
+  if (it.dep) { bank.cash -= it.dep; bank.money += it.dep; bank.log.push({ t: 'Bargeld eingezahlt', v: it.dep }); saveBank(); toast = { text: money(it.dep) + ' eingezahlt – jetzt kannst du es ausgeben!', t: 3.5 }; }
   if (it.put && menu.regal) { const i = menu.regal.slots.indexOf(null); if (i >= 0) { menu.regal.slots[i] = it.troph; saveFurn(); toast = { text: TROPHIES[it.troph].name + ' steht jetzt im Regal!', t: 3 }; } }
   if (it.take && menu.regal) { const i = menu.regal.slots.indexOf(it.troph); if (i >= 0) { menu.regal.slots[i] = null; saveFurn(); } }
   if (it.fill && menu.napf) fillNapf(menu.napf, it.fill);
@@ -1611,7 +1605,7 @@ function interactTarget() {
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
   const sc = nearSchalter();
-  if (sc) return { x: sc.x + sc.w / 2, y: sc.base - sc.h - 220, label: 'Sparkonto' };
+  if (sc) return { x: sc.x + sc.w / 2, y: sc.base - sc.h - 220, label: 'Einzahlen' };
   const pk = nearPakete();
   if (pk) return { x: pk.fx, y: pk.base - 190, label: 'Pakete ausliefern' };
   const trg = nearFurn('trophaeenregal');
@@ -1679,6 +1673,7 @@ function uiIcon(name, x, y, s, col) {
   const P = () => g.beginPath();
   if (name === 'bus') { P(); g.roundRect(-16, -14, 32, 24, 5); g.fill(); g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(-12, -10, 10, 8); g.fillRect(2, -10, 10, 8); g.fillStyle = col || '#fff'; P(); g.arc(-9, 13, 4, 0, 7); g.arc(9, 13, 4, 0, 7); g.fill(); }
   else if (name === 'trophy') { P(); g.moveTo(-12, -15); g.lineTo(12, -15); g.lineTo(9, 1); g.quadraticCurveTo(0, 8, -9, 1); g.closePath(); g.fill(); P(); g.arc(-12, -8, 5, Math.PI * 0.5, Math.PI * 1.5); g.stroke(); P(); g.arc(12, -8, 5, -Math.PI * 0.5, Math.PI * 0.5); g.stroke(); g.fillRect(-2.5, 4, 5, 8); P(); g.roundRect(-10, 11, 20, 6, 2); g.fill(); }
+  else if (name === 'cash') { P(); g.roundRect(-17, -10, 34, 20, 3); g.fill(); g.fillStyle = 'rgba(0,0,0,.35)'; P(); g.arc(0, 0, 5.5, 0, 7); g.fill(); P(); g.arc(-12, 0, 2, 0, 7); g.fill(); P(); g.arc(12, 0, 2, 0, 7); g.fill(); }
   else if (name === 'coin') { P(); g.arc(0, 0, 14, 0, 7); g.fill(); g.fillStyle = (!col || col === '#fff') ? '#1f4f9e' : 'rgba(255,255,255,.9)'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 0, 1); }
   else if (name === 'paw') { P(); g.ellipse(0, 6, 10, 8, 0, 0, 7); g.fill(); for (const [a, b] of [[-12, -4], [-5, -11], [5, -11], [12, -4]]) { P(); g.arc(a, b, 4.5, 0, 7); g.fill(); } }
   else if (name === 'moon') { g.save(); P(); g.arc(0, 0, 14, 0, 7); g.clip(); P(); g.arc(0, 0, 14, 0, 7); g.arc(7, -5, 12, 0, 7); g.fill('evenodd'); g.restore(); }
@@ -1696,8 +1691,7 @@ function uiIcon(name, x, y, s, col) {
 function rowIcon(it) {
   if (it.foodBuy || it.fill) return ['food', FOODS[it.lvl].col];
   if (it.empty) return ['x', '#e0262b'];
-  if (it.dep) return ['coin', '#13a040'];
-  if (it.wd) return ['coin', '#1f4f9e'];
+  if (it.dep !== undefined) return ['cash', '#13a040'];
   if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
   if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : 'sofa', '#2f6fe0'];
   if (it.sleep) return [it.sleep === 'morgen' ? 'sun' : 'moon', it.sleep === 'morgen' ? '#ff9a1a' : '#4b3fa8'];
@@ -2416,10 +2410,12 @@ function drawBuildUI() {
 // ---------- Handy mit Apps ----------
 let bank = { money: 100, log: [{ t: 'Startgeld', v: 100 }] };
 try { const b = JSON.parse(localStorage.getItem('bob-bank') || 'null'); if (b && typeof b.money === 'number') bank = b; } catch (e) {}
-function bankInterest() {
-  if (bank.saveDay == null) bank.saveDay = gDay();
-  while (bank.saveDay < gDay()) { bank.saveDay++; const z = Math.floor((bank.save || 0) * 0.02); if (z > 0) { bank.save += z; bank.lastZins = z; } }
-}
+// Bargeld: alles Verdiente ist erst Bargeld und muss in der Bank eingezahlt werden
+if (bank.cash == null) bank.cash = 0;
+if (bank.save) { bank.money += bank.save; bank.save = 0; }
+function earn(v) { bank.cash = (bank.cash || 0) + v; saveBank(); cashPop = { v, t: 2 }; }
+let cashPop = null;
+function bankInterest() {}
 function saveBank() { try { localStorage.setItem('bob-bank', JSON.stringify(bank)); } catch (e) {} }
 
 const phone = { open: false, app: null, a: 0, msg: '' };
@@ -2648,7 +2644,7 @@ function drawPhone(dt) {
     g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '600 20px system-ui'; g.fillText('BoB', cx + 24, cy + 28);
     g.font = '500 18px ui-monospace, monospace'; g.fillText('•••• •••• •••• 2024', cx + 24, cy + 118);
     g.font = '600 15px system-ui'; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('BOB', cx + 24, cy + 148);
-    g.textAlign = 'right'; g.font = '600 15px system-ui'; g.fillText('Sparkonto', cx + cw - 24, cy + 28); g.font = '700 20px system-ui'; g.fillStyle = '#ffcc1a'; g.fillText(money(bank.save || 0), cx + cw - 24, cy + 54); g.textAlign = 'left';
+    g.textAlign = 'right'; g.font = '600 15px system-ui'; g.fillText('Bargeld', cx + cw - 24, cy + 28); g.font = '700 20px system-ui'; g.fillStyle = '#ffcc1a'; g.fillText(money(Math.floor(bank.cash || 0)), cx + cw - 24, cy + 54); g.textAlign = 'left';
     g.fillStyle = '#13f000'; g.beginPath(); g.arc(cx + cw - 46, cy + 136, 14, 0, 7); g.fill();
     g.fillStyle = '#ffee00'; g.beginPath(); g.arc(cx + cw - 28, cy + 136, 14, 0, 7); g.fill();
     // Buchungen
@@ -2763,7 +2759,7 @@ function drawCatalog(dt) {
   g.fillStyle = '#e0262b'; g.beginPath(); g.moveTo(XL + 50, 18); g.lineTo(XL + 520, 18); g.lineTo(XL + 500, 96); g.lineTo(XL + 70, 96); g.closePath(); g.fill(); g.stroke();
   marker('Möbelhaus', XL + 285, 58, 54, '#fff');
   // Kontostand
-  g.font = '700 26px system-ui'; const kt = 'Kontostand: ' + money(bank.money), kw = g.measureText(kt).width + 40;
+  g.font = '700 26px system-ui'; const kt = 'Kontostand: ' + money(bank.money) + (bank.cash >= 1 ? '   ·   Bargeld ' + money(Math.floor(bank.cash)) + ' erst zur Bank bringen' : ''), kw = g.measureText(kt).width + 40;
   g.fillStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.roundRect(WR_CLOSE.x - 60 - kw, 46, kw, 50, 25); g.fill(); g.stroke();
   g.fillStyle = '#0a8a2f'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(kt, WR_CLOSE.x - 60 - kw / 2, 72);
   // Kategorien
@@ -2848,6 +2844,13 @@ function drawClock() {
   g.font = '700 24px system-ui'; const w = g.measureText(t).width + 34, x = XR - w - 18;
   g.fillStyle = 'rgba(15,20,30,.55)'; g.beginPath(); g.roundRect(x, 16, w, 44, 22); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, x + w / 2, 39);
+  // Bargeld
+  const ct = money(Math.floor(bank.cash || 0)); g.font = '700 22px system-ui';
+  const cw = g.measureText(ct).width + 62, cx = x - cw - 10;
+  g.fillStyle = 'rgba(15,20,30,.55)'; g.beginPath(); g.roundRect(cx, 16, cw, 44, 22); g.fill();
+  uiIcon('cash', cx + 24, 38, 26, '#5fd36a');
+  g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(ct, cx + 44, 39);
+  if (cashPop) { cashPop.t -= 1 / 60; if (cashPop.t <= 0) cashPop = null; else { g.globalAlpha = Math.min(1, cashPop.t * 2); g.fillStyle = '#5fd36a'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.fillText('+' + money(cashPop.v), cx + cw / 2, 82 + (2 - cashPop.t) * 8); g.globalAlpha = 1; } }
 }
 
 // ---------- Schlafen ----------
@@ -3278,9 +3281,9 @@ function shiftEndT() { return gDay() * 1440 + JOBS[job.id].to; }
 function workedMin() { const J = JOBS[job.id], s = Math.max(wk.start, gDay() * 1440 + J.from); return Math.max(0, Math.min(gt.T, shiftEndT()) - s); }
 function finishWork() {
   const free = unpaid(), mins = workedMin(), lohn = free ? 0 : Math.round(mins / 60 * JOBS[job.id].wage), sum = free ? 0 : lohn + wk.bonus;
-  if (sum > 0) { bank.money += sum; bank.log.push({ t: 'Lohn ' + JOBS[job.id].place, v: sum }); saveBank(); }
+  if (sum > 0) earn(sum);
   job.earned = (job.earned || 0) + sum; saveJob();
-  wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' aufs Konto!' : 'Feierabend.', t: 3 };
+  wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' Bargeld – bring es zur Bank!' : 'Feierabend.', t: 3.5 };
 }
 function scanItem(it) {
   if (it.done) return;
@@ -3533,7 +3536,7 @@ function checkAch(dt) {
     if (ach.done[a.id]) continue;
     const [c, m] = a.prog(); if (c < m) continue;
     ach.done[a.id] = true;
-    if (a.money) { bank.money += a.money; bank.log.push({ t: 'Erfolg: ' + a.name, v: a.money }); saveBank(); }
+    if (a.money) earn(a.money);
     let extra = '';
     if (a.troph && !ach.regal) { ach.regal = true; inv.trophaeenregal = (inv.trophaeenregal || 0) + 1; saveFurn(); extra = 'Gratis: Trophäenregal (Bauen → Deko)'; }
     achPops.push({ a, t: 4.5, extra }); saveAch();
@@ -3767,7 +3770,7 @@ function pickups() {
   }
   const cs = garden.coins[cur] || [];
   for (let i = cs.length - 1; i >= 0; i--) if (near(cs[i], 80)) {
-    const c = cs.splice(i, 1)[0]; bank.money += c.v; bank.log.push({ t: 'Geld vom Tier', v: c.v }); saveBank(); saveGarden();
+    const c = cs.splice(i, 1)[0]; earn(c.v); saveGarden();
     toast = { text: '+' + money(c.v) + ' eingesammelt!', t: 2 };
   }
 }
