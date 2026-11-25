@@ -1117,20 +1117,30 @@ Object.assign(OUTFITS, {
       g.beginPath(); g.ellipse(x + 152, y + 12, 26, 18, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(x + 140, y + 46, 16, 32, 0.15, 0, 7); g.fill();
       g.save(); g.translate(x + 206, y + 96); g.rotate(0.6); g.beginPath(); g.ellipse(0, 0, 17, 42, 0, 0, 7); g.fill(); g.restore();
     },
-    front: (bx, by, hx, hy) => {
-      // Tonnendeckel als Hut, leicht schief
-      g.save(); g.translate(0, hy + 8); g.rotate(-0.04);
-      g.fillStyle = '#b9b9b9'; g.strokeStyle = '#111'; g.lineWidth = 4.5;
-      g.beginPath(); g.moveTo(-HEAD.w / 2 - 14, 14); g.lineTo(HEAD.w / 2 + 16, 10); g.lineTo(HEAD.w / 2 + 12, -34); g.lineTo(-HEAD.w / 2 - 10, -26); g.closePath(); g.fill(); g.stroke();
-      g.fillStyle = '#9d9d9d'; g.beginPath(); g.moveTo(HEAD.w / 2 + 12, -34); g.lineTo(HEAD.w / 2 + 30, -44); g.lineTo(HEAD.w / 2 + 34, 0); g.lineTo(HEAD.w / 2 + 16, 10); g.closePath(); g.fill(); g.stroke();
-      g.fillStyle = '#b9b9b9'; g.beginPath(); g.moveTo(-2, -28); g.lineTo(48, -32); g.lineTo(54, -68); g.lineTo(4, -64); g.closePath(); g.fill(); g.stroke(); // Griff
-      g.strokeStyle = '#2a2a2a'; g.lineWidth = 2;
-      for (const [a, b, c, d] of [[-80, -16, -70, 2], [-20, -18, 20, -8], [60, -22, 90, -10], [100, -24, 112, -4]]) { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); }
-      // Bananenschale
-      g.translate(-78, -26); g.fillStyle = '#f2e600'; g.strokeStyle = '#111'; g.lineWidth = 4;
-      g.beginPath(); g.moveTo(-6, 0); g.quadraticCurveTo(-38, 6, -44, 22); g.quadraticCurveTo(-20, 18, -4, 12); g.quadraticCurveTo(14, 18, 40, 22); g.quadraticCurveTo(30, 4, 6, 0);
-      g.quadraticCurveTo(14, -40, 6, -86); g.quadraticCurveTo(-14, -40, -6, 0); g.fill(); g.stroke();
-      g.fillStyle = '#7a7010'; g.beginPath(); g.roundRect(0, -104, 12, 22, 5); g.fill(); g.stroke();
+    front: (bx, by, hx, hy, t) => {
+      // Tonnendeckel als echter 3D-Deckel auf dem Kopf
+      const LP = mkPal('#b9b9b9', '#d2d2d2'), D = DEPTH + 18, lx = hx - 14, lw = HEAD.w + 28, ly = hy - 18, lh = 30;
+      const dx = -D * t, dy = -D * 0.55;
+      g.lineWidth = 4.5; g.strokeStyle = '#111'; g.lineJoin = 'round';
+      cube(lx + 6 * t, ly, lw, lh, D, LP, true, t);
+      // Kratzer vorne
+      g.strokeStyle = '#3a3a3a'; g.lineWidth = 2; g.lineCap = 'round';
+      for (const [a, b2, c] of [[30, 8, 22], [96, 12, 34], [170, 6, 24], [226, 10, 20]]) { g.beginPath(); g.moveTo(lx + a, ly + b2); g.lineTo(lx + a + c, ly + b2 + 10); g.stroke(); }
+      // Griff mittig auf der Oberseite
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      const gx = lx + 6 * t + lw / 2 - 30 + dx / 2, gy = ly + dy / 2 - 16;
+      cube(gx, gy, 60, 18, 16, LP, true, t);
+      // Bananenschale steht vorne links auf dem Deckel
+      g.save(); g.translate(lx + 6 * t + 62 + dx * 0.35, ly + dy * 0.35 + 2);
+      g.fillStyle = '#f2e600'; g.strokeStyle = '#111'; g.lineWidth = 4;
+      // hintere Lasche (dunkler)
+      g.fillStyle = '#cdbf00'; g.beginPath(); g.moveTo(-4, -6); g.quadraticCurveTo(8, -26, 30, -18); g.quadraticCurveTo(18, -12, 4, -2); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#f2e600';
+      g.beginPath(); g.moveTo(-8, -4); g.quadraticCurveTo(-30, -2, -42, 14); g.quadraticCurveTo(-22, 12, -6, 6); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(8, -4); g.quadraticCurveTo(30, -2, 40, 16); g.quadraticCurveTo(20, 12, 6, 6); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(-9, 0); g.quadraticCurveTo(-12, -46, -2, -88); g.quadraticCurveTo(12, -46, 9, 0); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#e0d000'; g.beginPath(); g.moveTo(1, -6); g.quadraticCurveTo(4, -46, -1, -80); g.quadraticCurveTo(-6, -46, -3, -6); g.closePath(); g.fill();
+      g.fillStyle = '#6b6210'; g.beginPath(); g.roundRect(-7, -104, 12, 20, 5); g.fill(); g.stroke();
       g.restore();
     } },
 });
