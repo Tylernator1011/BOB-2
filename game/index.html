@@ -4568,7 +4568,8 @@ const ADMIN = {
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
-    ['Pässe + 1000 XP', '#ffe14a', () => { lief.paesse = true; saveLief(); passXp(1000); }],
+    ['Kalender', '#e0262b', () => { lief.garten = true; lief.kalender = true; saveLief(); gartenSetup(); }],
+    ['Pässe + 1000 XP', '#ffe14a', () => { lief.kalender = true; lief.paesse = true; saveLief(); passXp(1000); }],
     ['Jahreszeit wechseln', '#5fb8ff', () => { seasonOverride = ((seasonOverride != null ? seasonOverride : seasonIdx()) + 1) % 4; toast = { text: 'Jahreszeit: ' + season().name, t: 2 }; }],
     ['Streichel-Bonus', '#ffcc1a', () => { lief.klick = true; saveLief(); }],
     ['Gold-Rezept Lv3', '#9b5de5', () => { lief.lv3gold = true; saveLief(); }],
@@ -5005,6 +5006,7 @@ const WEB_ITEMS = [
   { id: 'tf3',  cat: 'tier', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
   { id: 'tf3x', cat: 'tier', name: 'Futter Lv3 ×6', price: 110, desc: ['Vorratspack', 'billiger als im Laden'], food: [3, 6] },
   { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Große Rasenfläche hinterm Haus:', 'im Haus ganz nach unten'], once: true },
+  { id: 'kalender', cat: 'haus', name: 'Kalender', price: 500, desc: ['Hängt im Garten an der Wand:', 'Tage, Jahreszeiten, Updates'], once: true, needs: 'garten' },
   { id: 'hundehaus', cat: 'haus', name: 'Haustier-Haus', price: 1500, desc: ['Für den Garten: mit Napf,', 'dort wählst du dein Tier'], once: true, needs: 'garten' },
   { id: 'maid', cat: 'haus', name: 'Haus-Maid', price: 2000, desc: ['Passt auf dein Tier auf:', 'füllt den Napf mit bestem Futter'], once: true, needs: 'hundehaus' },
   { id: 'maid2', cat: 'haus', name: 'Maid: Goldkacke', price: 1500, desc: ['Die Maid sammelt die goldene', 'Kacke ein – direkt aufs Konto'], once: true, needs: 'maid' },
@@ -5013,7 +5015,7 @@ const WEB_ITEMS = [
   { id: 'klick', cat: 'haus', name: 'Streichel-Bonus', price: 2500, desc: ['Jeder Klick aufs Tier:', '+1 € Bargeld (Rechtsklick: Infos)'], once: true, needs: 'hundehaus' },
   { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
-  { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'garten' },
+  { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
 const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
@@ -5032,7 +5034,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5083,6 +5085,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
   if (id === 'klick') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.arc(18, -14, 22, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 18, -13); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-30, -20); g.lineTo(-30, 30); g.lineTo(-18, 18); g.lineTo(-8, 38); g.lineTo(0, 34); g.lineTo(-10, 14); g.lineTo(6, 14); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
@@ -5313,7 +5316,7 @@ function drawGarten(R) {
   g.fillStyle = 'rgba(255,255,255,.07)'; for (let x = Math.floor(XL / 160) * 160; x < XR; x += 160) g.fillRect(x, FLOOR, 80, H - FLOOR);
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   if (lief.feld) drawFeld();
-  drawKalWall();
+  if (lief.kalender) drawKalWall();
 }
 // ---------- Krypto-App ----------
 const COINS = {
@@ -6489,7 +6492,7 @@ for (const s of SEASONS) TROPHIES['bp_' + s.id] = { name: s.name + '-Pokal', col
 // Kalender an der Hauswand im Garten
 const KAL = { x: 815, y: 300 };
 const kal = { open: false, tab: 'kalender', ui: null, t0: 0, scroll: 0 };
-function nearKalender() { return cur === 'garten' && !fade.dir && Math.abs(bob.x - KAL.x) < 130 && bob.y < FLOOR + 160 ? KAL : null; }
+function nearKalender() { return lief.kalender && cur === 'garten' && !fade.dir && Math.abs(bob.x - KAL.x) < 130 && bob.y < FLOOR + 160 ? KAL : null; }
 function drawKalWall() {
   const x = KAL.x, y = KAL.y, s = season();
   g.save(); g.lineWidth = 3; g.strokeStyle = LINE;
