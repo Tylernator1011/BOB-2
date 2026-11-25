@@ -2000,7 +2000,7 @@ function drawChase(dt) {
   }
   // Bob rennt
   const k = BASE_W / BODY.w * 0.85;
-  drawBobFig(BX, GY - c.y, k, 1, c.y > 0 ? 0 : -Math.abs(Math.sin(t * 16)) * 10, 1, wear.on, c.y < 5);
+  drawBobFig(BX, GY - c.y, k, 1, c.y > 0 ? 0 : -Math.abs(Math.sin(t * 16)) * 10, 1, wear.on, c.y < 5, accWorn());
   if (c.hit) { g.globalAlpha = c.hit; marker('Autsch!', BX, GY - 330, 44, '#ff4d4d'); g.globalAlpha = 1; }
   // Polizeiauto
   const px = BX - 220 - c.gap * 520, blink = Math.sin(t * 14) > 0;
@@ -3279,8 +3279,82 @@ let wear = { owned: ['gruen'], on: 'gruen' };
 try { const w = JSON.parse(localStorage.getItem('bob-kleidung') || 'null'); if (w && w.owned) wear = w; } catch (e) {}
 function saveWear() { try { localStorage.setItem('bob-kleidung', JSON.stringify(wear)); } catch (e) {} }
 
+// ---------- Accessoires: passen auf jedes Outfit (Maße werden pro Outfit automatisch gemessen) ----------
+const ACC_SLOTS = { kopf: 'Kopf', gesicht: 'Gesicht', hals: 'Hals', ruecken: 'Rücken' };
+const FIT = {}; let FIT_DONE = false;
+// Misst jedes Outfit einmal: wie weit ragt es über den Kopf, wie breit ist es unten
+function measureFits() {
+  FIT_DONE = true;
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+  const k = 0.5, X = 400, Y = 760, headTop = Y + (-BODY.h - HEAD.h + 2) * k;
+  for (const id of Object.keys(OUTFITS)) {
+    try {
+      g.clearRect(0, 0, 800, 800); drawBobFig(X, Y, k, 0.0001, 0, 1, id, false);
+      const d = g.getImageData(0, 0, 800, 800).data; let top = headTop, half = BODY.w / 2 * k;
+      for (let y = 0; y < Y + 20; y++) { let hit = false; for (let x = 150; x < 650; x += 2) { if (d[(y * 800 + x) * 4 + 3] > 200) { hit = true; if (y > headTop + 30) half = Math.max(half, Math.abs(x - X)); } } if (hit && y < top) top = y; }
+      FIT[id] = { top: Math.max(0, (headTop - top) / k), half: half / k };
+    } catch (e) { FIT[id] = { top: 0, half: BODY.w / 2 }; }
+  }
+  g.clearRect(0, 0, 800, 800); g.restore();
+}
+function fitOf(id) { return FIT[id] || { top: 0, half: BODY.w / 2 }; }
+const ACC = {
+  cap: { name: 'Basecap', slot: 'kopf', price: 120, draw: (bx, by, hx, hy, t, f) => {
+    const top = hy - Math.max(0, f.top - 6), dx = -DEPTH * t;
+    g.lineWidth = 4; g.strokeStyle = '#111';
+    cube(hx + 14 + 4 * t, top - 40, HEAD.w - 28, 46, DEPTH * 0.9, mkPal('#2f6fe0', '#4a86f0'), true, t);
+    g.fillStyle = '#245ac0'; g.beginPath(); g.moveTo(hx + 30 + 4 * t, top + 6); g.lineTo(hx + HEAD.w - 30 + 4 * t, top + 6); g.lineTo(hx + HEAD.w - 10 + 4 * t + dx * -0.6, top + 22); g.lineTo(hx + 10 + 4 * t + dx * -0.6, top + 22); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#fff'; g.font = '900 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BoB', hx + HEAD.w / 2 + 4 * t, top - 17);
+  } },
+  partyhut: { name: 'Partyhut', slot: 'kopf', price: 60, draw: (bx, by, hx, hy, t, f) => {
+    const top = hy - Math.max(0, f.top - 10), cx = hx + HEAD.w / 2 + 10 * t;
+    g.lineWidth = 4; g.strokeStyle = '#111'; g.fillStyle = '#ff5ac8'; g.beginPath(); g.moveTo(cx - 46, top + 4); g.lineTo(cx, top - 120); g.lineTo(cx + 46, top + 4); g.closePath(); g.fill(); g.stroke();
+    g.save(); g.clip(); g.fillStyle = '#ffe14a'; for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx - 20 + i * 14, top - 20 - i * 26, 8, 0, 7); g.fill(); } g.restore();
+    g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(cx, top - 124, 12, 0, 7); g.fill(); g.stroke();
+  } },
+  heiligenschein: { name: 'Heiligenschein', slot: 'kopf', price: 400, draw: (bx, by, hx, hy, t, f) => {
+    const tt = performance.now() / 1000, top = hy - f.top - 30 + Math.sin(tt * 2) * 6, cx = hx + HEAD.w / 2 + 10 * t;
+    g.shadowColor = '#fff6a0'; g.shadowBlur = 24; g.lineWidth = 14; g.strokeStyle = '#ffe14a'; g.beginPath(); g.ellipse(cx, top, 90, 24, 0, 0, 7); g.stroke();
+    g.lineWidth = 4; g.strokeStyle = '#fff8c0'; g.stroke(); g.shadowBlur = 0;
+  } },
+  kopfhoerer: { name: 'Kopfhörer', slot: 'kopf', price: 180, draw: (bx, by, hx, hy, t, f) => {
+    const top = hy - Math.max(0, f.top - 4);
+    g.lineWidth = 14; g.strokeStyle = '#222'; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx - 8, hy + 80); g.bezierCurveTo(hx - 8, top - 60, hx + HEAD.w + 8, top - 60, hx + HEAD.w + 8, hy + 80); g.stroke(); g.lineCap = 'butt';
+    g.lineWidth = 4; g.strokeStyle = '#111'; for (const s of [-1, 1]) { const x = s < 0 ? hx - 26 : hx + HEAD.w - 8; cube(x, hy + 56, 34, 70, DEPTH * 0.6, mkPal('#e0262b', '#f04a4a'), true, t); }
+  } },
+  sonnenbrille: { name: 'Sonnenbrille', slot: 'gesicht', price: 90, draw: (bx, by, hx, hy, t, f) => {
+    g.lineWidth = 4; g.strokeStyle = '#111'; g.fillStyle = '#111';
+    for (const ex of [hx + 66, hx + 174]) { g.beginPath(); g.roundRect(ex - 40, hy + 46, 80, 40, [4, 4, 18, 18]); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(ex - 30, hy + 52, 18, 6); g.fillStyle = '#111'; }
+    g.lineWidth = 8; g.beginPath(); g.moveTo(hx + 106, hy + 56); g.lineTo(hx + 134, hy + 56); g.stroke(); g.beginPath(); g.moveTo(hx + 26, hy + 54); g.lineTo(hx - 2, hy + 50); g.moveTo(hx + 214, hy + 54); g.lineTo(hx + HEAD.w + 2, hy + 50); g.stroke();
+  } },
+  schnurrbart: { name: 'Schnurrbart', slot: 'gesicht', price: 50, draw: (bx, by, hx, hy, t, f) => {
+    const cx = hx + HEAD.w / 2, y = hy + 104; g.fillStyle = '#3a2410'; g.strokeStyle = '#111'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(cx, y - 6); g.bezierCurveTo(cx - 30, y - 22, cx - 70, y - 6, cx - 78, y + 12); g.bezierCurveTo(cx - 50, y + 4, cx - 24, y + 10, cx, y + 4); g.bezierCurveTo(cx + 24, y + 10, cx + 50, y + 4, cx + 78, y + 12); g.bezierCurveTo(cx + 70, y - 6, cx + 30, y - 22, cx, y - 6); g.fill(); g.stroke();
+  } },
+  goldkette: { name: 'Goldkette', slot: 'hals', price: 500, draw: (bx, by, hx, hy, t, f) => {
+    const tt = performance.now() / 1000; g.lineWidth = 3; g.strokeStyle = '#7a5a00';
+    for (let i = 0; i <= 14; i++) { const u = i / 14, x = bx + 40 + u * (BODY.w - 80), y = by + 6 + Math.sin(u * Math.PI) * 46; g.fillStyle = i % 2 ? '#ffd21a' : '#e6b422'; g.beginPath(); g.ellipse(x, y, 9, 6, 0, 0, 7); g.fill(); g.stroke(); }
+    const cx = bx + BODY.w / 2, cy = by + 66; g.fillStyle = '#ffd21a'; g.beginPath(); g.arc(cx, cy, 20, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('$', cx, cy + 1);
+    g.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(tt * 4)})`; g.beginPath(); g.arc(cx - 8, cy - 8, 3, 0, 7); g.fill();
+  } },
+  fliege: { name: 'Fliege', slot: 'hals', price: 70, draw: (bx, by, hx, hy, t, f) => {
+    const cx = bx + BODY.w / 2, cy = by + 16; g.fillStyle = '#e0262b'; g.strokeStyle = '#111'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx - 40, cy - 18); g.lineTo(cx - 40, cy + 18); g.closePath(); g.fill(); g.stroke(); g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 40, cy - 18); g.lineTo(cx + 40, cy + 18); g.closePath(); g.fill(); g.stroke(); g.beginPath(); g.arc(cx, cy, 8, 0, 7); g.fill(); g.stroke();
+  } },
+  rucksack: { name: 'Rucksack', slot: 'ruecken', price: 150, back: (bx, by, hx, hy, t, f) => {
+    const dx = -DEPTH * t, dy = -DEPTH * 0.55; g.lineWidth = 4; g.strokeStyle = '#111';
+    cube(bx + 30 + dx * 2.2, by - 10 + dy * 2.2, BODY.w - 60, BODY.h + 4, DEPTH * 1.4, mkPal('#2fa84f', '#3cc060'), true, t);
+  }, draw: (bx, by, hx, hy, t, f) => {
+    g.strokeStyle = '#1e7a38'; g.lineWidth = 14; for (const x of [bx + 50, bx + BODY.w - 50]) { g.beginPath(); g.moveTo(x, by - 2); g.lineTo(x + (x < 0 ? -6 : 6), by + 90); g.stroke(); }
+  } },
+  umhang: { name: 'Umhang', slot: 'ruecken', price: 300, back: (bx, by, hx, hy, t, f) => {
+    const tt = performance.now() / 1000, hw = Math.max(BODY.w / 2, f.half) + 26, wav = Math.sin(tt * 3) * 10, dx = -DEPTH * t;
+    g.fillStyle = '#8a1a2a'; g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.moveTo(-BODY.w / 2 + 10 + dx, by - 6); g.lineTo(BODY.w / 2 - 10 + dx, by - 6); g.quadraticCurveTo(hw + 20 + dx, by + 60, hw + dx + wav, by + BODY.h + 40); g.lineTo(-hw + dx + wav, by + BODY.h + 40); g.quadraticCurveTo(-hw - 20 + dx, by + 60, -BODY.w / 2 + 10 + dx, by - 6); g.closePath(); g.fill(); g.stroke();
+  }, draw: (bx, by, hx, hy, t, f) => { g.fillStyle = '#ffd21a'; g.strokeStyle = '#111'; g.lineWidth = 3; for (const x of [bx + 22, bx + BODY.w - 22]) { g.beginPath(); g.arc(x, by + 10, 11, 0, 7); g.fill(); g.stroke(); } } },
+};
+function accWorn() { const a = wear.acc || {}; return Object.values(a).filter(k => ACC[k]); }
 // Bob-Figur: Fußpunkt (x, y), Maßstab k, Drehung t
-function drawBobFig(x, y, k, t, hop, sq, outfit, shadow) {
+function drawBobFig(x, y, k, t, hop, sq, outfit, shadow, accs) {
   if (shadow) {
     g.fillStyle = 'rgba(0,0,0,.22)';
     g.beginPath(); g.ellipse(x - DEPTH * k * 0.4 * t, y + 2 * k * 1.5, BODY.w * k * 0.6 + hop * 0.5, 14 * k * 1.5, 0, 0, Math.PI * 2); g.fill();
@@ -3294,6 +3368,8 @@ function drawBobFig(x, y, k, t, hop, sq, outfit, shadow) {
   const bx = -BODY.w / 2, by = -BODY.h, hx = -HEAD.w / 2, hy = by - HEAD.h + 2;
   const reset = () => { g.lineWidth = 4.5; g.strokeStyle = '#111'; g.lineJoin = 'round'; g.lineCap = 'butt'; };
   if (of.custom) { of.custom(t, k); g.restore(); return; }
+  const AC = (accs || []).map(a => ACC[a]).filter(Boolean), F = AC.length ? fitOf(outfit) : null;
+  for (const a of AC) if (a.back) { g.save(); a.back(bx, by, hx, hy, t, F); g.restore(); reset(); }
   if (of.back) { g.save(); of.back(bx, by, hx, hy, t); g.restore(); reset(); }
   cube(bx, by, BODY.w, BODY.h, DEPTH, of.bp || outfitPal(outfit), true, t);
   if (of.apron) {
@@ -3309,6 +3385,7 @@ function drawBobFig(x, y, k, t, hop, sq, outfit, shadow) {
   const tc = of.textCol, tx = of.noText ? null : tc ? tinted2(text, tc) : text;
   if (tx && text.complete && text.width) g.drawImage(tx, bx + 10, by + 3);
   if (of.front) { g.save(); of.front(bx, by, hx, hy, t); g.restore(); }
+  for (const sl of ['ruecken', 'hals', 'gesicht', 'kopf']) for (const a of AC) if (a.slot === sl && a.draw) { g.save(); reset(); a.draw(bx, by, hx, hy, t, F); g.restore(); }
   g.restore();
 }
 function drawBob() {
@@ -3316,7 +3393,7 @@ function drawBob() {
   const s = scaleAt(bob.y), k = BASE_W / BODY.w * s;
   const hop = bob.moving ? -Math.abs(Math.sin(bob.phase)) * 9 * s : Math.sin(bob.phase * 0.5) * 1.2 * s;
   const sq = bob.moving ? 1 - Math.abs(Math.sin(bob.phase)) * 0.03 : 1;
-  drawBobFig(bob.x, bob.y, k, bob.turn, hop, sq, wear.on, true);
+  drawBobFig(bob.x, bob.y, k, bob.turn, hop, sq, wear.on, true, accWorn());
 }
 
 // Steuerung
@@ -3360,9 +3437,10 @@ function wrPet() { return owned[wr.pi] || null; }
 function wrItems() {
   if (wr.mode === 'pet') { const p = wrPet(); return p ? petWearOf(p).owned.filter(k => PET_OUTFITS[k]) : []; }
   if (wr.mode === 'shop') return Object.keys(MARKT_KLEIDER);
+  if (wr.mode === 'acc') return (wear.accOwned || []).filter(k => ACC[k]);
   return wear.owned.filter(k => OUTFITS[k]);
 }
-function wrOn() { return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
+function wrOn() { if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
 function wrMaxScroll() { return Math.max(0, Math.ceil(wrItems().length / WR.cols) - WR.rows); }
 function openWardrobe(mode) {
   wr.mode = mode || 'bob'; wr.open = true; wr.msg = ''; wr.pi = Math.max(0, owned.indexOf(activePet));
@@ -3378,6 +3456,7 @@ const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CL
 function wrEquip(i) {
   const k = wrItems()[i]; if (!k) return; wr.sel = i; wr.msg = '';
   if (wr.mode === 'shop' && !wear.owned.includes(k)) return;
+  if (wr.mode === 'acc') { wear.acc = wear.acc || {}; const sl = ACC[k].slot; if (wear.acc[sl] === k) delete wear.acc[sl]; else wear.acc[sl] = k; saveWear(); return; }
   if (wr.mode === 'pet') { petWearOf(wrPet()).on = k; savePetWear(); } else { wear.on = k; saveWear(); }
 }
 function wrSetScroll(v) { wr.scroll = Math.max(0, Math.min(wrMaxScroll(), Math.round(v))); }
@@ -3390,7 +3469,9 @@ function wrBuyNow() {
   toast = { text: OUTFITS[k].name + ' gekauft und angezogen!', t: 3 };
 }
 function wrBuyBtn() { const px = (WR_TRACK.x + 40 + SXR) / 2; return { x: px - 170, y: 800, w: 340, h: 64 }; }
+function wrTab(i) { return { x: XL + 600 + i * 230, y: 40, w: 215, h: 64 }; }
 function wardrobeClick(x, y) {
+  if (wr.mode === 'bob' || wr.mode === 'acc') for (const [m, i] of [['bob', 0], ['acc', 1]]) { const b = wrTab(i); if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { wr.mode = m; wr.sel = 0; wr.scroll = 0; return; } }
   if (wr.mode === 'shop') { const b = wrBuyBtn(); if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { wrBuyNow(); return; } }
   if (Math.hypot(x - WR_CLOSE.x, y - WR_CLOSE.y) < WR_CLOSE.r + 8) { wr.open = false; return; }
   if (x > WR_TRACK.x - 10 && x < WR_TRACK.x + WR_TRACK.w + 10 && y > WR_TRACK.y && y < WR_TRACK.y + WR_TRACK.h) {
@@ -3464,6 +3545,7 @@ function drawWardrobe() {
   // Titel-Schild
   g.fillStyle = '#ffe066'; g.beginPath(); g.moveTo(XL + 60, 22); g.lineTo(XL + 560, 22); g.lineTo(XL + 540, 122); g.lineTo(XL + 80, 122); g.closePath(); g.fill(); g.stroke();
   marker(wr.mode === 'pet' ? 'Haustiere' : wr.mode === 'shop' ? 'Klamotten' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
+  if (wr.mode === 'bob' || wr.mode === 'acc') for (const [m, lab, i] of [['bob', 'Outfits', 0], ['acc', 'Accessoires', 1]]) { const b = wrTab(i), on = wr.mode === m; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = on ? '#13f000' : '#fff'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 16); g.fill(); g.stroke(); marker(lab, b.x + b.w / 2, b.y + b.h / 2 + 2, 28, '#111'); }
   if (wr.mode === 'shop') {
     const ct = 'Bargeld: ' + money(Math.floor(bank.cash || 0)); g.font = '800 26px system-ui'; const cw = g.measureText(ct).width + 70;
     g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 600, 46, cw, 54, 27); g.fill(); uiIcon('cash', XL + 630, 73, 30, '#5fd36a');
@@ -3479,7 +3561,9 @@ function drawWardrobe() {
     g.fillRect(x, y, WR.cw, WR.ch); g.strokeRect(x, y, WR.cw, WR.ch);
     if (k) {
       if (wr.mode === 'pet') drawPetCube(wrPet(), x + WR.cw / 2, y + WR.ch - 14, 96, 1, 0);
-      else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false);
+      else if (wr.mode === 'acc') drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [k]);
+      else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false, accWorn());
+      if (wr.mode === 'acc' && accWorn().includes(k)) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
       if (k === wrOn()) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
       if (wr.mode === 'shop') {
         const have = wear.owned.includes(k), lt = have ? 'hast du' : money(MARKT_KLEIDER[k]);
@@ -3497,7 +3581,8 @@ function drawWardrobe() {
   g.fillStyle = '#fff'; g.beginPath(); g.roundRect(WR_TRACK.x - 3, ty, WR_TRACK.w + 6, th, 6); g.fill(); g.stroke();
   // Vorschau
   const b1 = Math.sin(t * 1.7) * 3, px = (WR_TRACK.x + 40 + XR) / 2;
-  if (wr.mode !== 'pet') drawBobFig(px, 770, 1.3, 1, b1, 1, items[wr.sel] || wear.on, true);
+  if (wr.mode === 'acc') { drawBobFig(px, 770, 1.3, 1, b1, 1, wear.on, true, accWorn()); const k = items[wr.sel]; if (k) { marker(ACC[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(ACC_SLOTS[ACC[k].slot] + (accWorn().includes(k) ? ' · angezogen (nochmal klicken = ausziehen)' : ' · klicken zum Anziehen'), px, 196); } else marker('Noch keine Accessoires – gibt es in bobnet', px, 420, 30, '#fff'); }
+  else if (wr.mode !== 'pet') drawBobFig(px, 770, 1.3, 1, b1, 1, items[wr.sel] || wear.on, true, accWorn());
   else if (!wrPet()) { marker('Du hast noch kein Tier', px, 420, 40, '#fff'); wr.ui = null; }
   else {
     const p = wrPet();
@@ -4681,6 +4766,7 @@ const ADMIN = {
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
+    ['Alle Accessoires', '#9b5de5', () => { wear.accOwned = Object.keys(ACC); saveWear(); }],
     ['Kalender', '#e0262b', () => { lief.garten = true; lief.kalender = true; saveLief(); gartenSetup(); }],
     ['Pässe + 1000 XP', '#ffe14a', () => { lief.kalender = true; lief.paesse = true; saveLief(); passXp(1000); }],
     ['Jahreszeit wechseln', '#5fb8ff', () => { seasonOverride = ((seasonOverride != null ? seasonOverride : seasonIdx()) + 1) % 4; toast = { text: 'Jahreszeit: ' + season().name, t: 2 }; }],
@@ -5131,6 +5217,7 @@ const WEB_ITEMS = [
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
+for (const [k, a] of Object.entries(ACC)) WEB_ITEMS.push({ id: 'acc_' + k, acc: k, cat: 'acc', name: a.name, price: a.price, desc: ['Accessoire (' + ACC_SLOTS[a.slot] + ')', 'passt auf jedes Outfit'], once: true });
 const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
 let lief = { orders: [], pkgs: [], snacks: {} };
 try { const d = JSON.parse(localStorage.getItem('bob-lieferung') || 'null'); if (d) lief = Object.assign(lief, d); } catch (e) {}
@@ -5142,6 +5229,7 @@ function webPay(it) { if (webCur(it) === 'bar') { bank.cash = (bank.cash || 0) -
 function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || webCur(it) === web.filter); }
 function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now(); keys.clear(); joy.on = false; }
 function webOrder(it) {
+  if (it.acc) { wear.accOwned = wear.accOwned || []; if (wear.accOwned.includes(it.acc)) return; if (webHave(it) < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; } webPay(it); wear.accOwned.push(it.acc); saveWear(); web.msg = it.name + ' gekauft! Anziehen im Kleiderschrank unter „Accessoires“.'; web.msgT = 4; return; }
   if (it.once) {
     if (lief[it.id]) return;
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
@@ -5198,6 +5286,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id.startsWith('acc_')) { g.restore(); g.save(); drawBobFig(cx, cy + 50, sz / 640, 0.6, 0, 1, 'gruen', false, [id.slice(4)]); g.restore(); return; }
   if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
@@ -5253,7 +5342,7 @@ function drawWeb(dt) {
   its.forEach((it, i) => {
     const r = Math.floor(i / L.cols) - web.scroll, c = i % L.cols, x = P.x + 25 + c * (L.cw + L.gap), y = L.gy + r * (L.ch + 14);
     if (y > P.y + P.h || y + L.ch < L.gy) return;
-    const own = it.once && lief[it.id], lock = it.needs && !lief[it.needs], ok = !own && !lock && webHave(it) >= it.price, hov = web.hover === it.id;
+    const own = it.acc ? (wear.accOwned || []).includes(it.acc) : it.once && lief[it.id], lock = it.needs && !lief[it.needs], ok = !own && !lock && webHave(it) >= it.price, hov = web.hover === it.id;
     g.fillStyle = '#fff'; g.fillRect(x, y, L.cw, 132); webPic(it.id, x + L.cw / 2, y + 66, 110);
     outl(it.name, x + L.cw / 2, y + 160, '800 25px "Trebuchet MS", system-ui', '#fff', 5);
     outl('Preis: ' + it.price + ' €' + (webCur(it) === 'bar' ? ' bar' : ''), x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', webCur(it) === 'bar' ? '#ffd23a' : '#5aff3a', 5);
@@ -6564,6 +6653,7 @@ function drawSeasonAir(dt) {
 }
 // Große Updates
 const BIG_UPDATES = [
+  ['1.40', 'Accessoires', 'Neue Kleidungsart für Kopf, Gesicht, Hals und Rücken – passt auf jedes Outfit'],
   ['1.39', 'Bob-Pass Outfits', 'König, 100, Oma, Opa, Timmy, Mary Jane, Bobi und der animierte Blitzgott'],
   ['1.38', 'Pässe & Bob-Pass', 'Pässe-Tab im Kalender, Bob-Pass mit 100 Leveln'],
   ['1.37', 'Kalender & Jahreszeiten', 'Kalender im Garten, 4 Jahreszeiten mit eigenem Aussehen'],
@@ -7424,6 +7514,7 @@ function fit() {
 addEventListener('resize', fit); fit();
 let last = performance.now(), doorLock = false;
 function frame(t) {
+  if (!FIT_DONE && t > 600) measureFits();
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   // große Räume: Kamera folgt Bob
   { const RW = ROOMS[cur].wide; XL = SXL; XR = SXR; VW = SVW; camX = 0;
