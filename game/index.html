@@ -106,6 +106,7 @@ const ROOMS = {
                 { type: 'zwand', x: 395, w: 20, base: 700, depth: 260 }, { type: 'zwand', x: 785, w: 20, base: 700, depth: 260 },
                 { type: 'gitter', x: 20, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 310, w: 90, base: 700, h: 400, depth: 24 },
                 { type: 'gitter', x: 410, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 700, w: 90, base: 700, h: 400, depth: 24 },
+                { type: 'gitter', x: 500, w: 200, base: 700, h: 400, depth: 24, jailDoor: true },
                 { type: 'gitter', x: 800, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 1090, w: 90, base: 700, h: 400, depth: 24 },
               ] },
   haltestelle: { name: 'Bushaltestelle', outside: true, kind: 'street', grass: true, exits: { l: 'draussen', r: 'polizeiplatz' }, maxY: H - 175, objs: [{ type: 'gulli', x: 420, y: 672, base: 600, to: ['kanal5', 800] }],
@@ -252,6 +253,7 @@ function drawZellen(R) {
 }
 function drawGitter(o) {
   const top = o.base - o.h;
+  if (o.jailDoor) { g.fillStyle = '#c9a54a'; g.beginPath(); g.arc(o.x + o.w - 26, top + 200, 12, 0, 7); g.fill(); }
   g.lineWidth = 5; g.strokeStyle = LINE;
   g.fillStyle = '#5d646c'; g.fillRect(o.x, top, o.w, 16); g.strokeRect(o.x, top, o.w, 16); g.fillRect(o.x, o.base - 12, o.w, 12); g.strokeRect(o.x, o.base - 12, o.w, 12);
   g.strokeStyle = '#3a3f44'; g.lineWidth = 9; for (let x = o.x + 14; x < o.x + o.w - 6; x += 32) { g.beginPath(); g.moveTo(x, top + 16); g.lineTo(x, o.base - 12); g.stroke(); }
@@ -603,7 +605,7 @@ function drawObj(o) {
   else if (o.type === 'schatz') drawSchatz(o);
   else if (o.type === 'npc') drawNpc(o);
   else if (o.type === 'theke') drawTheke(o);
-  else if (o.type === 'gitter') drawGitter(o);
+  else if (o.type === 'gitter') { if (!o.jailDoor || jailed()) drawGitter(o); }
   else if (o.type === 'zwand') drawZwand(o);
   else if (o.type === 'stand') drawStand(o);
   else if (o.type === 'bar') drawBar(o);
@@ -947,6 +949,65 @@ addEventListener('keydown', e => {
   if (chase.mode === 'car') { if (!chase.done && (e.code === 'ArrowLeft' || e.code === 'KeyA')) chase.lane = Math.max(0, chase.lane - 1); else if (!chase.done && (e.code === 'ArrowRight' || e.code === 'KeyD')) chase.lane = Math.min(2, chase.lane + 1); return; }
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') chaseJump();
 }, true);
+// ---------- Haft: länger bei jedem Mal, bleibt nach Neustart, Wache zum Bestechen ----------
+let jail = { until: 0, count: 0, free: true };
+try { const j = JSON.parse(localStorage.getItem('bob-knast') || 'null'); if (j) jail = Object.assign(jail, j); } catch (e) {}
+function saveJail() { try { localStorage.setItem('bob-knast', JSON.stringify(jail)); } catch (e) {} }
+function jailed() { return gt.T < jail.until; }
+const guard = { state: 'off', x: 0, y: 790, next: 25, t: 0, say: '', sayT: 0, tried: false };
+function jailTick(dt) {
+  if (!jail.free && !jailed()) { jail.free = true; saveJail(); guard.state = 'off'; if (cur === 'zellen') toast = { text: 'Deine Zeit ist um – die Zellentür ist offen. Du bist frei!', t: 4.5 }; }
+  if (cur !== 'zellen' || !jailed()) { if (guard.state !== 'off' && cur !== 'zellen') guard.state = 'off'; }
+  if (guard.sayT > 0) guard.sayT -= dt;
+  if (cur !== 'zellen') return;
+  if (guard.state === 'off') {
+    if (!jailed()) return;
+    guard.next -= dt; if (guard.next <= 0) { guard.state = 'in'; guard.x = XR + 120; guard.tried = false; }
+  } else if (guard.state === 'in') {
+    guard.x -= 260 * dt; if (guard.x <= 830) { guard.x = 830; guard.state = 'wait'; guard.t = 14; guard.say = ['Na, gefällt dir die Aussicht?', 'Ruhe da drin!', 'Kontrollgang …', 'Noch ein bisschen sitzen, Freundchen.'][Math.floor(Math.random() * 4)]; guard.sayT = 3; }
+  } else if (guard.state === 'wait') {
+    guard.t -= dt; if (guard.t <= 0) guard.state = 'out';
+  } else if (guard.state === 'out') {
+    guard.x += 260 * dt; if (guard.x > XR + 150) { guard.state = 'off'; guard.next = 40 + Math.random() * 40; }
+  }
+}
+function drawGuard() {
+  const s = scaleAt(guard.y), k = BASE_W / BODY.w * s, t = performance.now() / 1000, mv = guard.state === 'in' || guard.state === 'out';
+  drawBobFig(guard.x, guard.y, k, guard.state === 'out' ? 1 : -1, mv ? -Math.abs(Math.sin(t * 11)) * 8 * s : Math.sin(t * 2) * 1.2 * s, 1, 'polizist', true);
+  if (guard.sayT > 0) {
+    g.font = '700 22px system-ui'; const tw = g.measureText(guard.say).width + 34, bx = guard.x - tw / 2, by = guard.y - 330 * s - 60;
+    g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 46, 16); g.fill(); g.stroke();
+    g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(guard.say, guard.x, by + 24);
+  }
+}
+function nearGuard() { return cur === 'zellen' && guard.state === 'wait' && !guard.tried && Math.abs(bob.x - guard.x) < 230 && !fade.dir; }
+function nearPritsche() { return cur === 'zellen' && jailed() && bob.x > 420 && bob.x < 640 && bob.y < 640 && !fade.dir; }
+function openBribe() {
+  const m = Math.floor(bank.money);
+  menu.kind = 'bribe'; menu.title = 'Wache bestechen – Konto: ' + money(m);
+  menu.items = [[100, 25], [300, 50], [800, 80]].map(([v, p]) => ({ label: money(v) + ' anbieten (' + p + ' % Chance)', bribe: v, chance: p / 100, disabled: m < v, tag: m < v ? 'zu wenig' : null, tagCol: '#c0392b' }));
+  menu.items.push({ label: 'Lieber nichts sagen' });
+  MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now();
+  menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear();
+}
+function doBribe(it) {
+  guard.tried = true; guard.t = Math.min(guard.t, 2.5);
+  if (Math.random() < it.chance) {
+    bank.money -= it.bribe; bank.log.push({ t: 'Bestechung', v: -it.bribe }); saveBank();
+    jail.until = gt.T; saveJail(); guard.say = 'Ich hab nichts gesehen … schnell weg!'; guard.sayT = 3;
+    toast = { text: 'Bestochen! Die Zellentür ist offen.', t: 4 };
+  } else {
+    jail.until += 1440; saveJail(); guard.say = 'Netter Versuch! Dafür gibt es einen Tag mehr.'; guard.sayT = 3.5;
+    toast = { text: 'Bestechung abgelehnt – einen Tag länger in Haft!', t: 4 };
+  }
+}
+function jailText() { const d = Math.floor(jail.until / 1440); return (d === gDay() ? 'heute' : d === gDay() + 1 ? 'morgen' : WD[d % 7]) + ' ' + hm(jail.until % 1440); }
+function drawJailHud() {
+  if (cur !== 'zellen' || !jailed() || phone.open || menu.open) return;
+  const tx = 'In Haft bis ' + jailText() + ' Uhr'; g.font = '800 22px system-ui'; const w = g.measureText(tx).width + 50;
+  g.fillStyle = 'rgba(255,122,26,.92)'; g.beginPath(); g.roundRect(W / 2 - w / 2, 16, w, 46, 23); g.fill();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tx, W / 2, 40);
+}
 function chaseEnd() {
   chase.on = false;
   if (chase.done === 'frei') {
@@ -955,9 +1016,11 @@ function chaseEnd() {
     toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
   } else {
     const lost = Math.floor(bank.cash || 0); bank.cash = 0; const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
-    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); go('zellen', [600, 600]);
+    jail.count++; const days = Math.min(5, jail.count);
+    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); jail.until = gt.T + (days - 1) * 1440; jail.free = days <= 1; saveJail(); go('zellen', [600, 600]);
+    guard.state = 'off'; guard.next = 20;
     if (!wear.owned.includes('gefangener')) wear.owned.push('gefangener'); wear.on = 'gefangener'; saveWear();
-    toast = { text: 'Festgenommen! Eine Nacht im Gefängnis – jetzt bist du wieder frei, aber in Orange. Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
+    toast = { text: 'Festgenommen (' + jail.count + '. Mal)! ' + (days <= 1 ? 'Eine Nacht in der Zelle – jetzt bist du frei.' : days + ' Tage Haft.') + ' Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
   }
 }
 // Flucht im Fluchtwagen (einfacher): von oben, Spur wechseln
@@ -2168,7 +2231,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !tres.on && !chase.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub()); }
+function canInteract() { return !tres.on && !chase.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -2349,6 +2412,8 @@ function drawWardrobe() {
 }
 let toast = { text: '', t: 0 };
 function openMenu() {
+  if (nearGuard()) { openBribe(); return; }
+  if (nearPritsche()) { sleepTo('morgen'); return; }
   if (nearDrop()) { dwPickup(nearDrop()); return; }
   if (nearRaub()) { startTresor(nearRaub()); return; }
   if (nearGulli()) { const o = nearGulli(); go(o.to[0], [o.to[1], FLOOR + 80]); return; }
@@ -2441,6 +2506,7 @@ function choose(i) {
   if (it.dest) bump('bus');
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
+  if (it.bribe) doBribe(it);
   if (it.mk || it.mw || it.mb) marktBuy(it);
   if (it.wd) { bank.money -= it.wd; bank.cash = (bank.cash || 0) + it.wd; bank.log.push({ t: 'Abgehoben', v: -it.wd }); saveBank(); toast = { text: money(it.wd) + ' abgehoben – jetzt hast du es als Bargeld dabei.', t: 3.5 }; }
   if (it.dep) { bank.cash -= it.dep; bank.money += it.dep; bank.log.push({ t: 'Bargeld eingezahlt', v: it.dep }); saveBank(); toast = { text: money(it.dep) + ' eingezahlt – jetzt kannst du es ausgeben!', t: 3.5 }; }
@@ -2486,6 +2552,8 @@ function interactTarget() {
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
+  if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: 'Schlafen' };
   const dr = nearDrop();
   if (dr) return { x: dr.x, y: dr.y - 120 * scaleAt(dr.y) - (dr.kind === 'schmuggelB' ? 200 : 0), label: dr.kind === 'schmuggelB' ? 'Ware abgeben' : dr.kind === 'item' ? 'Abholen (' + money(dr.pay) + ' bar)' : 'Ware abholen' };
   if (nearRaub()) return { x: 1560, y: 120, label: 'Tresor knacken' };
@@ -2545,6 +2613,7 @@ const MENU_STYLE = {
   plant: { c: '#2fa84f', icon: 'sprout' },
   napf:  { c: '#e0262b', icon: 'food' },
   troph: { c: '#e0a10f', icon: 'trophy' },
+  bribe: { c: '#ff7a1a', icon: 'cash' },
   bank:  { c: '#1f4f9e', icon: 'coin' },
   markt: { c: '#3a2d4a', icon: 'cash' },
   bar:   { c: '#9b2a8a', icon: 'cash' },
@@ -2585,6 +2654,7 @@ function rowIcon(it) {
   if (it.foodBuy || it.fill) return ['food', FOODS[it.lvl].col];
   if (it.empty) return ['x', '#e0262b'];
   if (it.dep !== undefined) return ['cash', '#13a040'];
+  if (it.bribe) return ['cash', '#ff7a1a'];
   if (it.wd !== undefined) return ['cash', '#1f4f9e'];
   if (it.mk || it.mw || it.mb) return ['cash', '#3a2d4a'];
   if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
@@ -3022,7 +3092,7 @@ function furnBox(f) {
            left: f.x + (m.ext.fx0 - (m.L > 0 ? m.ext.d * KX : 0)) * s, right: f.x + (m.ext.fx1 + (m.L < 0 ? m.ext.d * KX : 0)) * s };
 }
 function solids(room) {
-  const list = (ROOMS[room].objs || []).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o.type === 'npc' ? { x: o.x - o.w / 2, w: o.w, base: o.base, depth: o.depth } : o);
+  const list = (ROOMS[room].objs || []).filter(o => !o.jailDoor || jailed()).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o.type === 'npc' ? { x: o.x - o.w / 2, w: o.w, base: o.base, depth: o.depth } : o);
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall) list.push(furnBox(f));
   return list;
 }
@@ -3478,6 +3548,7 @@ const ADMIN = {
     ['Schwarzmarkt', '#3a2d4a', tpTo('schwarzmarkt', [-350, FLOOR + 80])],
     ['Polizei', '#1f4f9e', tpTo('polizeiplatz', [600, 650])],
     ['Gefängnis', '#ff7a1a', tpTo('zellen', [600, 600])],
+    ['Aus der Haft entlassen', '#13b84a', () => { jail.until = gt.T; saveJail(); }],
   ],
 };
 function drawAdminApp(s) {
@@ -5211,7 +5282,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); checkJobs(); bankInterest(); dwTick(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -5223,14 +5294,16 @@ function frame(t) {
   if (st) list.push({ y: STOP_BASE, f: () => drawStop(st) });
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
+  if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
   if (!bob.hidden && !build.on) list.push({ y: bob.y + 0.01, f: drawBob });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawSleep(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawJailHud(); drawSleep(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
+if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
 requestAnimationFrame(frame);
 }
 </script>
