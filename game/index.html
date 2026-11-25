@@ -2136,7 +2136,11 @@ function openMenu() {
   if (nearSchalter()) {
     const c = Math.floor(bank.cash || 0);
     menu.kind = 'bank'; menu.title = 'Bank – Konto: ' + money(bank.money) + ' · Bargeld: ' + money(c) + ' · 2 % Zinsen pro Tag aufs Konto';
-    const it = [{ label: c > 0 ? 'Bargeld einzahlen' : 'Kein Bargeld dabei', dep: c, disabled: c < 1, tag: c > 0 ? money(c) : null }, { label: 'Tschüss' }];
+    const m = Math.floor(bank.money);
+    const it = [{ label: c > 0 ? 'Bargeld einzahlen' : 'Kein Bargeld dabei', dep: c, disabled: c < 1, tag: c > 0 ? money(c) : null }];
+    for (const v of [50, 200, 1000]) it.push({ label: money(v) + ' abheben', wd: v, disabled: m < v, tag: m < v ? 'zu wenig' : null, tagCol: '#c0392b' });
+    it.push({ label: 'Alles abheben', wd: m, disabled: m < 1, tag: m > 0 ? money(m) : null });
+    it.push({ label: 'Tschüss' });
     menu.items = it; MENU.row = Math.min(76, Math.floor((H - 220) / it.length)); menu.t0 = performance.now();
     menu.open = true; menu.sel = Math.max(0, it.findIndex(i => !i.disabled)); keys.clear(); return;
   }
@@ -2211,6 +2215,7 @@ function choose(i) {
   if (it.dest) bus = { x: XR + 80, mode: 'arrive', dest: it.dest, t: 0 };
   if (it.sleep) sleepTo(it.sleep);
   if (it.mk || it.mw || it.mb) marktBuy(it);
+  if (it.wd) { bank.money -= it.wd; bank.cash = (bank.cash || 0) + it.wd; bank.log.push({ t: 'Abgehoben', v: -it.wd }); saveBank(); toast = { text: money(it.wd) + ' abgehoben – jetzt hast du es als Bargeld dabei.', t: 3.5 }; }
   if (it.dep) { bank.cash -= it.dep; bank.money += it.dep; bank.log.push({ t: 'Bargeld eingezahlt', v: it.dep }); saveBank(); toast = { text: money(it.dep) + ' eingezahlt – jetzt kannst du es ausgeben!', t: 3.5 }; }
   if (it.put && menu.regal) { const i = menu.regal.slots.indexOf(null); if (i >= 0) { menu.regal.slots[i] = it.troph; saveFurn(); toast = { text: TROPHIES[it.troph].name + ' steht jetzt im Regal!', t: 3 }; } }
   if (it.take && menu.regal) { const i = menu.regal.slots.indexOf(it.troph); if (i >= 0) { menu.regal.slots[i] = null; saveFurn(); } }
@@ -2264,7 +2269,7 @@ function interactTarget() {
   if (npc) return { x: npc.x, y: npc.base - 330 * scaleAt(npc.base) - 70, label: 'Reden' };
   if (nearSchatz()) return { x: nearSchatz().x, y: nearSchatz().base - 190, label: 'Truhe öffnen' };
   const sc = nearSchalter();
-  if (sc) return { x: sc.x + sc.w / 2, y: sc.base - sc.h - 220, label: 'Einzahlen' };
+  if (sc) return { x: sc.x + sc.w / 2, y: sc.base - sc.h - 220, label: 'Bank' };
   const pk = nearPakete();
   if (pk) return { x: pk.fx, y: pk.base - 190, label: 'Pakete ausliefern' };
   const trg = nearFurn('trophaeenregal');
@@ -2353,6 +2358,7 @@ function rowIcon(it) {
   if (it.foodBuy || it.fill) return ['food', FOODS[it.lvl].col];
   if (it.empty) return ['x', '#e0262b'];
   if (it.dep !== undefined) return ['cash', '#13a040'];
+  if (it.wd !== undefined) return ['cash', '#1f4f9e'];
   if (it.mk || it.mw || it.mb) return ['cash', '#3a2d4a'];
   if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
   if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : 'sofa', '#2f6fe0'];
