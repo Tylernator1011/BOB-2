@@ -91,14 +91,14 @@ const ROOMS = {
               ] },
   // ----- Karte der Apokalypse -----
   apo_lager: { name: 'Dein Unterschlupf', apo: true, theme: 'lager', exits: { r: 'apo_strasse' }, wide: [-400, 1600], maxY: H - 60,
-              objs: [{ type: 'loot', k: 'tonne', x: 300, base: 560 }, { type: 'loot', k: 'kiste', x: 1200, base: 600 }, { type: 'versteck', k: 'busch', x: 0, w: 240, base: 720 }] },
+              objs: [{ type: 'loot', k: 'tonne', x: 300, base: 560 }, { type: 'loot', k: 'kiste', x: 1200, base: 600 }, { type: 'versteck', k: 'busch', x: 0, w: 240, base: 720 }, { type: 'versteck', k: 'haus', x: 710, w: 200, base: 530 }] },
   apo_strasse: { name: 'Zerstörte Straße', apo: true, theme: 'strasse', danger: 0.7, maxPat: 2, exits: { l: 'apo_lager', r: 'apo_markt' }, wide: [-800, 2400], maxY: H - 60,
               arches: [{ x: 1700, to: 'apo_park', ax: 0, label: 'Park' }],
-              objs: [{ type: 'versteck', k: 'auto', x: 200, w: 300, base: 700 }, { type: 'versteck', k: 'auto', x: 1100, w: 300, base: 760 }, { type: 'versteck', k: 'busch', x: -500, w: 260, base: 600 }, { type: 'versteck', k: 'busch', x: 2100, w: 240, base: 620 },
+              objs: [{ type: 'versteck', k: 'haus', x: -150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 200, w: 300, base: 700 }, { type: 'versteck', k: 'auto', x: 1100, w: 300, base: 760 }, { type: 'versteck', k: 'busch', x: -500, w: 260, base: 600 }, { type: 'versteck', k: 'busch', x: 2100, w: 240, base: 620 },
                      { type: 'loot', k: 'auto', x: 200, base: 700 }, { type: 'loot', k: 'auto', x: 1100, base: 760 }, { type: 'loot', k: 'kiste', x: 600, base: 560 }] },
   apo_markt: { name: 'Am Supermarkt', apo: true, theme: 'markt', danger: 0.6, maxPat: 1, exits: { l: 'apo_strasse' }, wide: [-600, 2000], maxY: H - 60,
               arches: [{ x: 750, to: 'apo_laden', ax: 600, label: 'Supermarkt' }],
-              objs: [{ type: 'versteck', k: 'auto', x: 1500, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: -300, w: 240, base: 640 }, { type: 'loot', k: 'auto', x: 1500, base: 720 }, { type: 'loot', k: 'kiste', x: 100, base: 580 }] },
+              objs: [{ type: 'versteck', k: 'haus', x: 1150, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1500, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: -300, w: 240, base: 640 }, { type: 'loot', k: 'auto', x: 1500, base: 720 }, { type: 'loot', k: 'kiste', x: 100, base: 580 }] },
   apo_laden: { name: 'Im Supermarkt', apo: true, theme: 'laden', danger: 0.45, maxPat: 1, exits: {}, wide: [-400, 1600], maxY: H - 60,
               arches: [{ x: 600, to: 'apo_markt', ax: 750, label: 'Ausgang' }],
               objs: [{ type: 'loot', k: 'regal', x: 0, base: 560 }, { type: 'loot', k: 'regal', x: 250, base: 560 }, { type: 'loot', k: 'regal', x: 1000, base: 560 }, { type: 'loot', k: 'kuehl', x: 1300, base: 560 }, { type: 'loot', k: 'kuehl', x: -250, base: 560 }, { type: 'versteck', k: 'busch', x: 1450, w: 200, base: 760 }] },
@@ -108,7 +108,7 @@ const ROOMS = {
                      { type: 'loot', k: 'fluss', x: 300, base: 760 }, { type: 'loot', k: 'fluss', x: 1800, base: 760 }, { type: 'loot', k: 'kiste', x: 1250, base: 600 }] },
   apo_camp: { name: 'Affen-Lager', apo: true, theme: 'camp', danger: 1, maxPat: 3, exits: {}, wide: [-600, 2200], maxY: H - 60,
               arches: [{ x: -300, to: 'apo_park', ax: 2050, label: 'Park' }],
-              objs: [{ type: 'versteck', k: 'busch', x: 200, w: 240, base: 640 }, { type: 'versteck', k: 'gras', x: 1000, w: 360, base: 720 }, { type: 'loot', k: 'kiste', x: 600, base: 580 }, { type: 'loot', k: 'kiste', x: 1400, base: 600 }, { type: 'loot', k: 'kiste', x: 1900, base: 580 }] },
+              objs: [{ type: 'versteck', k: 'haus', x: 400, w: 200, base: 530 }, { type: 'versteck', k: 'auto', x: 1700, w: 300, base: 720 }, { type: 'versteck', k: 'busch', x: 200, w: 240, base: 640 }, { type: 'versteck', k: 'gras', x: 1000, w: 360, base: 720 }, { type: 'loot', k: 'kiste', x: 600, base: 580 }, { type: 'loot', k: 'kiste', x: 1400, base: 600 }, { type: 'loot', k: 'kiste', x: 1900, base: 580 }] },
   laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'labor', at: [600, FLOOR + 80], bank: true } },
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
@@ -1190,10 +1190,12 @@ function apoFresh(id) { return { on: true, pet: id, t: 0, hp: 100, food: 100, wa
 function startApo(id) {
   labor = { pet: null, since: 0, paid: 0, baseLvl: 1 }; saveLabor();
   if (activePet === id) { activePet = owned.find(k => k !== id) || null; saveOwned(); }
-  apo = apoFresh(id); saveApo(); AP.en = []; AP.bul = []; AP.room = null; AP.bossE = null;
+  apo = apoFresh(id); saveApo(); if (!wear.owned.includes('apo_bob')) wear.owned.push('apo_bob'); wear.on = 'apo_bob'; saveWear(); AP.en = []; AP.bul = []; AP.room = null; AP.bossE = null;
   togglePhone(false); menu.open = false; go('apo_lager', [600, 640]);
 }
 function apoReset() {
+  AP.fx = []; AP.rec = 0; AP.aim = 0;
+  AP.storm = null; AP.drop = null; AP.act = null;
   AP.en = []; AP.bul = []; AP.shock = []; AP.room = cur; AP.patT = 40 + Math.random() * 40;
   const R = ROOMS[cur]; if (!R.apo || apo.boss) return;
   // beim Betreten: manchmal ist eine Patrouille da
@@ -1203,9 +1205,248 @@ function apoReset() {
 function apoPatrol(inside) {
   const R = ROOMS[cur], y0 = FLOOR + 80, y1 = (R.maxY || H - 20) - 20, w = XR - XL;
   const x0 = XL + 150 + Math.random() * (w - 700), y = y0 + Math.random() * (y1 - y0);
-  const e = { x: inside ? x0 + Math.random() * 400 : (Math.random() < 0.5 ? XL + 40 : XR - 40), y, x0, x1: x0 + 400 + Math.random() * 300, dir: Math.random() < 0.5 ? 1 : -1, st: 'patrol', hp: 3, id: Math.random() < 0.5 ? 'orangutan' : 'monke', fire: 1.5, lost: 0, hit: 0, wait: 0 };
+  const e = { x: inside ? x0 + Math.random() * 400 : (Math.random() < 0.5 ? XL + 40 : XR - 40), y, x0, x1: x0 + 400 + Math.random() * 300, dir: Math.random() < 0.5 ? 1 : -1, st: 'patrol', hp: 3, type: apeType(), fire: 1.5, lost: 0, hit: 0, wait: 0 };
+  e.hp = APE_TYPES[e.type].hp; if (e.type === 'scharf') { e.x1 = e.x0 + 120; }
   if (!inside) { e.x0 = Math.min(e.x0, e.x); e.x1 = Math.max(e.x1, e.x); e.dir = e.x < (XL + XR) / 2 ? 1 : -1; }
   AP.en.push(e);
+}
+// ----- Gegner-Arten (eckige Affen im Bob-Stil) -----
+const APE_TYPES = {
+  schimpanse: { name: 'Schimpanse', hp: 3, sp: 95, k: 1, fur: '#6b4a2a', face: '#d9b08a', gun: 'pistole', range: 430 },
+  gorilla:    { name: 'Gorilla', hp: 6, sp: 60, k: 1.3, fur: '#3a3a3e', face: '#8a8a90', gun: 'schrot', range: 380 },
+  flitzer:    { name: 'Flitzer', hp: 2, sp: 190, k: 0.78, fur: '#b8742e', face: '#f0d0a0', gun: null, range: 360 },
+  spaeher:    { name: 'Späher', hp: 3, sp: 85, k: 0.95, fur: '#5a4a3a', face: '#c9a888', gun: 'pistole', range: 430, scanner: true },
+  scharf:     { name: 'Scharfschütze', hp: 3, sp: 50, k: 1, fur: '#4a5a2a', face: '#c9b08a', gun: 'gewehr', range: 850 },
+};
+function apeType() {
+  const d = apoDay(), r = Math.random();
+  if (d >= 3 && r < 0.14) return 'scharf';
+  if (d >= 2 && r < 0.32) return 'spaeher';
+  if (r < 0.5) return 'flitzer';
+  if (d >= 2 && r < 0.68) return 'gorilla';
+  return 'schimpanse';
+}
+function apoDmg(v) { if (wear.on === 'apo_ruestung') v *= 0.7; apo.hp -= v; }
+function apoSheltered() { return ROOMS[cur].theme === 'laden' || apoObjs('versteck').some(o => (o.k === 'auto' || o.k === 'haus') && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55); }
+// ----- Animationen: Essen, Trinken, Verband, Looten, Überwältigen -----
+function apoAct(k, dur, done, data) { AP.act = { k, t: 0, dur, done, data }; keys.clear(); }
+function apoActTick(dt) { const a = AP.act; if (!a) return; a.t += dt; if (a.t >= a.dur) { AP.act = null; a.done && a.done(); } }
+function drawApoAct() {
+  const a = AP.act; if (!a) return;
+  const s = scaleAt(bob.y), p = Math.min(1, a.t / a.dur), hx = bob.x, hy = bob.y - 250 * s, t = performance.now() / 1000;
+  g.save(); g.lineWidth = 3; g.strokeStyle = LINE;
+  if (a.k === 'dose') {
+    const up = Math.sin(Math.min(1, p * 2) * Math.PI / 2), x = hx + 70 * s - up * 40 * s, y = hy + 120 * s - up * 50 * s;
+    g.fillStyle = '#c0392b'; g.fillRect(x - 16 * s, y - 22 * s, 32 * s, 44 * s); g.strokeRect(x - 16 * s, y - 22 * s, 32 * s, 44 * s); g.fillStyle = '#ddd'; g.fillRect(x - 16 * s, y - 22 * s, 32 * s, 8 * s);
+    if (p > 0.4) for (let i = 0; i < 4; i++) { const q = (t * 3 + i * 0.25) % 1; g.fillStyle = '#e0a060'; g.fillRect(x + (i - 2) * 10 * s, y - 30 * s - q * 40 * s, 6 * s, 6 * s); }
+    if (p > 0.4) marker('mampf', hx - 80 * s, hy - 20 * s + Math.sin(t * 12) * 4, 28, '#fff');
+  } else if (a.k === 'wasser') {
+    const tilt = Math.min(1, p * 2) * 1.8, x = hx + 60 * s, y = hy + 60 * s;
+    g.translate(x, y); g.rotate(-tilt); g.fillStyle = 'rgba(120,200,255,.9)'; g.beginPath(); g.roundRect(-12 * s, -30 * s, 24 * s, 50 * s, 6); g.fill(); g.stroke(); g.fillStyle = '#2f6fe0'; g.fillRect(-7 * s, -40 * s, 14 * s, 10 * s); g.setTransform(1, 0, 0, 1, -(SXL + camX), 0);
+    if (p > 0.4) for (let i = 0; i < 5; i++) { const q = (t * 2 + i * 0.2) % 1; g.fillStyle = 'rgba(120,200,255,.9)'; g.beginPath(); g.arc(hx + 30 * s - q * 20 * s, hy + 60 * s + q * 60 * s, 5 * s, 0, 7); g.fill(); }
+    if (p > 0.4) marker('gluck', hx - 80 * s, hy - 20 * s + Math.sin(t * 10) * 4, 28, '#bfe9ff');
+  } else if (a.k === 'medi') {
+    const ang = p * Math.PI * 4;
+    for (let i = 0; i < 3; i++) { const yy = bob.y - (60 + i * 50) * s, w = 190 * s; g.fillStyle = '#fff'; g.save(); g.globalAlpha = Math.min(1, p * 3 - i * 0.6); g.fillRect(bob.x - w / 2, yy - 8 * s, w, 16 * s); g.strokeRect(bob.x - w / 2, yy - 8 * s, w, 16 * s); g.restore(); }
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(bob.x + Math.cos(ang) * 110 * s, bob.y - 120 * s + Math.sin(ang) * 30 * s, 14 * s, 0, 7); g.fill(); g.stroke();
+    marker('+', hx + 90 * s, hy - 20 * s - p * 40, 50, '#3cff5a');
+  } else if (a.k === 'loot') {
+    const o = a.data, ox = o.x, oy = o.base - 100;
+    for (let i = 0; i < 6; i++) { const q = (t * 2.2 + i / 6) % 1; const px = ox + Math.sin(i * 2.3) * 70 * q, py = oy - Math.sin(q * Math.PI) * 120; g.fillStyle = ['#c0392b', '#2f6fe0', '#ffcc1a', '#8a8a8a'][i % 4]; g.fillRect(px - 8, py - 8, 16, 16); g.strokeRect(px - 8, py - 8, 16, 16); }
+    g.strokeStyle = '#fff'; g.lineWidth = 8; g.beginPath(); g.arc(bob.x, hy - 40 * s, 26, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2); g.stroke();
+    marker('such …', bob.x, hy - 90 * s, 26, '#fff');
+  } else if (a.k === 'takedown') {
+    const e = a.data; if (e) { for (let i = 0; i < 5; i++) { const an = t * 6 + i * 1.26; g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(e.x + Math.cos(an) * 50, e.y - 150 + Math.sin(an) * 18, 8, 0, 7); g.fill(); } }
+    marker(p < 0.5 ? 'HUH!' : 'POW!', bob.x, hy - 50 * s, 42, '#fff');
+  }
+  g.restore();
+}
+// ----- Events: Affensturm und Versorgungsabwurf -----
+function apoEventTick(dt) {
+  const R = ROOMS[cur];
+  if (AP.storm) {
+    const S = AP.storm; S.t += dt;
+    if (S.st === 'warn' && S.t > 6) { S.st = 'run'; S.t = 0; const y0 = FLOOR + 80, y1 = (R.maxY || H - 20) - 20; for (let i = 0; i < 18; i++) S.apes.push({ x: S.dir > 0 ? XL - 100 - i * 90 - Math.random() * 60 : XR + 100 + i * 90 + Math.random() * 60, y: y0 + Math.random() * (y1 - y0), v: 520 + Math.random() * 220, hop: 0, hit: false, kind: Math.random() < 0.6 ? 'flitzer' : 'schimpanse' }); }
+    if (S.st === 'run') {
+      if (S.inv > 0) S.inv -= dt;
+      const cars = apoObjs('versteck').filter(o => o.k === 'auto');
+      for (const a of S.apes) {
+        a.x += S.dir * a.v * dt;
+        const car = cars.find(o => Math.abs(a.x - o.x) < o.w / 2 + 40 && Math.abs(a.y - o.base) < 80);
+        a.hop = car ? Math.sin(Math.min(1, Math.max(0, (S.dir > 0 ? a.x - (car.x - car.w / 2 - 40) : (car.x + car.w / 2 + 40) - a.x) / (car.w + 80))) * Math.PI) * 170 : Math.abs(Math.sin(a.x / 40)) * 12;
+        if (!a.hit && Math.abs(a.x - bob.x) < 80 && Math.abs(a.y - bob.y) < 60 && !apoSheltered() && !(S.inv > 0)) { a.hit = true; S.inv = 0.8; apoDmg(12); AP.hurt = 0.4; bob.x += S.dir * 60; }
+      }
+      if (S.apes.every(a => (S.dir > 0 ? a.x > XR + 150 : a.x < XL - 150))) { AP.storm = null; toast = { text: 'Der Affensturm ist vorbei. Puh!', t: 3 }; }
+    }
+    return;
+  }
+  if (apo.boss || !R.danger || R.theme === 'laden') return;
+  AP.evT = (AP.evT == null ? 70 + Math.random() * 60 : AP.evT) - dt;
+  if (AP.evT <= 0) {
+    AP.evT = 80 + Math.random() * 90;
+    if (Math.random() < 0.55) { AP.storm = { st: 'warn', t: 0, dir: Math.random() < 0.5 ? 1 : -1, apes: [] }; }
+    else if (!AP.drop) { const x = XL + 300 + Math.random() * (XR - XL - 600); AP.drop = { x, y: FLOOR + 120 + Math.random() * 120, fall: 1 }; toast = { text: 'Ein Versorgungsabwurf! Hol ihn dir, bevor die Affen es tun.', t: 4 }; apoPatrol(false); }
+  }
+  if (AP.drop && AP.drop.fall > 0) AP.drop.fall = Math.max(0, AP.drop.fall - dt * 0.35);
+}
+function nearDropBox() { const d = AP.drop; return apo.on && d && d.fall <= 0 && !fade.dir && Math.abs(bob.x - d.x) < 110 && Math.abs(bob.y - d.y) < 90 && d; }
+function drawDropBox() {
+  const d = AP.drop; if (!d) return; const y = d.y - d.fall * 700, t = performance.now() / 1000;
+  g.lineWidth = 4; g.strokeStyle = LINE;
+  if (d.fall > 0) { g.fillStyle = '#e8e8e8'; g.beginPath(); g.arc(d.x, y - 170, 90, Math.PI, 0); g.fill(); g.stroke(); g.strokeStyle = '#555'; g.lineWidth = 2; for (const k of [-80, 0, 80]) { g.beginPath(); g.moveTo(d.x + k, y - 170); g.lineTo(d.x, y - 70); g.stroke(); } }
+  g.fillStyle = '#4a5a2a'; g.fillRect(d.x - 60, y - 80, 120, 80); g.lineWidth = 4; g.strokeStyle = LINE; g.strokeRect(d.x - 60, y - 80, 120, 80);
+  g.fillStyle = '#fff'; g.fillRect(d.x - 10, y - 74, 20, 68); g.fillRect(d.x - 54, y - 50, 108, 20);
+  if (d.fall <= 0) { g.fillStyle = `rgba(255,60,60,${0.5 + 0.5 * Math.sin(t * 6)})`; g.beginPath(); g.arc(d.x + 50, y - 90, 7, 0, 7); g.fill(); }
+}
+function drawStorm() {
+  const S = AP.storm; if (!S || S.st !== 'run') return;
+  for (const a of S.apes) drawApeModel({ x: a.x, y: a.y, type: a.kind, dir: S.dir, st: 'alert' }, a.hop, true);
+}
+// ----- Gefundene Outfits -----
+const APO_FINDS = ['apo_gasmaske', 'apo_ruestung', 'apo_tarn', 'apo_bandit'];
+function apoFindOutfit(chance) {
+  const left = APO_FINDS.filter(k => !wear.owned.includes(k)); if (!left.length || Math.random() > chance) return null;
+  const k = left[Math.floor(Math.random() * left.length)]; wear.owned.push(k); wear.on = k; saveWear(); return OUTFITS[k].name;
+}
+// ----- Eckiger Affe im Bob-Stil -----
+function apeGunPos(e) { const T = APE_TYPES[e.type] || APE_TYPES.schimpanse, s = scaleAt(e.y), k = BASE_W / BODY.w * s * T.k * 0.78; return { gx: e.x + (e.dir || 1) * 125 * k, gy: e.y - 105 * k, s: s * Math.max(0.9, T.k) * 0.95 }; }
+function drawApeModel(e, hopUp, noCone) {
+  const T = APE_TYPES[e.type] || APE_TYPES.schimpanse, s = scaleAt(e.y), k = BASE_W / BODY.w * s * T.k * 0.78, t = performance.now() / 1000;
+  const dir = e.dir || 1, moving = !(e.wait > 0), hop = (hopUp || 0) + (moving ? Math.abs(Math.sin(t * (T.sp / 12) + e.x * 0.01)) * 8 * s : 0);
+  if (!noCone && !e.boss) {
+    const range = T.range * (apoNight() > 0.5 ? 0.7 : 1), col = e.st === 'alert' ? '255,60,60' : e.st === 'search' ? '255,200,60' : T.scanner ? '80,255,140' : '255,255,180';
+    const cg = g.createLinearGradient(e.x, 0, e.x + dir * range, 0); cg.addColorStop(0, `rgba(${col},.28)`); cg.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = cg; g.beginPath(); g.moveTo(e.x, e.y - 60 * s); g.lineTo(e.x + dir * range, e.y - 150); g.lineTo(e.x + dir * range, e.y + 60); g.closePath(); g.fill();
+    if (T.gun === 'gewehr' && e.st === 'alert') { const P = apeGunPos(e), m = gunMuzzle('gewehr', P.gx, P.gy, dir, P.s, e.aim || 0); g.strokeStyle = 'rgba(255,30,30,.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(m.x, m.y); g.lineTo(bob.x, bob.y - 120 * scaleAt(bob.y)); g.stroke(); }
+  }
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(e.x, e.y + 2, 110 * k, 14 * k, 0, 0, 7); g.fill();
+  const fp = mkPal(T.fur, shade(T.fur, 0.15)), t2 = -dir;
+  g.save(); g.translate(e.x + DEPTH * k * 0.5 * t2, e.y - hop); g.scale(k, k); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
+  if (e.hit) g.filter = 'brightness(2)';
+  // Arme
+  cube(-150, -170, 40, 130, DEPTH, fp, true, t2); cube(110, -170, 40, 130, DEPTH, fp, true, t2);
+  // Körper
+  cube(-110, -170, 220, 170, DEPTH, fp, true, t2);
+  g.fillStyle = shade(T.fur, 0.35); g.fillRect(-70, -140, 140, 120); g.lineWidth = 3; g.strokeRect(-70, -140, 140, 120); g.lineWidth = 5;
+  // Kopf
+  const hy = -330;
+  cube(-100, hy, 200, 165, DEPTH, fp, true, t2);
+  g.fillStyle = T.face; g.beginPath(); g.roundRect(-70, hy + 30, 140, 120, 30); g.fill(); g.lineWidth = 4; g.stroke();
+  g.fillStyle = shade(T.face, -0.15); g.beginPath(); g.ellipse(0, hy + 118, 52, 28, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(-12, hy + 112, 5, 0, 7); g.arc(12, hy + 112, 5, 0, 7); g.fill();
+  g.beginPath(); g.moveTo(-20, hy + 134); g.lineTo(20, hy + 134); g.stroke();
+  g.fillStyle = e.st === 'alert' ? '#ff3b3b' : '#111'; g.beginPath(); g.arc(-34, hy + 66, 9, 0, 7); g.arc(34, hy + 66, 9, 0, 7); g.fill();
+  g.lineWidth = 7; g.beginPath(); g.moveTo(-56, hy + 44); g.lineTo(-16, hy + 56); g.moveTo(56, hy + 44); g.lineTo(16, hy + 56); g.stroke();
+  // Ausrüstung je nach Art
+  g.lineWidth = 4;
+  if (e.type === 'gorilla') cube(-108, hy - 34, 216, 40, DEPTH + 4, mkPal('#3a4a2a', '#4a5a36'), true, t2);
+  else if (e.type === 'flitzer') { g.fillStyle = '#d02020'; g.fillRect(-100, hy + 14, 200, 22); g.strokeRect(-100, hy + 14, 200, 22); }
+  else if (e.type === 'spaeher') { g.fillStyle = '#222'; g.fillRect(-70, hy + 50, 140, 34); g.strokeRect(-70, hy + 50, 140, 34); g.fillStyle = `rgba(80,255,140,${0.6 + 0.4 * Math.sin(t * 6)})`; g.beginPath(); g.arc(-34, hy + 67, 13, 0, 7); g.arc(34, hy + 67, 13, 0, 7); g.fill(); cube(50, hy - 50, 14, 50, 10, mkPal('#555', '#666'), true, t2); g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(57, hy - 54, 8, 0, 7); g.fill(); }
+  else if (e.type === 'scharf') { cube(-104, hy - 22, 208, 30, DEPTH, mkPal('#4a5a2a', '#5a6a32'), true, t2); g.fillStyle = '#3a4a1a'; for (let i = 0; i < 6; i++) g.fillRect(-90 + i * 32, hy - 30, 10, 20); }
+  else { g.fillStyle = '#3a4a2a'; g.fillRect(-110, -170, 220, 60); g.strokeRect(-110, -170, 220, 60); }
+  g.restore();
+  // Waffe
+  if (T.gun) {
+    const P = apeGunPos(e); P.gy -= hop;
+    drawGun(T.gun, P.gx, P.gy, dir, P.s, e.aim || 0, e.rec || 0, e.flash > 0 ? 1 : 0);
+  }
+  if (!e.boss && e.hp != null) { const mx = T.hp; g.fillStyle = '#300'; g.fillRect(e.x - 30, e.y - hop - 350 * k - 14, 60, 7); g.fillStyle = '#ff3b3b'; g.fillRect(e.x - 30, e.y - hop - 350 * k - 14, 60 * e.hp / mx, 7); }
+  if (e.sayT > 0) marker(e.say, e.x, e.y - hop - 420 * k - 40, 52, e.say === '!' ? '#ff3b3b' : e.say === '?' ? '#ffcc1a' : '#3cff5a');
+  if (e.dead > 0) { }
+}
+// ===== Waffen-Modelle =====
+// Lokale Koordinaten: Ursprung = Hand am Griff, x zeigt nach vorne. MUZ = Mündung.
+const GUN_MUZ = { pistole: [64, -10], schrot: [128, -9], gewehr: [178, -6], bob: [118, -7], werfer: [150, -14] };
+function gunMuzzle(kind, gx, gy, dir, s, a) {
+  const [px, py] = GUN_MUZ[kind], c = Math.cos(a), sn = Math.sin(a);
+  return { x: gx + dir * (px * c - py * sn) * s, y: gy + (px * sn + py * c) * s };
+}
+function gunAim(gx, gy, dir, tx, ty) { return Math.max(-0.6, Math.min(0.6, Math.atan2(ty - gy, (tx - gx) * dir))); }
+function poly(pts, fill) { g.fillStyle = fill; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fill(); g.stroke(); }
+function box(x, y, w, h, fill, r) { g.fillStyle = fill; g.beginPath(); g.roundRect(x, y, w, h, r || 0); g.fill(); g.stroke(); }
+function drawGun(kind, gx, gy, dir, s, a, rec, flash) {
+  rec = Math.max(0, rec || 0);
+  g.save(); g.translate(gx, gy); g.scale(dir * s, s); g.rotate(a - rec * 0.22); g.translate(-rec * 14, 0);
+  g.lineWidth = 2.5 / s > 3 ? 3 : 2.5; g.strokeStyle = '#0a0a0a'; g.lineJoin = 'round';
+  const M = '#2b2d31', M2 = '#3c3f45', HI = 'rgba(255,255,255,.18)', WOOD = '#7a4a22', WOOD2 = '#9a6232';
+  if (kind === 'pistole') {
+    poly([[-6, 2], [12, 2], [6, 36], [-12, 36]], '#1d1e21');
+    g.strokeStyle = '#555'; g.lineWidth = 1.5; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(-6 + i * 0.5, 12 + i * 6); g.lineTo(6 - i * 1.2, 12 + i * 6); g.stroke(); } g.strokeStyle = '#0a0a0a'; g.lineWidth = 2.5;
+    g.beginPath(); g.arc(20, 8, 9, 0, Math.PI); g.stroke();
+    box(-10, -2, 62, 10, M);
+    box(-12 - rec * 10, -18, 76, 17, M2, 2);
+    g.fillStyle = HI; g.fillRect(-10 - rec * 10, -16, 72, 4);
+    g.strokeStyle = '#151515'; g.lineWidth = 1.5; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(-4 + i * 4 - rec * 10, -16); g.lineTo(-4 + i * 4 - rec * 10, -4); g.stroke(); }
+    g.fillStyle = '#111'; g.fillRect(56 - rec * 10, -22, 5, 5); g.fillRect(-10 - rec * 10, -22, 6, 5);
+  } else if (kind === 'schrot') {
+    poly([[-82, -6], [-14, -10], [-10, 8], [-76, 22], [-86, 20]], WOOD);
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(-86, 14, 8, 8);
+    poly([[-14, -12], [32, -12], [32, 8], [-6, 8], [-10, 26], [-20, 26]], M);
+    g.beginPath(); g.arc(6, 10, 9, 0, Math.PI); g.stroke();
+    box(30, -14, 98, 9, M2, 2); g.fillStyle = HI; g.fillRect(32, -13, 94, 3);
+    box(30, -4, 76, 8, '#222', 3);
+    const p = Math.min(1, rec) * 18; box(40 - p, -6, 46, 14, WOOD2, 4);
+    g.strokeStyle = '#4a2a10'; g.lineWidth = 1.5; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(46 + i * 7 - p, -4); g.lineTo(46 + i * 7 - p, 6); g.stroke(); }
+    g.fillStyle = '#c9a227'; g.beginPath(); g.arc(124, -16, 2.5, 0, 7); g.fill();
+  } else if (kind === 'gewehr') {
+    poly([[-92, -8], [-12, -10], [-8, 6], [-40, 10], [-60, 24], [-94, 22]], WOOD);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(-88, -6, 70, 4);
+    poly([[-12, -12], [58, -12], [58, 6], [-6, 6], [-10, 24], [-20, 24]], WOOD2);
+    box(-10, -14, 62, 12, M, 2);
+    g.beginPath(); g.moveTo(18, -8); g.lineTo(10, 4); g.lineWidth = 4; g.strokeStyle = '#555'; g.stroke(); g.fillStyle = '#777'; g.beginPath(); g.arc(9, 6, 4, 0, 7); g.fill(); g.strokeStyle = '#0a0a0a'; g.lineWidth = 2.5; g.stroke();
+    g.beginPath(); g.arc(28, 10, 8, 0, Math.PI); g.stroke();
+    box(56, -11, 122, 6, M2, 2);
+    box(168, -13, 12, 10, '#111', 1);
+    box(-6, -32, 64, 11, '#1a1a1a', 5); box(-12, -35, 14, 17, '#222', 3); box(52, -36, 16, 19, '#222', 3);
+    g.fillStyle = 'rgba(120,200,255,.8)'; g.fillRect(64, -33, 3, 13);
+    box(14, -22, 6, 9, '#222'); box(38, -22, 6, 9, '#222');
+    g.strokeStyle = '#333'; g.lineWidth = 3; g.beginPath(); g.moveTo(140, -4); g.lineTo(150, 20); g.moveTo(140, -4); g.lineTo(130, 20); g.stroke();
+  } else if (kind === 'werfer') {
+    box(-70, -30, 214, 32, '#4a5a2a', 6); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(-66, -27, 206, 6);
+    box(130, -34, 22, 40, '#3a4a20', 4); box(-82, -34, 16, 40, '#2a3418', 4);
+    g.fillStyle = '#d0a020'; for (let i = 0; i < 4; i++) g.fillRect(-30 + i * 46, -30, 8, 32);
+    poly([[-6, 2], [8, 2], [2, 30], [-12, 30]], '#1d1e21'); poly([[40, 2], [54, 2], [50, 26], [36, 26]], '#1d1e21');
+    box(10, -48, 40, 14, '#222', 3); g.fillStyle = 'rgba(255,60,60,.8)'; g.fillRect(44, -45, 4, 8);
+    if (!(rec > 0.2)) { g.fillStyle = '#8a8f96'; g.beginPath(); g.moveTo(152, -26); g.lineTo(176, -14); g.lineTo(152, -2); g.closePath(); g.fill(); g.stroke(); }
+  } else { // Bobs Karabiner
+    poly([[-70, -12], [-14, -10], [-14, 6], [-58, 12], [-72, 18]], '#1d1e21');
+    g.fillStyle = '#333'; g.fillRect(-70, -10, 6, 26);
+    poly([[-4, 4], [8, 4], [2, 30], [-10, 30]], '#1d1e21');
+    box(-14, -16, 66, 22, M, 2); g.fillStyle = HI; g.fillRect(-12, -14, 62, 4);
+    g.beginPath(); g.arc(14, 8, 8, 0, Math.PI); g.stroke();
+    poly([[22, 6], [36, 6], [44, 40], [30, 42]], '#26282c');
+    g.strokeStyle = '#444'; g.lineWidth = 1.5; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(25 + i * 2, 14 + i * 9); g.lineTo(38 + i * 2, 14 + i * 9); g.stroke(); } g.strokeStyle = '#0a0a0a'; g.lineWidth = 2.5;
+    box(52, -14, 44, 18, '#3a3e44', 3);
+    g.strokeStyle = '#222'; g.lineWidth = 1.5; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(58 + i * 8, -11); g.lineTo(58 + i * 8, 1); g.stroke(); } g.strokeStyle = '#0a0a0a'; g.lineWidth = 2.5;
+    box(94, -10, 22, 6, M2, 1); box(112, -12, 8, 10, '#111', 1);
+    box(-2, -26, 24, 10, '#1a1a1a', 2); g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(10, -21, 2.5, 0, 7); g.fill();
+    box(-14 - rec * 6, -12, 10, 5, '#555');
+  }
+  if (flash > 0) {
+    const [mx, my] = GUN_MUZ[kind], f = flash, big = kind === 'schrot' ? 1.5 : kind === 'gewehr' ? 1.3 : 1;
+    g.translate(mx + rec * 14, my);
+    const gl = g.createRadialGradient(0, 0, 2, 0, 0, 46 * big); gl.addColorStop(0, `rgba(255,240,170,${f})`); gl.addColorStop(1, 'rgba(255,160,40,0)'); g.fillStyle = gl; g.beginPath(); g.arc(14, 0, 46 * big, 0, 7); g.fill();
+    g.fillStyle = `rgba(255,${200 + Math.random() * 55 | 0},80,${f})`; g.beginPath();
+    const n = 7; for (let i = 0; i < n * 2; i++) { const ang = (i / (n * 2)) * Math.PI * 2, r = (i % 2 ? 8 : (i === 0 ? 46 : 18 + Math.random() * 14)) * big; const px = Math.cos(ang) * r + (i === 0 ? 0 : 0), py = Math.sin(ang) * r * 0.7; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.closePath(); g.fill();
+    g.fillStyle = `rgba(255,255,230,${f})`; g.beginPath(); g.ellipse(10, 0, 22 * big, 6 * big, 0, 0, 7); g.fill();
+  }
+  g.restore();
+}
+// Schussfolgen: Hülsen und Rauch
+function gunFx(kind, gx, gy, dir, s, a) {
+  const m = gunMuzzle(kind, gx, gy, dir, s, a);
+  if (kind !== 'schrot' || true) AP.fx.push({ k: 'shell', x: gx + dir * 10 * s, y: gy - 14 * s, vx: -dir * (80 + Math.random() * 80), vy: -200 - Math.random() * 120, t: 0.9, r: Math.random() * 6, red: kind === 'schrot' });
+  for (let i = 0; i < 3; i++) AP.fx.push({ k: 'smoke', x: m.x, y: m.y, vx: dir * (20 + Math.random() * 30), vy: -30 - Math.random() * 30, t: 0.8 + Math.random() * 0.4, r0: (8 + i * 5) * s });
+}
+function gunFxTick(dt) {
+  for (const f of AP.fx) { f.t -= dt; f.x += f.vx * dt; f.y += f.vy * dt; if (f.k === 'shell') { f.vy += 900 * dt; f.r += dt * 18; } else { f.vx *= 0.95; } }
+  AP.fx = AP.fx.filter(f => f.t > 0);
+}
+function drawGunFx() {
+  for (const f of AP.fx) {
+    if (f.k === 'shell') { g.save(); g.translate(f.x, f.y); g.rotate(f.r); g.fillStyle = f.red ? '#c0392b' : '#d4a52a'; g.strokeStyle = '#5a3a0a'; g.lineWidth = 1.5; g.fillRect(-6, -2.5, 12, 5); g.strokeRect(-6, -2.5, 12, 5); g.restore(); }
+    else { const k = 1 - f.t / 1.2; g.fillStyle = `rgba(200,200,200,${0.35 * (f.t / 1.2)})`; g.beginPath(); g.arc(f.x, f.y, f.r0 * (1 + k * 2), 0, 7); g.fill(); }
+  }
 }
 // Verstecke und Beute aus der Karte
 function apoObjs(type) { return (ROOMS[cur].objs || []).filter(o => o.type === type); }
@@ -1215,6 +1456,10 @@ function lootKey(o) { return cur + ':' + o.x; }
 function lootEmpty(o) { return o.k !== 'fluss' && apo.looted[lootKey(o)] === apoDay(); }
 function doLoot(o) {
   if (lootEmpty(o)) { toast = { text: 'Schon durchsucht – vielleicht liegt morgen wieder was hier.', t: 3 }; return; }
+  if (o.k === 'fluss') { apoAct('wasser', 1.2, () => doLootNow(o)); return; }
+  apoAct('loot', 1.3, () => doLootNow(o), o);
+}
+function doLootNow(o) {
   const r = Math.random(), got = [];
   const add = (k, n) => { apo.bag[k] = (apo.bag[k] || 0) + n; got.push(n + 'x ' + { dose: 'Dose', wasser: 'Wasser', medi: 'Verband' }[k]); };
   if (o.k === 'fluss') { apo.water = 100; toast = { text: 'Du trinkst aus dem Fluss. Durst gestillt!', t: 3 }; saveApo(); return; }
@@ -1223,27 +1468,33 @@ function doLoot(o) {
   else if (o.k === 'tonne') { add('wasser', 1); }
   else if (o.k === 'kiste') { if (r < 0.5) { const a = 4 + Math.floor(Math.random() * 6); apo.ammo += a; got.push(a + ' Patronen'); } if (Math.random() < 0.35) add('medi', 1); if (Math.random() < 0.35) add('dose', 1); }
   else if (o.k === 'auto') { if (r < 0.4) { const a = 2 + Math.floor(Math.random() * 4); apo.ammo += a; got.push(a + ' Patronen'); } else if (r < 0.7) add('wasser', 1); }
+  if (o.k === 'kiste' || o.k === 'auto') { const of = apoFindOutfit(o.k === 'kiste' ? 0.14 : 0.07); if (of) got.push('Outfit „' + of + '“ (angezogen)'); }
   apo.looted[lootKey(o)] = apoDay(); saveApo();
   toast = { text: got.length ? 'Gefunden: ' + got.join(', ') : 'Nichts Brauchbares …', t: 3 };
 }
 function useBag(k) {
-  if (!apo.on || !(apo.bag[k] > 0)) return;
-  apo.bag[k]--; if (k === 'dose') apo.food = Math.min(100, apo.food + 40); else if (k === 'wasser') apo.water = Math.min(100, apo.water + 45); else apo.hp = Math.min(100, apo.hp + 40); saveApo();
+  if (!apo.on || !(apo.bag[k] > 0) || AP.act) return;
+  apo.bag[k]--; apoAct(k, k === 'medi' ? 1.5 : 1.2, () => useBagNow(k));
+}
+function useBagNow(k) { if (k === 'dose') apo.food = Math.min(100, apo.food + 40); else if (k === 'wasser') apo.water = Math.min(100, apo.water + 45); else apo.hp = Math.min(100, apo.hp + 40); saveApo();
 }
 // Von hinten überwältigen
 function nearTakedown() {
   if (!apo.on || fade.dir) return null;
   return AP.en.find(e => e.st !== 'alert' && Math.sign(bob.x - e.x) === -e.dir && Math.abs(bob.x - e.x) < 160 && Math.abs(bob.y - e.y) < 70);
 }
-function doTakedown(e) { e.hp = 0; e.silent = true; bump('affen'); toast = { text: 'Lautlos überwältigt!', t: 2 }; }
+function doTakedown(e) { e.frozen = true; bob.x = e.x - e.dir * 80; bob.face = e.dir; apoAct('takedown', 0.9, () => { e.hp = 0; e.silent = true; bump('affen'); toast = { text: 'Lautlos überwältigt!', t: 2 }; }, e); }
 function apoAlertAll() { for (const e of AP.en) { e.st = 'alert'; e.lost = 0; } }
+function bobGunPos() { const s = scaleAt(bob.y); return { gx: bob.x + bob.face * 95 * s, gy: bob.y - 118 * s, s: s * 0.95 }; }
 function apoShoot(tx, ty) {
   if (!apo.on || AP.cd > 0 || AP.dead) return;
   if (apo.ammo <= 0) { toast = { text: 'Keine Munition! Durchsuch Kisten – oder schleich dich von hinten an.', t: 2.5 }; AP.cd = 0.5; return; }
   apo.ammo--; AP.cd = 0.28;
-  const sx = bob.x, sy = bob.y - 120 * scaleAt(bob.y), d = Math.hypot(tx - sx, ty - sy) || 1;
-  AP.bul.push({ x: sx, y: sy, vx: (tx - sx) / d * 900, vy: (ty - sy) / d * 900, me: true, t: 1.2 });
-  bob.face = tx < bob.x ? -1 : 1; AP.flash = 0.08; apoAlertAll();
+  bob.face = tx < bob.x ? -1 : 1;
+  const P = bobGunPos(); AP.aim = gunAim(P.gx, P.gy, bob.face, tx, ty); AP.aimT = 1.2;
+  const m = gunMuzzle('bob', P.gx, P.gy, bob.face, P.s, AP.aim), d = Math.hypot(tx - m.x, ty - m.y) || 1;
+  AP.bul.push({ x: m.x, y: m.y, vx: (tx - m.x) / d * 1100, vy: (ty - m.y) / d * 1100, me: true, t: 1.2 });
+  AP.flash = 0.09; AP.rec = 1; gunFx('bob', P.gx, P.gy, bob.face, P.s, AP.aim); apoAlertAll();
 }
 function apoShootNearest() {
   const list = AP.bossE ? [AP.bossE] : AP.en;
@@ -1252,9 +1503,12 @@ function apoShootNearest() {
 }
 function apoBossCfg() { return apo.pet === 'orangutan' ? { hp: 60, sp: 75, w: 320, dmg: 25 } : { hp: 32, sp: 240, w: 200, dmg: 12 }; }
 function apoSees(e) {
-  if (apoHidden()) return false;
-  const dx = bob.x - e.x, range = apoNight() > 0.5 ? 300 : 430;
-  return Math.sign(dx) === e.dir && Math.abs(dx) < range && Math.abs(bob.y - e.y) < 140;
+  const T = APE_TYPES[e.type] || APE_TYPES.schimpanse, dx = bob.x - e.x;
+  let range = T.range * (apoNight() > 0.5 ? 0.7 : 1); if (wear.on === 'apo_tarn') range *= 0.6;
+  const inCone = Math.sign(dx) === e.dir && Math.abs(dx) < range && Math.abs(bob.y - e.y) < 150;
+  if (!inCone) return false;
+  if (apoHidden()) { if (T.scanner && Math.abs(dx) < 300 && !apoSheltered()) { e.scanned = true; return true; } return false; }
+  return true;
 }
 function apoTick(dt) {
   if (!apo.on) return;
@@ -1262,32 +1516,50 @@ function apoTick(dt) {
   if (!ROOMS[cur].apo) { if (!fade.dir) go('apo_lager', [600, 640]); return; }
   if (AP.dead) { AP.dead -= dt; if (AP.dead <= 0) { AP.dead = 0; const id = apo.pet; apo = apoFresh(id); apo.intro = 0; saveApo(); AP.bossE = null; go('apo_lager', [600, 640]); } return; }
   if (AP.room !== cur || fade.dir) { if (fade.dir) return; apoReset(); }
-  if (AP.cd > 0) AP.cd -= dt; if (AP.flash > 0) AP.flash -= dt; if (AP.hurt > 0) AP.hurt -= dt;
+  if (AP.cd > 0) AP.cd -= dt; if (AP.flash > 0) AP.flash -= dt; if (AP.rec > 0) AP.rec -= dt * 6; if (AP.aimT > 0) { AP.aimT -= dt; if (AP.aimT <= 0) AP.aim = 0; } if (!AP.fx) AP.fx = []; gunFxTick(dt); if (AP.hurt > 0) AP.hurt -= dt;
   if (menu.open || phone.open || wr.open || bag.open || pp.open || sleepFx) return;
   if (!apo.boss) { apo.t += dt; if (apo.t >= 7 * APO_DAY) { apo.boss = true; apo.t = 7 * APO_DAY; toast = { text: 'Tag 7 überstanden! ' + PETS[apo.pet].name + ' wartet im Affen-Lager auf dich …', t: 5 }; saveApo(); } }
   apo.food = Math.max(0, apo.food - dt * 100 / (APO_DAY * 1.6)); apo.water = Math.max(0, apo.water - dt * 100 / (APO_DAY * 1.15));
   if (apo.food <= 0 || apo.water <= 0) apo.hp -= dt * 3;
   AP.saveT -= dt; if (AP.saveT <= 0) { AP.saveT = 3; saveApo(); }
+  apoActTick(dt); apoEventTick(dt);
   const R = ROOMS[cur], y0 = FLOOR + 60, y1 = (R.maxY || H - 20) - 10;
   // ab und zu kommt eine Patrouille vorbei
   if (!apo.boss && R.danger) { AP.patT -= dt * (apoNight() > 0.5 ? 1.5 : 1); if (AP.patT <= 0) { AP.patT = 45 + Math.random() * 45; if (AP.en.length < (R.maxPat || 1) + 1 && Math.random() < 0.6) apoPatrol(false); } }
   if (apo.boss && !AP.bossE && cur === 'apo_camp') { const c = apoBossCfg(); AP.bossE = { boss: true, x: XR - 300, y: 640, hp: c.hp, max: c.hp, id: apo.pet, fire: 2, slam: 3, dash: 0, hit: 0 }; AP.en = []; }
   // Patrouillen
   for (const e of AP.en) {
-    e.hit = Math.max(0, e.hit - dt);
+    e.hit = Math.max(0, e.hit - dt); if (e.rec > 0) e.rec -= dt * 5; if (e.flash > 0) e.flash -= dt; if (e.frozen) continue;
+    if (e.st === 'alert' && (APE_TYPES[e.type] || {}).gun) { const P = apeGunPos(e); e.dir = bob.x < e.x ? -1 : 1; const want = gunAim(P.gx, P.gy, e.dir, bob.x, bob.y - 100 * scaleAt(bob.y)); e.aim = (e.aim || 0) + (want - (e.aim || 0)) * Math.min(1, dt * 6); } else if (e.aim) e.aim *= 0.9;
     const dx = bob.x - e.x, dy = bob.y - e.y, d = Math.hypot(dx, dy) || 1;
-    if (e.st !== 'alert' && (apoSees(e) || (d < 90 && !apoHidden()))) { e.st = 'alert'; e.lost = 0; e.say = '!'; e.sayT = 1.5; }
+    const T = APE_TYPES[e.type] || APE_TYPES.schimpanse;
+    if (e.st !== 'alert' && (apoSees(e) || (d < 90 && !apoHidden()))) { e.st = 'alert'; e.lost = 0; e.say = e.scanned ? 'Wärmebild!' : '!'; e.sayT = 1.6; e.scanned = false; }
     if (e.st === 'patrol' || e.st === 'search') {
       if (e.wait > 0) { e.wait -= dt; if (e.wait <= 0) e.dir *= -1; }
-      else { e.x += e.dir * 70 * scaleAt(e.y) * dt; if ((e.dir > 0 && e.x > e.x1) || (e.dir < 0 && e.x < e.x0)) e.wait = 1.5 + Math.random() * 2; }
+      else { e.x += e.dir * Math.min(70, T.sp) * scaleAt(e.y) * dt; if ((e.dir > 0 && e.x > e.x1) || (e.dir < 0 && e.x < e.x0)) e.wait = 1.5 + Math.random() * 2; }
       if (e.st === 'search') { e.lost += dt; if (e.lost > 8) { e.st = 'patrol'; e.say = '…'; e.sayT = 1.2; } }
     } else {
       if (apoSees(e) || d < 200) e.lost = 0; else e.lost += dt;
       if (e.lost > 5) { e.st = 'search'; e.lost = 0; e.say = '?'; e.sayT = 1.5; continue; }
       e.dir = dx > 0 ? 1 : -1;
-      const sp = (e.id === 'monke' ? 130 : 95) * scaleAt(e.y);
-      if (d > 240) { e.x += dx / d * sp * dt; e.y += dy / d * sp * dt * 0.8; } else if (d < 90) apo.hp -= dt * 14;
-      e.fire -= dt; if (e.fire <= 0 && !apoHidden()) { e.fire = 1.6 + Math.random() * 1.2; const ex = e.x, ey = e.y - 60 * scaleAt(e.y), tx = bob.x, ty = bob.y - 100 * scaleAt(bob.y), dd = Math.hypot(tx - ex, ty - ey) || 1; AP.bul.push({ x: ex, y: ey, vx: (tx - ex) / dd * 420, vy: (ty - ey) / dd * 420, me: false, t: 2.5, dmg: 8 }); }
+      const sp = T.sp * scaleAt(e.y);
+      if (e.type === 'flitzer') {
+        e.zz = (e.zz || 0) + dt * 6; if (d > 70) { e.x += dx / d * sp * dt; e.y += (dy / d * sp * 0.7 + Math.sin(e.zz) * 120) * dt; } else { e.bite = (e.bite || 0) - dt; if (e.bite <= 0) { e.bite = 0.8; apoDmg(10); AP.hurt = 0.3; } }
+      } else if (e.type === 'scharf') {
+        if (d < 300) { e.x -= dx / d * sp * dt; }
+      } else {
+        const keep = e.type === 'gorilla' ? 180 : 240;
+        if (d > keep) { e.x += dx / d * sp * dt; e.y += dy / d * sp * dt * 0.8; } else if (d < 90) apoDmg(dt * 14);
+      }
+      e.fire -= dt;
+      if (T.gun && e.fire <= 0 && !(apoHidden() && !e.scanned)) {
+        const tx = bob.x, ty = bob.y - 100 * scaleAt(bob.y), P = apeGunPos(e); e.aim = gunAim(P.gx, P.gy, e.dir, tx, ty);
+        const mz = gunMuzzle(T.gun, P.gx, P.gy, e.dir, P.s, e.aim), ex = mz.x, ey = mz.y, base = Math.atan2(ty - ey, tx - ex);
+        if (T.gun !== 'gewehr' || apoSees(e)) { e.rec = 1; e.flash = 0.09; gunFx(T.gun, P.gx, P.gy, e.dir, P.s, e.aim); }
+        if (T.gun === 'pistole') { e.fire = 1.6 + Math.random() * 1.2; AP.bul.push({ x: ex, y: ey, vx: Math.cos(base) * 430, vy: Math.sin(base) * 430, me: false, t: 2.5, dmg: 8 }); }
+        else if (T.gun === 'schrot') { e.fire = 2.4; for (const a of [-0.25, -0.1, 0.05, 0.2]) AP.bul.push({ x: ex, y: ey, vx: Math.cos(base + a) * 380, vy: Math.sin(base + a) * 380, me: false, t: 1.1, dmg: 6 }); }
+        else if (T.gun === 'gewehr' && apoSees(e)) { e.fire = 3.2; AP.bul.push({ x: ex, y: ey, vx: Math.cos(base) * 950, vy: Math.sin(base) * 950, me: false, t: 1.5, dmg: 22 }); }
+      }
     }
     if (e.sayT > 0) e.sayT -= dt;
     e.y = Math.max(y0, Math.min(y1, e.y)); e.x = Math.max(XL + 30, Math.min(XR - 30, e.x));
@@ -1296,15 +1568,15 @@ function apoTick(dt) {
   const B = AP.bossE;
   if (B) {
     const c = apoBossCfg(), dx = bob.x - B.x, dy = bob.y - B.y, d = Math.hypot(dx, dy) || 1;
-    B.hit = Math.max(0, B.hit - dt);
+    B.hit = Math.max(0, B.hit - dt); if (B.rec > 0) B.rec -= dt * 4; if (B.flash > 0) B.flash -= dt; { const P = bossGunPos(B); B.aim = gunAim(P.gx, P.gy, P.dir, bob.x, bob.y - 100 * scaleAt(bob.y)); }
     if (apo.pet === 'monke') {
       if (B.dash > 0) { B.dash -= dt; B.x += B.dvx * dt; B.y += B.dvy * dt; }
       else { B.x += dx / d * c.sp * 0.45 * dt; B.y += dy / d * c.sp * 0.3 * dt; if (Math.random() < dt * 0.6) { B.dash = 0.45; B.dvx = dx / d * c.sp * 2.2; B.dvy = dy / d * c.sp * 1.4; } }
-      B.fire -= dt; if (B.fire <= 0) { B.fire = 1.5; const ey = B.y - 120; for (const a of [-0.22, 0, 0.22]) { const ang = Math.atan2(bob.y - 100 - ey, bob.x - B.x) + a; AP.bul.push({ x: B.x, y: ey, vx: Math.cos(ang) * 480, vy: Math.sin(ang) * 480, me: false, t: 2.5, dmg: 7 }); } }
+      B.fire -= dt; if (B.fire <= 0) { B.fire = 1.5; const P = bossGunPos(B), m = gunMuzzle(P.kind, P.gx, P.gy, P.dir, P.s, B.aim || 0), ey = m.y; B.rec = 1; B.flash = 0.1; gunFx(P.kind, P.gx, P.gy, P.dir, P.s, B.aim || 0); for (const a of [-0.22, 0, 0.22]) { const ang = Math.atan2(bob.y - 100 - ey, bob.x - m.x) + a; AP.bul.push({ x: m.x, y: ey, vx: Math.cos(ang) * 480, vy: Math.sin(ang) * 480, me: false, t: 2.5, dmg: 7 }); } }
     } else {
       B.x += dx / d * c.sp * dt; B.y += dy / d * c.sp * 0.6 * dt;
       B.slam -= dt; if (B.slam <= 0) { B.slam = 3.2; AP.shock.push({ x: B.x, y: B.y, r: 40, hit: false }); }
-      B.fire -= dt; if (B.fire <= 0) { B.fire = 3.6; const ey = B.y - 160, ang = Math.atan2(bob.y - 100 - ey, bob.x - B.x); AP.bul.push({ x: B.x, y: ey, vx: Math.cos(ang) * 300, vy: Math.sin(ang) * 300, me: false, t: 3, dmg: 18, big: true }); }
+      B.fire -= dt; if (B.fire <= 0) { B.fire = 3.6; const P = bossGunPos(B), m = gunMuzzle(P.kind, P.gx, P.gy, P.dir, P.s, B.aim || 0), ey = m.y, ang = Math.atan2(bob.y - 100 - ey, bob.x - m.x); B.rec = 1; B.flash = 0.14; gunFx(P.kind, P.gx, P.gy, P.dir, P.s, B.aim || 0); AP.bul.push({ x: m.x, y: ey, vx: Math.cos(ang) * 300, vy: Math.sin(ang) * 300, me: false, t: 3, dmg: 18, big: true }); }
     }
     B.y = Math.max(y0 + 40, Math.min(y1, B.y)); B.x = Math.max(XL + 120, Math.min(XR - 120, B.x));
     if (d < (apo.pet === 'orangutan' ? 150 : 110)) apo.hp -= dt * c.dmg;
@@ -1313,8 +1585,8 @@ function apoTick(dt) {
   AP.shock = AP.shock.filter(s => s.r < 700);
   for (const b of AP.bul) {
     b.x += b.vx * dt; b.y += b.vy * dt; b.t -= dt;
-    if (b.me) { for (const e of (B ? [B] : AP.en)) { const sw = (e.boss ? apoBossCfg().w : 100) * scaleAt(e.y); if (Math.abs(b.x - e.x) < sw * 0.6 && b.y < e.y + 20 && b.y > e.y - sw * 1.15) { e.hp--; e.hit = 0.15; e.st = 'alert'; b.t = 0; break; } } }
-    else if (Math.abs(b.x - bob.x) < 60 && b.y < bob.y && b.y > bob.y - 230 * scaleAt(bob.y)) { apo.hp -= b.dmg; b.t = 0; AP.hurt = 0.25; }
+    if (b.me) { for (const e of (B ? [B] : AP.en)) { const sw = (e.boss ? apoBossCfg().w : 130 * (APE_TYPES[e.type] || APE_TYPES.schimpanse).k) * scaleAt(e.y); if (Math.abs(b.x - e.x) < sw * 0.6 && b.y < e.y + 20 && b.y > e.y - sw * 1.15) { e.hp--; e.hit = 0.15; e.st = 'alert'; b.t = 0; break; } } }
+    else if (Math.abs(b.x - bob.x) < 60 && b.y < bob.y && b.y > bob.y - 230 * scaleAt(bob.y)) { apoDmg(b.dmg); b.t = 0; AP.hurt = 0.25; }
   }
   AP.bul = AP.bul.filter(b => b.t > 0);
   AP.en = AP.en.filter(e => { if (e.hp > 0) return true; if (!e.silent) bump('affen'); if (Math.random() < 0.5) { apo.ammo += 2 + Math.floor(Math.random() * 3); } return false; });
@@ -1387,6 +1659,7 @@ function drawVersteck(o) {
   const s = scaleAt(o.base), hid = apo.on && Math.abs(bob.x - o.x) < o.w / 2 && Math.abs(bob.y - o.base) < 55;
   g.save(); if (hid) g.globalAlpha = 0.75;
   g.lineWidth = 4; g.strokeStyle = LINE;
+  if (o.k === 'haus') { g.restore(); g.fillStyle = '#0d0b08'; g.fillRect(o.x - 80, FLOOR - 190, 160, 190); g.lineWidth = 6; g.strokeStyle = '#3a2814'; g.strokeRect(o.x - 80, FLOOR - 190, 160, 190); g.fillStyle = '#e8d28a'; g.fillRect(o.x - 50, FLOOR - 230, 100, 30); g.lineWidth = 3; g.strokeStyle = LINE; g.strokeRect(o.x - 50, FLOOR - 230, 100, 30); g.fillStyle = '#3a2814'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Unterschlupf', o.x, FLOOR - 214); return; }
   if (o.k === 'auto') {
     const w = o.w, x = o.x - w / 2, y = o.base;
     g.fillStyle = '#6a3a2a'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 80); g.lineTo(x + w * 0.22, y - 90); g.lineTo(x + w * 0.32, y - 150); g.lineTo(x + w * 0.7, y - 150); g.lineTo(x + w * 0.82, y - 90); g.lineTo(x + w, y - 80); g.lineTo(x + w, y); g.closePath(); g.fill(); g.stroke();
@@ -1416,10 +1689,14 @@ function drawLootSpot(o) {
 }
 function apoListItems(list) {
   if (!apo.on || apo.intro > 0 || !ROOMS[cur].apo) return;
-  for (const e of AP.en) list.push({ y: e.y, f: () => drawApe(e) });
+  for (const e of AP.en) list.push({ y: e.y, f: () => drawApeModel(e) });
+  if (AP.drop) list.push({ y: AP.drop.y, f: drawDropBox });
+  if (AP.storm) list.push({ y: 99998, f: drawStorm });
+  list.push({ y: bob.y + 0.02, f: drawApoAct });
   if (AP.bossE) list.push({ y: AP.bossE.y, f: () => drawApe(AP.bossE) });
   list.push({ y: 99999, f: drawApoTop });
 }
+function bossGunPos(e) { const s = scaleAt(e.y), w = apoBossCfg().w * s, dir = e.x < bob.x ? 1 : -1, kind = apo.pet === 'monke' ? 'schrot' : 'werfer'; return { kind, gx: e.x + dir * w * 0.38, gy: e.y - w * 0.42, s: s * (kind === 'werfer' ? 1.25 : 1.05), dir }; }
 function drawApe(e) {
   const s = scaleAt(e.y), t = performance.now() / 1000, w = (e.boss ? apoBossCfg().w : 100) * s;
   // Sichtkegel der Patrouille
@@ -1433,8 +1710,7 @@ function drawApe(e) {
   const dir = e.boss ? (e.x < bob.x ? 1 : -1) : e.dir, mv = e.boss || !(e.wait > 0);
   drawPetCube(e.id, e.x, e.y, w, -dir, mv ? -Math.abs(Math.sin(t * (e.boss && apo.pet === 'orangutan' ? 3 : 9) + e.x)) * 6 * s : 0);
   g.restore();
-  const gy = e.y - w * 0.45;
-  g.fillStyle = '#222'; g.strokeStyle = LINE; g.lineWidth = 3; g.fillRect(e.x + dir * w * 0.35 - (dir < 0 ? 60 * s : 0), gy, 60 * s, 14 * s); g.strokeRect(e.x + dir * w * 0.35 - (dir < 0 ? 60 * s : 0), gy, 60 * s, 14 * s);
+  { const P = bossGunPos(e); e.dir = dir; drawGun(P.kind, P.gx, P.gy, dir, P.s, e.aim || 0, e.rec || 0, e.flash > 0 ? 1 : 0); }
   if (e.boss) {
     const bw = 260; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(e.x - bw / 2, e.y - w * 1.25 - 30, bw, 22); g.fillStyle = '#ff3b3b'; g.fillRect(e.x - bw / 2 + 3, e.y - w * 1.25 - 27, (bw - 6) * Math.max(0, e.hp / e.max), 16);
     g.fillStyle = '#fff'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(PETS[apo.pet].name.toUpperCase() + ' (MUTIERT)', e.x, e.y - w * 1.25 - 46);
@@ -1442,13 +1718,17 @@ function drawApe(e) {
 }
 function drawApoTop() {
   for (const s of AP.shock) { g.strokeStyle = `rgba(255,140,40,${1 - s.r / 700})`; g.lineWidth = 10; g.beginPath(); g.ellipse(s.x, s.y, s.r, s.r / 2.2, 0, 0, 7); g.stroke(); }
-  for (const b of AP.bul) { g.fillStyle = b.me ? '#ffe14a' : '#ff5a3a'; g.beginPath(); g.arc(b.x, b.y, b.big ? 18 : 6, 0, 7); g.fill(); if (b.big) { g.strokeStyle = LINE; g.lineWidth = 3; g.stroke(); } }
+  if (AP.fx) drawGunFx();
+  for (const b of AP.bul) {
+    if (b.big) { g.fillStyle = '#ff5a3a'; g.beginPath(); g.arc(b.x, b.y, 18, 0, 7); g.fill(); g.strokeStyle = LINE; g.lineWidth = 3; g.stroke(); continue; }
+    const v = Math.hypot(b.vx, b.vy) || 1, L = Math.min(70, v * 0.05), ux = b.vx / v, uy = b.vy / v;
+    const tg = g.createLinearGradient(b.x - ux * L, b.y - uy * L, b.x, b.y); tg.addColorStop(0, 'rgba(255,220,120,0)'); tg.addColorStop(1, b.me ? '#fff3b0' : '#ffb08a');
+    g.strokeStyle = tg; g.lineCap = 'round'; g.lineWidth = 5; g.beginPath(); g.moveTo(b.x - ux * L, b.y - uy * L); g.lineTo(b.x, b.y); g.stroke(); g.lineCap = 'butt';
+    g.fillStyle = b.me ? '#ffe14a' : '#ff6a3a'; g.beginPath(); g.arc(b.x, b.y, 3.5, 0, 7); g.fill();
+  }
   if (!bob.hidden) {
-    const s = scaleAt(bob.y), dir = bob.face, gx = bob.x + dir * 110 * s, gy = bob.y - 110 * s;
-    g.save(); g.translate(gx, gy); g.scale(dir, 1); g.fillStyle = '#2a2a2a'; g.strokeStyle = LINE; g.lineWidth = 3;
-    g.fillRect(-20 * s, -10 * s, 90 * s, 20 * s); g.strokeRect(-20 * s, -10 * s, 90 * s, 20 * s); g.fillRect(-10 * s, 8 * s, 18 * s, 26 * s); g.strokeRect(-10 * s, 8 * s, 18 * s, 26 * s);
-    if (AP.flash > 0) { g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(80 * s, 0, 16 * s, 0, 7); g.fill(); }
-    g.restore();
+    const P = bobGunPos();
+    drawGun('bob', P.gx, P.gy, bob.face, P.s, AP.aim || 0, AP.rec || 0, AP.flash > 0 ? 1 : 0);
   }
   const n = apoNight(); if (n > 0) { g.fillStyle = `rgba(5,10,30,${0.5 * n})`; g.fillRect(XL, 0, VW, H); }
 }
@@ -1478,6 +1758,12 @@ function drawApoHud() {
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(tx, W / 2, 40);
   if (!apo.boss) { g.fillStyle = '#333'; g.fillRect(W / 2 - 120, 66, 240, 8); g.fillStyle = '#3cff5a'; g.fillRect(W / 2 - 120, 66, 240 * (apo.t / (7 * APO_DAY)), 8); }
   if (isTouch()) { const b = apoBtn(); g.fillStyle = 'rgba(224,38,43,.85)'; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = LINE; g.stroke(); g.fillStyle = '#fff'; g.font = '900 20px system-ui'; g.fillText('FEUER', b.x, b.y + 1); }
+  if (AP.storm) {
+    const S = AP.storm, t = performance.now() / 1000, sh = apoSheltered();
+    g.fillStyle = `rgba(200,30,30,${0.75 + 0.2 * Math.sin(t * 8)})`; g.beginPath(); g.roundRect(W / 2 - 330, 92, 660, 74, 18); g.fill();
+    g.fillStyle = '#fff'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S.st === 'warn' ? 'AFFENSTURM in ' + Math.ceil(6 - S.t) + ' s!' : 'AFFENSTURM!', W / 2, 116);
+    g.font = '700 17px system-ui'; g.fillText(sh ? '✓ Du bist geschützt – bleib hier!' : 'Versteck dich in einem Haus oder Auto! Büsche schützen nicht.', W / 2, 146);
+  }
   if (AP.hurt > 0) { g.fillStyle = `rgba(255,0,0,${AP.hurt})`; g.fillRect(XL, 0, VW, H); }
   if (AP.dead) { g.fillStyle = 'rgba(60,0,0,.8)'; g.fillRect(XL, 0, VW, H); marker('DU BIST GESTORBEN', W / 2, 360, 72, '#fff'); g.fillStyle = '#fff'; g.font = '600 24px system-ui'; g.textAlign = 'center'; g.fillText('Alles beginnt wieder bei Tag 1 …', W / 2, 440); }
 }
@@ -2550,6 +2836,33 @@ Object.assign(OUTFITS, {
       g.fillStyle = '#fff'; for (let k = 10; k < w; k += 30) { g.beginPath(); g.arc(x + k, y + 17, 3, 0, 7); g.fill(); }
       g.fillStyle = 'rgba(60,40,20,.5)'; g.beginPath(); g.ellipse(x + 50, y + 110, 18, 8, 0.3, 0, 7); g.fill();
     } },
+  apo_bob: { name: 'Apokalypsen-Bob', bp: mkPal('#3a9a32', '#46a83e'), textCol: '#1d3d18',
+    bodyFront: (x, y, w, h) => {
+      g.fillStyle = 'rgba(70,50,20,.45)'; for (const [cx, cy, r] of [[40, 110, 22], [200, 40, 18], [150, 120, 14], [70, 30, 12]]) { g.beginPath(); g.ellipse(x + cx, y + cy, r, r * 0.6, 0.3, 0, 7); g.fill(); }
+      g.fillStyle = '#1d3d18'; g.beginPath(); g.moveTo(x + w - 60, y + h); g.lineTo(x + w - 44, y + h - 40); g.lineTo(x + w - 30, y + h - 14); g.lineTo(x + w - 14, y + h - 48); g.lineTo(x + w, y + h); g.closePath(); g.fill();
+      g.strokeStyle = '#8a6a3a'; g.lineWidth = 8; g.beginPath(); g.moveTo(x, y + h - 30); g.lineTo(x + w, y + h - 34); g.stroke();
+    },
+    headFront: (x, y, w, h) => {
+      bobFace(x, y);
+      g.save(); g.translate(x + w / 2, y + 30); g.rotate(-0.25); g.fillStyle = '#f4f4f4'; g.fillRect(-w * 0.62, -14, w * 1.24, 26); g.strokeStyle = '#999'; g.lineWidth = 2; g.strokeRect(-w * 0.62, -14, w * 1.24, 26); g.fillStyle = '#c0392b'; g.beginPath(); g.arc(30, 0, 7, 0, 7); g.fill(); g.restore();
+      g.fillStyle = 'rgba(70,50,20,.4)'; g.beginPath(); g.ellipse(x + 190, y + 120, 18, 9, 0.2, 0, 7); g.fill();
+    } },
+  apo_gasmaske: { name: 'Gasmaske', bp: mkPal('#4a4a3a', '#5a5a48'), noText: true,
+    bodyFront: (x, y, w, h) => { g.strokeStyle = '#2a2a20'; g.lineWidth = 12; g.beginPath(); g.moveTo(x + 40, y); g.lineTo(x + w - 60, y + h); g.moveTo(x + w - 40, y); g.lineTo(x + 60, y + h); g.stroke(); },
+    headFront: (x, y, w, h) => {
+      g.fillStyle = '#3a3a34'; g.beginPath(); g.roundRect(x + 20, y + 20, w - 40, h - 30, 40); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 4; g.stroke();
+      for (const ex of [x + 75, x + w - 75]) { g.fillStyle = 'rgba(150,220,255,.6)'; g.beginPath(); g.arc(ex, y + 64, 30, 0, 7); g.fill(); g.lineWidth = 7; g.strokeStyle = '#888'; g.stroke(); g.fillStyle = '#111'; g.beginPath(); g.arc(ex, y + 64, 7, 0, 7); g.fill(); }
+      g.fillStyle = '#5a5a50'; g.beginPath(); g.arc(x + w / 2, y + 130, 30, 0, 7); g.fill(); g.lineWidth = 4; g.strokeStyle = '#111'; g.stroke(); for (let k = -16; k <= 16; k += 8) { g.beginPath(); g.moveTo(x + w / 2 + k, y + 116); g.lineTo(x + w / 2 + k, y + 144); g.stroke(); }
+    } },
+  apo_ruestung: { name: 'Schrott-Rüstung', bp: mkPal('#5a5f66', '#6a7078'), noText: true,
+    bodyFront: (x, y, w, h) => { g.strokeStyle = '#111'; g.lineWidth = 4; for (const [px, py, pw, ph] of [[20, 10, 100, 70], [130, 10, 100, 70], [40, 86, 170, 54]]) { g.fillStyle = '#8a9098'; g.fillRect(x + px, y + py, pw, ph); g.strokeRect(x + px, y + py, pw, ph); g.fillStyle = '#444'; for (const [rx, ry] of [[8, 8], [pw - 8, 8], [8, ph - 8], [pw - 8, ph - 8]]) { g.beginPath(); g.arc(x + px + rx, y + py + ry, 4, 0, 7); g.fill(); } } },
+    front: (bx, by, hx, hy, t) => { g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 6 + 6 * t, hy - 30, HEAD.w + 12, 44, DEPTH + 8, mkPal('#7a8088', '#8a9098'), true, t); g.fillStyle = '#c0392b'; g.fillRect(hx + HEAD.w / 2 - 6 + 6 * t, hy - 30, 12, 44); } },
+  apo_tarn: { name: 'Tarn-Anzug', bp: mkPal('#4a5a2a', '#56682e'), noText: true,
+    bodyFront: (x, y, w, h) => { for (let i = 0; i < 26; i++) { const lx = x + (i * 37) % w, ly = y + (i * 53) % h; g.strokeStyle = i % 3 ? '#2f4a18' : '#6a7a3a'; g.lineWidth = 6; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + 8, ly + 30); g.stroke(); } },
+    front: (bx, by, hx, hy, t) => { for (let i = 0; i < 14; i++) { const lx = hx + 10 + i * 17 + 6 * t; g.strokeStyle = i % 2 ? '#2f4a18' : '#5a7a2a'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(lx, hy + 6); g.quadraticCurveTo(lx + 10, hy - 30, lx - 4, hy - 50 - (i % 3) * 10); g.stroke(); } g.lineCap = 'butt'; } },
+  apo_bandit: { name: 'Endzeit-Bandit', bp: mkPal('#3a2a1a', '#4a3622'), noText: true,
+    bodyFront: (x, y, w, h) => { g.fillStyle = '#c9d1d9'; g.strokeStyle = '#111'; g.lineWidth = 3; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(x + 10 + i * 20, y + 10); g.lineTo(x + 20 + i * 20, y - 22); g.lineTo(x + 30 + i * 20, y + 10); g.closePath(); g.fill(); g.stroke(); } g.fillStyle = '#eee'; g.beginPath(); g.arc(x + w - 70, y + 70, 26, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#111'; g.beginPath(); g.arc(x + w - 80, y + 66, 6, 0, 7); g.arc(x + w - 60, y + 66, 6, 0, 7); g.fill(); },
+    headFront: (x, y, w, h) => { bobFace(x, y); g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(x, y + 90); g.lineTo(x + w, y + 90); g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; for (let k = 20; k < w; k += 36) { g.beginPath(); g.arc(x + k, y + 130, 4, 0, 7); g.fill(); } } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -2755,7 +3068,7 @@ function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); r
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown()); }
+function canInteract() { return !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -2939,6 +3252,7 @@ function openMenu() {
   if (nearGuard()) { openBribe(); return; }
   if (nearTerminal()) { openLabor(); return; }
   { const td = nearTakedown(); if (td) { doTakedown(td); return; } }
+  { const db = nearDropBox(); if (db) { apoAct('loot', 1.4, () => { AP.drop = null; const a = 10 + Math.floor(Math.random() * 8); apo.ammo += a; apo.bag.dose += 2; apo.bag.wasser += 2; apo.bag.medi += 1; const of = apoFindOutfit(0.5); toast = { text: 'Abwurf: ' + a + ' Patronen, 2 Dosen, 2 Wasser, 1 Verband' + (of ? ', Outfit „' + of + '“' : ''), t: 4.5 }; saveApo(); }, { x: db.x, base: db.y }); return; } }
   { const lt = nearLoot(); if (lt) { doLoot(lt); return; } }
   if (nearPritsche()) { if (canSleepNow()) sleepTo('morgen'); else toast = { text: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr. Arbeite doch an der Stanze!', t: 3.5 }; return; }
   if (nearWerkbank()) { startStanze(); return; }
@@ -3085,6 +3399,7 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  { const db = nearDropBox(); if (db) return { x: db.x, y: db.y - 150, label: 'Abwurf öffnen' }; }
   { const lt = nearLoot(); if (lt) return { x: lt.x, y: lt.base - 220, label: lt.k === 'fluss' ? 'Trinken' : lootEmpty(lt) ? 'Leer' : 'Durchsuchen' }; }
   if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
   if (nearWerkbank()) return { x: 700, y: FLOOR - 120, label: 'Arbeiten' };
@@ -5788,7 +6103,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if (tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
+  if ((apo.on && AP.act) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
