@@ -5928,9 +5928,9 @@ function shiftEndT() { return gDay() * 1440 + JOBS[job.id].to; }
 function workedMin() { const J = JOBS[job.id], s = Math.max(wk.start, gDay() * 1440 + J.from); return Math.max(0, Math.min(gt.T, shiftEndT()) - s); }
 function finishWork() {
   const free = unpaid(), mins = workedMin(), lohn = free ? 0 : Math.round(mins / 60 * JOBS[job.id].wage), sum = free ? 0 : lohn + wk.bonus;
-  if (sum > 0) earn(sum);
+  if (sum > 0) { bank.money += sum; bank.log.push({ t: 'Lohn: ' + JOBS[job.id].name, v: sum }); saveBank(); }
   job.earned = (job.earned || 0) + sum; saveJob();
-  wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' Bargeld – bring es zur Bank!' : 'Feierabend.', t: 3.5 };
+  wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' Lohn – direkt aufs Konto überwiesen!' : 'Feierabend.', t: 3.5 };
 }
 function scanItem(it) {
   if (it.done) return;
@@ -6111,7 +6111,7 @@ function drawWork(dt) {
     g.fillStyle = '#0a8a2f'; g.font = '800 28px system-ui'; g.textAlign = 'left'; g.fillText('Gesamt', P.x + 40, P.y + 384); g.textAlign = 'right'; g.fillText(money(unpaid() ? 0 : lohn + wk.bonus), P.x + P.w - 40, P.y + 384);
     const b = u.ok; softShadow(12, 4); const bg = g.createLinearGradient(0, b.y, 0, b.y + b.h); bg.addColorStop(0, '#2fd060'); bg.addColorStop(1, '#13a040');
     g.fillStyle = bg; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 20); g.fill(); noShadow();
-    g.fillStyle = '#fff'; g.font = '800 24px system-ui'; g.textAlign = 'center'; g.fillText('Geld nehmen', b.x + b.w / 2, b.y + b.h / 2 + 1);
+    g.fillStyle = '#fff'; g.font = '800 24px system-ui'; g.textAlign = 'center'; g.fillText('Aufs Konto', b.x + b.w / 2, b.y + b.h / 2 + 1);
   }
 }
 
