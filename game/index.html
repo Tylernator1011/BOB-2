@@ -7693,7 +7693,7 @@ const abCd = {};
 function abilFree() { return !((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device || kb.open || bob.hidden); }
 function useAbil(i) {
   const id = activeAbils()[i]; if (!id || !abilFree()) return;
-  if ((abCd[id] || 0) > 0) { toast = { text: ABIL[id].name + ' lädt noch (' + Math.ceil(abCd[id]) + ' s)', t: 1.2 }; return; }
+  if ((abCd[id] || 0) > 0) return;
   abCd[id] = ABIL[id].cd; ABIL[id].use();
 }
 addEventListener('keydown', e => {
@@ -7740,9 +7740,9 @@ function drawAbilHud() {
 
 // Bobis Welle: kurz darauf reiten, schneller, macht Schaden
 const wave = { t: 0, age: 0, dir: 1, hit: new Set(), parts: [], pops: [] };
-function waveStart() { wave.t = ABIL.welle.dur; wave.age = 0; wave.dir = bob.face || 1; wave.hit = new Set(); toast = { text: 'Bobi ruft eine Welle! 🌊', t: 1.6 }; }
+function waveStart() { wave.t = ABIL.welle.dur; wave.age = 0; wave.dir = bob.face || 1; wave.hit = new Set(); }
 function waveAmt() { if (wave.t <= 0) return 0; return Math.min(1, wave.age * 4, wave.t * 2.5); }
-function waveLift() { return waveAmt() * 80 * scaleAt(bob.y); }
+function waveLift() { return waveAmt() * 85 * scaleAt(bob.y); }
 function waveTick(dt) {
   for (const p of wave.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.l -= dt; }
   wave.parts = wave.parts.filter(p => p.l > 0 && p.y < p.gy);
@@ -7763,31 +7763,44 @@ const WAVE_PAL = mkPal('#1877d2', '#3fb0f2'), WAVE_DEEP = mkPal('#0f5aa8', '#1e8
 function drawWave() {
   const s = scaleAt(bob.y), a = waveAmt(), dir = wave.dir, t = performance.now() / 1000, tt = bob.turn;
   if (a > 0) {
-    const N = 22, cw = 22 * s, front = bob.x + dir * 100 * s, base = bob.y + 8 * s;
-    g.save(); g.fillStyle = 'rgba(20,80,160,.28)'; g.beginPath(); g.ellipse(bob.x - dir * 120 * s, bob.y + 6 * s, 270 * s * a, 24 * s, 0, 0, 7); g.fill(); g.restore();
-    const cols = [];
-    for (let i = 0; i < N; i++) {
-      const u = i / (N - 1); let h = u < 0.55 ? 0.12 + 0.88 * Math.pow(u / 0.55, 1.6) : 1 - Math.pow((u - 0.55) / 0.45, 0.8) * 0.75;
-      h = (h * 300 + Math.sin(t * 9 + i * 0.7) * 6) * s * a;
-      cols.push({ x: front - dir * (i + 1) * cw, i, h, u });
-    }
-    const order = tt > 0 ? [...cols].sort((p, q) => q.x - p.x) : [...cols].sort((p, q) => p.x - q.x);
-    for (const c of order) {
-      const y0 = base - c.h, foam = c.u > 0.38 && c.u < 0.7;
-      cube(c.x, y0, cw + 1, c.h, 26 * s, c.u > 0.72 ? WAVE_DEEP : WAVE_PAL, !foam, tt);
-      if (foam) cube(c.x, y0 - 10 * s, cw + 1, 10 * s + 1, 26 * s, FOAM_PAL, true, tt);
-    }
-    // überschlagende Krone: Bogen nach vorne
-    const crest = cols[Math.round((N - 1) * 0.55)];
-    for (let j = 1; j <= 6; j++) {
-      const q = j / 6, lw = cw * 1.05, lx = crest.x + dir * j * cw * 0.95, ly = base - crest.h - 18 * s - Math.sin(q * Math.PI * 0.8) * 26 * s + q * q * 60 * s + Math.sin(t * 7 + j) * 2 * s, lh = (24 - q * 10) * s;
-      cube(lx, ly, lw, lh, 24 * s, q > 0.8 ? FOAM_PAL : WAVE_PAL, false, tt);
-      cube(lx, ly - 9 * s, lw, 9 * s, 24 * s, FOAM_PAL, true, tt);
-    }
-    // Schaum vorne am Boden
-    for (let j = 0; j < 4; j++) { const fx = front - dir * j * 22 * s + Math.sin(t * 12 + j) * 4 * s; cube(fx - 10 * s, base - 12 * s, 20 * s, 12 * s, 18 * s, FOAM_PAL, true, tt); }
+    const base = bob.y + 8 * s, wob = Math.sin(t * 6) * 6;
+    const P = (rx, ry) => [bob.x + dir * rx * s, base - ry * s * a];
+    const path = (ox, oy) => {
+      const m = (rx, ry) => { const q = P(rx, ry); return [q[0] + ox, q[1] + oy]; };
+      g.beginPath(); g.moveTo(...m(-360, 0));
+      g.bezierCurveTo(...m(-270, 10), ...m(-210, 210 + wob), ...m(-120, 290 + wob));
+      g.bezierCurveTo(...m(-60, 335 + wob), ...m(30, 300), ...m(55, 225 - wob));
+      g.bezierCurveTo(...m(20, 245), ...m(-25, 215), ...m(-18, 165));
+      g.bezierCurveTo(...m(-10, 90), ...m(60, 22), ...m(150, 0));
+      g.closePath();
+    };
+    g.save(); g.lineJoin = 'round';
+    g.fillStyle = 'rgba(20,80,160,.25)'; g.beginPath(); g.ellipse(bob.x - dir * 100 * s, bob.y + 6 * s, 270 * s * a, 24 * s, 0, 0, 7); g.fill();
+    // Rückseite (Tiefe)
+    const ddx = -22 * s * tt, ddy = -14 * s;
+    path(ddx, ddy); g.fillStyle = '#0d4f99'; g.fill(); g.lineWidth = 4; g.strokeStyle = LINE; g.stroke();
+    // Vorderseite
+    path(0, 0); const top = P(0, 330)[1], gr = g.createLinearGradient(0, top, 0, base);
+    gr.addColorStop(0, '#6fd3ff'); gr.addColorStop(0.45, '#2d9cf0'); gr.addColorStop(1, '#1257b5');
+    g.fillStyle = gr; g.fill();
+    g.save(); g.clip();
+    // dunkle Röhre unter der Krone
+    const [tx, ty] = P(-45, 175); g.fillStyle = 'rgba(8,50,110,.45)'; g.beginPath(); g.ellipse(tx, ty, 70 * s, 85 * s * a, 0, 0, 7); g.fill();
+    // helle Streifen auf dem Rücken
+    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 5 * s; g.lineCap = 'round';
+    for (let j = 0; j < 4; j++) { const o = j * 50, sh = Math.sin(t * 3 + j) * 8; g.beginPath(); g.moveTo(...P(-320 + o, 20 + j * 8)); g.quadraticCurveTo(...P(-230 + o + sh, 140 + j * 20), ...P(-150 + o * 0.5, 230 - j * 30)); g.stroke(); }
+    g.restore();
+    g.lineWidth = 4; g.strokeStyle = LINE; path(0, 0); g.stroke();
+    // Schaumkrone
+    g.strokeStyle = '#ffffff'; g.lineCap = 'round'; g.lineWidth = 14 * s;
+    g.beginPath(); g.moveTo(...P(-175, 255 + wob)); g.bezierCurveTo(...P(-110, 300 + wob), ...P(-50, 330 + wob), ...P(10, 305)); g.quadraticCurveTo(...P(45, 285), ...P(52, 232 - wob)); g.stroke();
+    g.fillStyle = '#ffffff';
+    for (let j = 0; j < 9; j++) { const q = j / 8, [fx, fy] = P(-170 + q * 220, 262 + Math.sin(q * 3.1) * 70 + wob + Math.sin(t * 9 + j * 2) * 5); g.beginPath(); g.arc(fx, fy, (7 + (j % 3) * 3) * s, 0, 7); g.fill(); }
+    // Schaum unten vorne
+    for (let j = 0; j < 7; j++) { const [fx, fy] = P(150 - j * 28 + Math.sin(t * 10 + j) * 5, 6 + (j % 2) * 6); g.beginPath(); g.arc(fx, fy, (9 + (j % 3) * 3) * s, 0, 7); g.fill(); }
+    g.restore();
   }
-  for (const p of wave.parts) { g.globalAlpha = Math.max(0, Math.min(1, p.l * 2)); g.fillStyle = p.sz > 8 ? '#bfe6ff' : '#ffffff'; g.fillRect(p.x - p.sz / 2, p.y - p.sz / 2, p.sz, p.sz); g.fillStyle = 'rgba(30,136,229,.6)'; g.fillRect(p.x - p.sz / 2 + p.sz * 0.25, p.y + p.sz * 0.1, p.sz * 0.5, p.sz * 0.5); }
+  for (const p of wave.parts) { g.globalAlpha = Math.max(0, Math.min(1, p.l * 2)); g.fillStyle = p.sz > 8 ? '#bfe6ff' : '#ffffff'; g.beginPath(); g.arc(p.x, p.y, p.sz / 2, 0, 7); g.fill(); }
   g.globalAlpha = 1;
   for (const p of wave.pops) { g.globalAlpha = Math.min(1, p.t * 2); g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 6; g.strokeStyle = '#08305c'; g.strokeText('-' + p.v, p.x, p.y - (1 - p.t) * 40); g.fillStyle = '#4fc3f7'; g.fillText('-' + p.v, p.x, p.y - (1 - p.t) * 40); }
   g.globalAlpha = 1;
