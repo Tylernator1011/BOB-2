@@ -1084,12 +1084,12 @@ function chaseEnd() {
     bump('flucht'); go('kanal1', [500, FLOOR + 100]);
     toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
   } else {
-    const pct = Math.min(50, 10 * (jail.count + 1)), lost = Math.round((bank.cash || 0) * pct / 100); bank.cash = Math.max(0, (bank.cash || 0) - lost); const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
-    jail.count++; const days = Math.min(5, jail.count);
-    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); jail.until = gt.T + (days - 1) * 1440; jail.free = days <= 1; saveJail(); go('zellen', [600, 600]);
+    const pct = Math.min(50, 10 * (jail.count + 2)), lost = Math.round((bank.cash || 0) * pct / 100); bank.cash = Math.max(0, (bank.cash || 0) - lost); const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
+    jail.count++; const hrs = Math.min(60, 12 * jail.count);
+    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); jail.until = gt.T + hrs * 60; jail.free = false; saveJail(); go('zellen', [600, 600]);
     guard.state = 'off'; guard.next = 20;
     if (!wear.owned.includes('gefangener')) wear.owned.push('gefangener'); wear.on = 'gefangener'; saveWear();
-    toast = { text: 'Festgenommen (' + jail.count + '. Mal)! ' + (days <= 1 ? 'Eine Nacht in der Zelle – jetzt bist du frei.' : days + ' Tage Haft.') + ' ' + pct + ' % vom Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
+    toast = { text: 'Festgenommen (' + jail.count + '. Mal)! ' + hrs + ' Stunden Haft, bis ' + jailText() + ' Uhr.' + ' ' + pct + ' % vom Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
   }
 }
 // Flucht im Fluchtwagen (einfacher): von oben, Spur wechseln
