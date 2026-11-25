@@ -2999,6 +2999,24 @@ Object.assign(OUTFITS, {
       poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], '#c0392b');
       g.fillStyle = 'rgba(255,255,255,.55)'; for (let k = 22; k < x1 - x0; k += 34) for (const [r, o] of [[24, 0], [58, 17]]) { if (k + o < x1 - x0 - 8) { g.beginPath(); g.arc(x0 + k + o, y0 + r, 4.5, 0, 7); g.fill(); } }
     } },
+  maid: { name: 'Maid', bp: mkPal('#1a1a1f', '#26262c'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      // weißer Kragen, Schürze mit Rüschen, Schleife
+      g.fillStyle = '#fff'; g.strokeStyle = '#111'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(x + w / 2 - 70, y); g.lineTo(x + w / 2, y + 30); g.lineTo(x + w / 2 + 70, y); g.closePath(); g.fill(); g.stroke();
+      g.fillRect(x + 50, y + 34, w - 100, h - 34); g.strokeRect(x + 50, y + 34, w - 100, h - 34);
+      for (let k = x + 58; k < x + w - 50; k += 18) { g.beginPath(); g.arc(k + 4, y + h, 9, Math.PI, 0); g.fill(); g.stroke(); }
+      g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(x + w / 2, y + 18); g.lineTo(x + w / 2 - 22, y + 6); g.lineTo(x + w / 2 - 22, y + 30); g.closePath(); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x + w / 2, y + 18); g.lineTo(x + w / 2 + 22, y + 6); g.lineTo(x + w / 2 + 22, y + 30); g.closePath(); g.fill(); g.stroke(); g.beginPath(); g.arc(x + w / 2, y + 18, 6, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(x + w / 2 - 30, y + 70, 6, 0, 7); g.arc(x + w / 2 + 30, y + 70, 6, 0, 7); g.fill();
+    },
+    headFront: (x, y, w, h) => { bobFace(x, y); g.fillStyle = 'rgba(255,120,150,.35)'; g.beginPath(); g.ellipse(x + 40, y + 110, 18, 10, 0, 0, 7); g.ellipse(x + w - 40, y + 110, 18, 10, 0, 0, 7); g.fill(); },
+    front: (bx, by, hx, hy, t) => {
+      // Rüschen-Haarband als echter Würfel mit Spitzenkante
+      g.lineWidth = 4; g.strokeStyle = '#111';
+      cube(hx + 20 + 4 * t, hy - 18, HEAD.w - 40, 22, DEPTH * 0.7, mkPal('#ffffff', '#f2f2f2'), true, t);
+      g.fillStyle = '#fff'; g.lineWidth = 3; for (let k = hx + 28 + 4 * t; k < hx + HEAD.w - 26 + 4 * t; k += 20) { g.beginPath(); g.arc(k + 6, hy - 18, 10, Math.PI, 0); g.fill(); g.stroke(); }
+      g.fillStyle = '#1a1a1f'; g.fillRect(hx + 20 + 4 * t, hy - 2, HEAD.w - 40, 6);
+    } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -3580,7 +3598,7 @@ function interactTarget() {
   const nap = nearFurn('napf');
   if (nap) return { x: nap.x, y: furnBox(nap).top - 30, label: nap.food ? 'Napf: ' + FOODS[nap.food].name : 'Napf füllen' };
   const tp = nearFurn('topf');
-  if (tp) return { x: tp.x, y: furnBox(tp).top - 110 * scaleAt(tp.y), label: topfLabel(tp) };
+  if (tp) return { x: tp.x, y: tp.feld ? tp.y - 170 * scaleAt(tp.y) : furnBox(tp).top - 110 * scaleAt(tp.y), label: topfLabel(tp) };
   const hd = nearFurn('herd');
   if (hd) return { x: hd.x, y: furnBox(hd).top - 16, label: 'Kochen' };
   const bt = nearBett();
@@ -4522,6 +4540,8 @@ const ADMIN = {
     ['Darkweb-Zugang', '#0b0f0c', () => { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); }],
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
+    ['Gemüsefeld', '#7a4a24', () => { lief.garten = true; lief.feld = true; saveLief(); gartenSetup(); }],
+    ['Maid + Goldkacke', '#1a1a1f', () => { lief.garten = true; lief.hundehaus = true; lief.maid = true; lief.maid2 = true; saveLief(); gartenSetup(); }],
     ['Haustier-Haus', '#c0392b', () => { lief.garten = true; lief.hundehaus = true; saveLief(); gartenSetup(); }],
     ['Krypto: Kurse +50 %', '#16a36b', () => { for (const k in COINS) { kr.p[k] *= 1.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
     ['Krypto: Crash −50 %', '#d6334a', () => { for (const k in COINS) { kr.p[k] *= 0.5; kr.h[k].push(kr.p[k]); kr.h[k].shift(); } saveKr(); }],
@@ -4952,6 +4972,9 @@ const WEB_ITEMS = [
   { id: 'tf3',  cat: 'tier', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
   { id: 'tf3x', cat: 'tier', name: 'Futter Lv3 ×6', price: 110, desc: ['Vorratspack', 'billiger als im Laden'], food: [3, 6] },
   { id: 'hundehaus', cat: 'haus', name: 'Haustier-Haus', price: 1500, desc: ['Für den Garten: mit Napf,', 'dort wählst du dein Tier'], once: true, needs: 'garten' },
+  { id: 'maid', cat: 'haus', name: 'Haus-Maid', price: 2000, desc: ['Passt auf dein Tier auf:', 'füllt den Napf mit bestem Futter'], once: true, needs: 'hundehaus' },
+  { id: 'maid2', cat: 'haus', name: 'Maid: Goldkacke', price: 1500, desc: ['Die Maid sammelt die goldene', 'Kacke ein – direkt aufs Konto'], once: true, needs: 'maid' },
+  { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
   { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Große Rasenfläche hinterm Haus:', 'im Haus ganz nach unten'], once: true },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
@@ -4968,10 +4991,10 @@ function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now()
 function webOrder(it) {
   if (it.once) {
     if (lief[it.id]) return;
-    if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst den Garten.'; web.msgT = 2.5; return; }
+    if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5022,6 +5045,14 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (id === 'feld') { g.fillStyle = '#45c43a'; g.fillRect(-50, -50, 100, 100); g.fillStyle = '#7a4a24'; g.fillRect(-42, -30, 84, 70); g.lineWidth = 3; g.strokeStyle = '#3a2010'; g.strokeRect(-42, -30, 84, 70); for (const [a, b] of [[-24, -10], [0, -10], [24, -10], [-24, 22], [0, 22], [24, 22]]) { g.fillStyle = '#5a3416'; g.beginPath(); g.ellipse(a, b, 10, 4, 0, 0, 7); g.fill(); g.strokeStyle = '#2a8a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(a, b); g.lineTo(a, b - 14); g.stroke(); g.fillStyle = '#2fb84f'; g.beginPath(); g.ellipse(a - 5, b - 10, 5, 3, -0.5, 0, 7); g.ellipse(a + 5, b - 12, 5, 3, 0.5, 0, 7); g.fill(); } g.fillStyle = '#e0262b'; g.beginPath(); g.arc(24, -24, 4, 0, 7); g.fill(); g.restore(); return; }
+  if (id === 'maid' || id === 'maid2') {
+    g.fillStyle = '#1a1a1f'; g.fillRect(-24, 4, 48, 40); g.fillStyle = '#fff'; g.fillRect(-14, 10, 28, 30); g.fillStyle = '#ffee00'; g.fillRect(-26, -40, 52, 44); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(-26, -40, 52, 44); g.strokeRect(-24, 4, 48, 40);
+    g.fillStyle = '#fff'; g.fillRect(-26, -46, 52, 10); g.strokeRect(-26, -46, 52, 10); for (let k = -20; k <= 20; k += 10) { g.beginPath(); g.arc(k, -46, 5, Math.PI, 0); g.fill(); g.stroke(); }
+    g.fillStyle = '#111'; g.beginPath(); g.arc(-9, -24, 3, 0, 7); g.arc(9, -24, 3, 0, 7); g.fill(); g.beginPath(); g.arc(0, -16, 8, 0.2, Math.PI - 0.2); g.stroke();
+    if (id === 'maid2') { g.fillStyle = '#ffcc1a'; g.beginPath(); g.ellipse(32, 36, 14, 8, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.ellipse(32, 28, 9, 6, 0, 0, 7); g.fill(); g.stroke(); }
+    else { g.strokeStyle = '#8a4316'; g.lineWidth = 4; g.beginPath(); g.moveTo(30, -30); g.lineTo(38, 40); g.stroke(); g.fillStyle = '#e8d28a'; g.beginPath(); g.moveTo(30, 34); g.lineTo(46, 34); g.lineTo(48, 48); g.lineTo(28, 48); g.closePath(); g.fill(); }
+    g.restore(); return; }
   if (id === 'hundehaus') { g.fillStyle = '#45c43a'; g.fillRect(-50, 26, 100, 24); g.lineWidth = 3; g.strokeStyle = '#3a2010'; g.fillStyle = '#c0392b'; g.fillRect(-32, -10, 64, 40); g.strokeRect(-32, -10, 64, 40); g.fillStyle = '#6a3a1a'; g.beginPath(); g.moveTo(-40, -8); g.lineTo(0, -42); g.lineTo(40, -8); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#1a0c06'; g.beginPath(); g.moveTo(-14, 30); g.lineTo(-14, 10); g.arc(0, 10, 14, Math.PI, 0); g.lineTo(14, 30); g.closePath(); g.fill(); g.fillStyle = '#e0262b'; g.beginPath(); g.ellipse(30, 36, 14, 6, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#c8a060'; g.beginPath(); g.ellipse(30, 33, 10, 3, 0, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'garten') { g.fillStyle = '#5fb8ff'; g.fillRect(-50, -50, 100, 56); g.fillStyle = '#ffee00'; g.beginPath(); g.arc(-30, -32, 11, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(14, -30, 9, 0, 7); g.arc(26, -34, 11, 0, 7); g.arc(38, -30, 8, 0, 7); g.fill(); g.fillStyle = '#4dbb3a'; g.beginPath(); g.ellipse(-20, 8, 50, 16, 0, Math.PI, 0); g.fill(); g.fillStyle = '#45c43a'; g.fillRect(-50, 6, 100, 44); g.fillStyle = 'rgba(255,255,255,.12)'; for (let x = -50; x < 50; x += 20) g.fillRect(x, 6, 10, 44); g.restore(); return; }
   if (id === 'pizza') { g.fillStyle = '#e9b04a'; g.beginPath(); g.arc(0, 0, 44, 0, 7); g.fill(); g.stroke(); circ(0, 0, 36, '#d8442a'); g.fillStyle = 'rgba(255,230,150,.85)'; for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.cos(i * 2.4) * 22, Math.sin(i * 2.4) * 22, 9, 6, i, 0, 7); g.fill(); } for (const [a, b] of [[-16, -12], [14, -18], [18, 12], [-10, 18], [0, 0]]) circ(a, b, 7, '#a8202a'); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(Math.cos(i * 0.785) * 44, Math.sin(i * 0.785) * 44); g.lineTo(-Math.cos(i * 0.785) * 44, -Math.sin(i * 0.785) * 44); g.stroke(); } }
@@ -5070,7 +5101,7 @@ function drawWeb(dt) {
     it.desc.forEach((d, k) => outl(d, x + L.cw / 2, y + 224 + k * 24, '700 17px "Trebuchet MS", system-ui', '#e8e8e8', 4));
     const b = { x, y: L.ch - 56 + y, w: L.cw, h: 56 };
     g.fillStyle = ok ? (hov ? '#3cff2a' : '#1fd81a') : '#1a7a1a'; g.fillRect(b.x, b.y, b.w, b.h); g.strokeStyle = '#0a3a0a'; g.lineWidth = 3; g.strokeRect(b.x, b.y, b.w, b.h);
-    outl(own ? 'Gekauft' : lock ? 'Erst Garten' : ok ? (it.once ? 'Kaufen' : 'Bestellen') : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
+    outl(own ? 'Gekauft' : lock ? 'Gesperrt' : ok ? (it.once ? 'Kaufen' : 'Bestellen') : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
     btns.push({ b, id: it.id, act: () => webOrder(it) });
   });
   g.restore();
@@ -5130,9 +5161,69 @@ function drawHundehaus() {
   g.fillStyle = '#5a3a1a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(pet ? PETS[pet].name : 'Haustier', x, y - h - 35 * s);
   g.restore();
 }
+// ---------- Haus-Maid: passt auf dein Tier auf und füllt den Napf im Haustier-Haus ----------
+const MD = { x: HH.x + 260, y: HH.y + 110, st: 'idle', t: 2, say: '', sayT: 0, dir: -1, warned: 0 };
+function maidHome() { return [HH.x + 260, HH.y + 110]; }
+function maidNapf() { return (furn.garten || []).find(f => f.t === 'napf' && f.hh); }
+function maidBest() { for (const l of [4, 3, 2, 1]) if ((garden.food[l] || 0) > 0) return l; return 0; }
+function maidFill() {
+  const n = maidNapf(), l = maidBest(); if (!n || n.food || !l) return false;
+  garden.food[l]--; n.food = l; saveFurn(); saveGarden(); return l;
+}
+function maidTick(dt) {
+  if (!lief.maid || !lief.hundehaus) return;
+  const n = maidNapf(); if (!n) return;
+  if (MD.sayT > 0) MD.sayT -= dt;
+  if (cur !== 'garten') { // nicht im Garten: sie macht es einfach
+    MD.st = 'idle'; [MD.x, MD.y] = maidHome();
+    if (!n.food) { const l = maidFill(); if (!l && gt.T - MD.warned > 240) { MD.warned = gt.T; toast = { text: '🧹 Deine Maid: „Das Futter ist alle! Bitte neues kaufen.“', t: 4 }; } }
+    return;
+  }
+  const sp = 220 * dt, mv = (tx, ty) => { const dx = tx - MD.x, dy = ty - MD.y, d = Math.hypot(dx, dy); if (d < sp) { MD.x = tx; MD.y = ty; return true; } MD.x += dx / d * sp; MD.y += dy / d * sp * 0.8; MD.dir = dx < 0 ? -1 : 1; return false; };
+  const gc = lief.maid2 && (garden.coins.garten || []);
+  if (MD.st === 'idle' && gc && gc.length) { MD.coin = gc[0]; MD.st = 'coin'; MD.say = 'Oh, Goldkacke!'; MD.sayT = 1.4; }
+  if (MD.st === 'coin') { const c = MD.coin; if (!gc.includes(c)) { MD.st = 'back'; } else if (mv(c.x, c.y)) { gc.splice(gc.indexOf(c), 1); saveGarden(); bank.money += c.v; bank.log.push({ t: 'Maid: Goldkacke', v: c.v }); saveBank(); MD.say = '+' + money(c.v) + ' aufs Konto!'; MD.sayT = 1.8; MD.st = gc.length ? 'idle' : 'back'; } return; }
+  if (MD.st === 'idle') {
+    MD.t -= dt;
+    if (MD.t <= 0) {
+      MD.t = 2 + Math.random() * 2;
+      if (!n.food) { if (maidBest()) { MD.st = 'go'; MD.say = 'Ich hole Futter!'; MD.sayT = 1.5; } else if (gt.T - MD.warned > 120) { MD.warned = gt.T; MD.say = 'Das Futter ist alle!'; MD.sayT = 3; } }
+      else if (Math.random() < 0.35) { const pet = activeList()[0]; MD.say = pet ? ['Braves Tier!', PETS[pet].name + ' geht es gut.', 'Alles sauber hier.', 'Der Napf ist voll!'][Math.floor(Math.random() * 4)] : 'Alles sauber hier.'; MD.sayT = 2.2; }
+    }
+  } else if (MD.st === 'go') { if (mv(HH.x + 90, HH.y + 40)) { MD.st = 'fill'; MD.t = 1; } }
+  else if (MD.st === 'fill') { MD.t -= dt; if (MD.t <= 0) { const l = maidFill(); MD.say = l ? FOODS[l].name + ' – bitte schön!' : 'Hm, nichts mehr da.'; MD.sayT = 2.2; MD.st = 'back'; } }
+  else if (MD.st === 'back') { const [hx, hy] = maidHome(); if (mv(hx, hy)) { MD.st = 'idle'; MD.dir = -1; MD.t = 3; } }
+}
+function drawMaid() {
+  const s = scaleAt(MD.y), k = BASE_W / BODY.w * s * 0.9, t = performance.now() / 1000, walk = MD.st === 'go' || MD.st === 'back';
+  const hop = walk ? Math.abs(Math.sin(t * 9)) * 8 : Math.sin(t * 2) * 1.5;
+  drawBobFig(MD.x, MD.y, k, MD.dir, hop, 1, 'maid', true);
+  if (MD.st === 'fill') { g.fillStyle = FOODS[maidBest() || 1].col; g.beginPath(); g.arc(MD.x + MD.dir * 60 * s, MD.y - 120 * s + Math.sin(t * 10) * 6, 10 * s, 0, 7); g.fill(); }
+  if (MD.sayT > 0) { g.font = '700 18px system-ui'; const tw = g.measureText(MD.say).width + 28, bx = MD.x - tw / 2, by = MD.y - 330 * s - 40; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(MD.say, MD.x, by + 20); }
+}
+// Upgrade: Maid sammelt die goldene Kacke ein und zahlt sie aufs Konto
+function maidCoinTick() {
+  if (!lief.maid2) return;
+  for (const room of Object.keys(garden.coins)) {
+    if (room === cur && cur === 'garten') continue;
+    const cs = garden.coins[room]; if (!cs || !cs.length) continue;
+    const v = cs.reduce((a, c) => a + c.v, 0); garden.coins[room] = []; saveGarden();
+    bank.money += v; bank.log.push({ t: 'Maid: Goldkacke', v }); saveBank();
+    if (room === cur) toast = { text: '🧹 Die Maid hat ' + money(v) + ' Goldkacke eingesammelt – aufs Konto.', t: 3 };
+  }
+}
+const FELD = { x0: -450, x1: 50, y0: 575, y1: 790, slots: [[-380, 640], [-260, 640], [-140, 640], [-20, 640], [-380, 760], [-260, 760], [-140, 760], [-20, 760]] };
+function drawFeld() {
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#7a4a24'; g.beginPath(); g.roundRect(FELD.x0, FELD.y0, FELD.x1 - FELD.x0, FELD.y1 - FELD.y0, 18); g.fill(); g.stroke();
+  g.fillStyle = '#6a3e1c'; for (let y = FELD.y0 + 18; y < FELD.y1 - 10; y += 26) g.fillRect(FELD.x0 + 14, y, FELD.x1 - FELD.x0 - 28, 7);
+  g.fillStyle = '#c98a4a'; g.fillRect(FELD.x0 - 8, FELD.y0 - 8, FELD.x1 - FELD.x0 + 16, 12); g.strokeRect(FELD.x0 - 8, FELD.y0 - 8, FELD.x1 - FELD.x0 + 16, 12);
+  for (const [x, y] of FELD.slots) { g.fillStyle = '#5a3416'; g.beginPath(); g.ellipse(x, y, 46, 16, 0, 0, 7); g.fill(); g.fillStyle = '#8a5428'; g.beginPath(); g.ellipse(x, y - 4, 38, 11, 0, 0, 7); g.fill(); }
+}
 function gartenSetup() {
   if (!gartenOwned()) return;
   ROOMS.pink.exits.d = 'garten';
+  if (lief.feld) { furn.garten = furn.garten || []; if (!furn.garten.some(f => f.feld)) { for (const [x, y] of FELD.slots) furn.garten.push({ t: 'topf', x, y, r: 0, feld: true }); saveFurn(); } }
   if (lief.hundehaus) { furn.garten = furn.garten || []; for (const f of furn.garten) if (f.hh) f.y = HH.y - 4; if (!furn.garten.some(f => f.t === 'napf' && f.hh)) { furn.garten.push({ t: 'napf', x: HH.x, y: HH.y - 4, r: 0, hh: true }); saveFurn(); } }
 }
 function gartenTree(x, s, apples) {
@@ -5161,6 +5252,7 @@ function drawGarten(R) {
   const gr = g.createLinearGradient(0, FLOOR, 0, H); gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f'); g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, H - FLOOR);
   g.fillStyle = 'rgba(255,255,255,.07)'; for (let x = Math.floor(XL / 160) * 160; x < XR; x += 160) g.fillRect(x, FLOOR, 80, H - FLOOR);
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  if (lief.feld) drawFeld();
 }
 // ---------- Krypto-App ----------
 const COINS = {
@@ -6530,12 +6622,12 @@ function goldTick(id, d) {
 }
 // Pflanzen im Topf
 function plantProgress(f) { return f.plant ? Math.min(1, (gt.T - f.plant.t0) / GROW_MIN) : 0; }
-function nearFurn(type) { if (build.on || fade.dir) return null; return (furn[cur] || []).find(f => f.t === type && Math.abs(bob.x - f.x) < 170 && Math.abs(bob.y - f.y) < 130); }
+function nearFurn(type) { if (build.on || fade.dir) return null; let best = null, bd = 1e9; for (const f of furn[cur] || []) { if (f.t !== type) continue; const rx = f.feld ? 70 : 170, ry = f.feld ? 70 : 130; if (Math.abs(bob.x - f.x) < rx && Math.abs(bob.y - f.y) < ry) { const d = Math.hypot(bob.x - f.x, bob.y - f.y); if (d < bd) { bd = d; best = f; } } } return best; }
 function topfLabel(f) { if (!f.plant) return 'Pflanzen'; const p = plantProgress(f); return p >= 1 ? 'Ernten' : SEEDS[f.plant.type].name + ' ' + Math.floor(p * 100) + ' %'; }
 function drawPlant(f) {
   if (!f.plant) return;
   const m = model('topf', f.r || 0), s = scaleAt(f.y), zc = m.ext.d / 2;
-  const bx = f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - m.L * zc * KX * s, by = f.y - (56 + zc * KY) * s;
+  const bx = f.feld ? f.x : f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - m.L * zc * KX * s, by = f.feld ? f.y - 6 * s : f.y - (56 + zc * KY) * s;
   const p = plantProgress(f), st = p >= 1 ? 3 : Math.floor(p * 3), type = f.plant.type, h = [24, 50, 80, 100][st];
   const t = performance.now() / 1000;
   g.save(); g.translate(bx, by); g.scale(s, s); g.rotate(Math.sin(t * 1.5 + f.x) * 0.04);
@@ -6558,6 +6650,7 @@ function drawPlant(f) {
   g.restore();
 }
 function drawFurnItem(f) {
+  if (f.feld) { drawPlant(f); return; }
   drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r, f.t === 'trophaeenregal' ? regalExtra(f) : null); if (f.t === 'topf') drawPlant(f);
   if (f.t === 'napf' && f.food) {
     const m = model('napf', f.r || 0), s = scaleAt(f.y), zc = m.ext.d / 2;
@@ -6934,7 +7027,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); kryptoTick(dt); liefTick(); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); kryptoTick(dt); liefTick(); maidTick(dt); maidCoinTick(); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -6948,6 +7041,7 @@ function frame(t) {
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
   if (cur === 'garten' && lief.hundehaus) list.push({ y: HH.y, f: drawHundehaus });
+  if (cur === 'garten' && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else list.push({ y: bob.y + 0.01, f: drawBob }); }
