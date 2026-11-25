@@ -1850,13 +1850,18 @@ Object.assign(FURN, {
   ] },
 });
 const RW = '#7a4520', RD = '#55301a';
-FURN.trophaeenregal = { name: 'Trophäenregal', boxes: [
-  B(-160, 160, 48, 56, 0, 282, RW),
-  B(-160, 160, 0, 56, 0, 16, RD), B(-160, 160, 0, 56, 130, 144, RD), B(-170, 170, -4, 58, 264, 282, RD),
-  B(-170, -160, 0, 56, 0, 264, RD), B(160, 170, 0, 56, 0, 264, RD),
-  B(-60, 60, -6, -2, 266, 280, '#ffcc1a'),
+// hängt an der Wand (Höhe HANG über dem Boden)
+const HANG = 150;
+FURN.trophaeenregal = { name: 'Trophäenregal', wall: true, boxes: [
+  B(-150, 150, 46, 54, HANG - 10, HANG + 262, RW),
+  B(-166, 166, 0, 54, HANG, HANG + 16, RD), B(-166, 166, 0, 54, HANG + 130, HANG + 144, RD),
+  B(-150, -134, 8, 54, HANG - 40, HANG, RD), B(134, 150, 8, 54, HANG - 40, HANG, RD),
+  B(-150, -134, 8, 54, HANG + 90, HANG + 130, RD), B(134, 150, 8, 54, HANG + 90, HANG + 130, RD),
+  B(-60, 60, 40, 46, HANG + 230, HANG + 252, '#ffcc1a'),
 ] };
-const TROPHY_SLOTS = [[-100, 16], [0, 16], [100, 16], [-55, 144], [55, 144]];
+const TROPHY_SLOTS = [[-100, HANG + 16], [0, HANG + 16], [100, HANG + 16], [-55, HANG + 144], [55, HANG + 144]];
+// y so wählen, dass das Teil genau an der Rückwand hängt
+function wallY(t) { const d = model(t, 8).ext.d; let y = FLOOR + 4; while (y - d * KY * (0.78 + (y - FLOOR) / (H - FLOOR) * 0.4) < FLOOR + 4) y++; return y; }
 const TROPHIES = {
   pfote:        { name: 'Bronze-Pfote',  col: '#cd7f32', kind: 'pfote' },
   pokal_silber: { name: 'Silberpokal',   col: '#c9d1d9', kind: 'pokal' },
@@ -1986,6 +1991,7 @@ function model(t, r, extra) {
   });
   return modelCache[key] = { boxes, ext, sx, L };
 }
+for (const r in furn) for (const f of furn[r]) if (FURN[f.t] && FURN[f.t].wall) { f.r = 8; f.y = wallY(f.t); }
 const FOOT = 0.55; // Tiefe auf dem Boden (für Laufen und Ebenen)
 function furnBox(f) {
   const m = model(f.t, f.r || 0), s = scaleAt(f.y);
@@ -1995,7 +2001,7 @@ function furnBox(f) {
 }
 function solids(room) {
   const list = (ROOMS[room].objs || []).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o);
-  for (const f of furn[room] || []) if (!FURN[f.t].flat) list.push(furnBox(f));
+  for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall) list.push(furnBox(f));
   return list;
 }
 
@@ -2020,10 +2026,12 @@ function drawFurn(t, x, y, s, alpha, r, extra) {
     g.restore(); return;
   }
   // Schatten
+  if (!d.wall) {
   g.save(); g.globalAlpha *= 0.22; g.fillStyle = '#000';
   { const e = m.ext, pts = [P(e.fx0 + 6, 0, -4), P(e.fx1 + 10, 0, -4), P(e.fx1 + 10, 0, e.d), P(e.fx0 + 6, 0, e.d)];
     g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.closePath(); g.fill(); }
   g.restore();
+  }
   if (d.glow) {
     const [gx, gy] = P(0, 210, 25), pulse = 0.28 + 0.08 * Math.sin(performance.now() / 500);
     g.save(); g.globalAlpha *= pulse; const rg = g.createRadialGradient(gx, gy, 10, gx, gy, 140);
@@ -2150,8 +2158,13 @@ function unstick() {
   for (const id of activeList()) { const p = petFor(id); if (p.room === cur) { [p.x, p.y] = freeSpot(p.x, p.y, PETS[id].w * scaleAt(p.y) * 0.4); p.wait = 0.5; } }
 }
 function toggleBuild(on) { if (build.on && !(on ?? !build.on)) unstick(); build.on = on ?? !build.on; build.sel = null; build.rot = 0; keys.clear(); joy.on = false; }
-function rotate() { build.rot = (build.rot + 1) % 12; }
+function rotate() { if (build.sel && FURN[build.sel].wall) { toast = { text: 'Das hängt an der Wand – drehen geht nicht.', t: 2.5 }; return; } build.rot = (build.rot + 1) % 12; }
 function placeOk(t, x, y, r) {
+  if (FURN[t].wall) {
+    const b = furnBox({ t, x, y: wallY(t), r: 8 });
+    if (b.left < XL + 20 || b.right > XR - 20) return false;
+    return !(furn[cur] || []).some(o => FURN[o.t].wall && (() => { const c = furnBox(o); return b.left < c.right && b.right > c.left; })());
+  }
   const f = { t, x, y, r }, b = furnBox(f);
   const mm = model(t, r || 0);
   if (y - mm.ext.d * KY * scaleAt(y) < FLOOR + 2 || y > H - 18 || b.left < XL + 16 || b.right > XR - 16) return false;
@@ -2176,7 +2189,8 @@ function buildClick(x, y) {
   if (build.sel && Math.hypot(x - buildBtns().rot.x, y - buildBtns().rot.y) < 28) { rotate(); return; }
   if (build.sel) {
     if (placeOk(build.sel, x, y, build.rot)) {
-      (furn[cur] = furn[cur] || []).push({ t: build.sel, x, y, r: build.rot });
+      const wl = FURN[build.sel].wall;
+      (furn[cur] = furn[cur] || []).push({ t: build.sel, x, y: wl ? wallY(build.sel) : y, r: wl ? 8 : build.rot });
       inv[build.sel]--; if (!inv[build.sel]) build.sel = null; saveFurn();
     }
     return;
@@ -2215,10 +2229,12 @@ function drawBuildUI() {
   // Vorschau
   const k = build.sel, inPanel = slotAt(build.px, build.py), onBtn = Math.hypot(build.px - buildBtns().done.x, build.py - buildBtns().done.y) < 30 || Math.hypot(build.px - buildBtns().rot.x, build.py - buildBtns().rot.y) < 30;
   if (k && !inPanel && !onBtn) {
-    const ok = placeOk(k, build.px, build.py, build.rot), s = scaleAt(build.py), b = furnBox({ t: k, x: build.px, y: build.py, r: build.rot });
+    const wl = FURN[k].wall, py = wl ? wallY(k) : build.py, rr = wl ? 8 : build.rot;
+    const ok = placeOk(k, build.px, py, rr), s = scaleAt(py), b = furnBox({ t: k, x: build.px, y: py, r: rr });
     g.fillStyle = ok ? 'rgba(19,240,0,.35)' : 'rgba(255,40,40,.4)';
-    g.fillRect(b.x, build.py - Math.max(b.depth, 24), b.w, Math.max(b.depth, 24));
-    drawFurn(k, build.px, build.py, s, ok ? 0.8 : 0.45, build.rot);
+    if (wl) { const bot = py - (HANG - 40) * s; g.fillRect(b.left, b.top, b.right - b.left, bot - b.top); }
+    else g.fillRect(b.x, build.py - Math.max(b.depth, 24), b.w, Math.max(b.depth, 24));
+    drawFurn(k, build.px, py, s, ok ? 0.8 : 0.45, rr);
   } else if (!k && !inPanel) {
     const f = furnAt(build.px, build.py);
     if (f) { const b = furnBox(f); g.strokeStyle = '#13f000'; g.lineWidth = 6; g.setLineDash([14, 10]); g.strokeRect(b.left - 6, b.top - 6, b.right - b.left + 12, f.y - b.top + 12); g.setLineDash([]); }
