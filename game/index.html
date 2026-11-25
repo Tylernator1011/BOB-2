@@ -4026,12 +4026,14 @@ function updateBus(dt) {
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 const petClicks = [];
+let lastPetClick = 0;
+function clickVal() { return lief.klick2 ? 2 : 1; }
 let autoAcc = 0;
 function autoClickTick(dt) {
   if (!lief.auto || !lief.klick || apo.on) return;
   const id = activeList()[0]; if (!id) return;
-  autoAcc += dt; if (autoAcc < 5) return; autoAcc -= 5;
-  earn(1); const p = petFor(id); if (p.room === cur) petClicks.push({ x: p.x, y: p.y - PETS[id].w * scaleAt(p.y) * 0.9, t: 0.9, auto: true });
+  const iv = lief.auto2 ? 4 : 5; autoAcc += dt; if (autoAcc < iv) return; autoAcc -= iv;
+  earn(clickVal()); const p = petFor(id); if (p.room === cur) petClicks.push({ x: p.x, y: p.y - PETS[id].w * scaleAt(p.y) * 0.9, t: 0.9, auto: true });
 }
 cv.addEventListener('contextmenu', e => { if (!lief.klick) return; e.preventDefault(); const [x, y] = toCanvas(e); const pt = petAt(x, y); if (pt && !menu.open && !phone.open) openPetPanel(pt.id); });
 cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, y] = toCanvas(e);
@@ -4042,7 +4044,7 @@ cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, 
   if (tres.on) { tresClick(x, y); return; }
   if (wk.on) { workDown(x, y); return; }
   if (pp.open) { petPanelClick(x, y); return; }
-  if (!build.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !sleepFx && !bus) { const pt = petAt(x, y); if (pt) { if (lief.klick) { earn(1); petClicks.push({ x: pt.x + (Math.random() - 0.5) * 40, y: pt.y - PETS[pt.id].w * scaleAt(pt.y) * 0.9, t: 0.9 }); pt.hopT = 0.25; } else openPetPanel(pt.id); return; } }
+  if (!build.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !sleepFx && !bus) { const pt = petAt(x, y); if (pt) { if (lief.klick) { if (performance.now() - lastPetClick < 800) return; lastPetClick = performance.now(); earn(clickVal()); petClicks.push({ x: pt.x + (Math.random() - 0.5) * 40, y: pt.y - PETS[pt.id].w * scaleAt(pt.y) * 0.9, t: 0.9 }); pt.hopT = 0.25; } else openPetPanel(pt.id); return; } }
   if (sleepFx) return;
   if (kal.open) { kalClick(x, y); return; }
   if (web.open) { webClick(x, y); return; }
@@ -4796,6 +4798,7 @@ const ADMIN = {
     ['Dietrich', '#4c535a', () => { dw.dietrich = true; saveDw(); }],
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
+    ['Autoklicker 2 + ×2', '#ffcc1a', () => { lief.klick = true; lief.auto = true; lief.auto2 = true; lief.klick2 = true; saveLief(); }],
     ['Alle Accessoires', '#9b5de5', () => { wear.accOwned = Object.keys(ACC); saveWear(); }],
     ['Kalender', '#e0262b', () => { lief.garten = true; lief.kalender = true; saveLief(); gartenSetup(); }],
     ['Pässe + 1000 XP', '#ffe14a', () => { lief.kalender = true; lief.paesse = true; saveLief(); passXp(1000); }],
@@ -5243,6 +5246,8 @@ const WEB_ITEMS = [
   { id: 'lv3gold', cat: 'haus', name: 'Gold-Rezept Lv3', price: 4000, desc: ['Auch Futter Lv3 macht', 'Goldkacke (halb so lang)'], once: true, needs: 'klo' },
   { id: 'klick', cat: 'haus', name: 'Streichel-Bonus', price: 2500, desc: ['Jeder Klick aufs Tier:', '+1 € Bargeld (Rechtsklick: Infos)'], once: true, needs: 'hundehaus' },
   { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
+  { id: 'auto2', cat: 'haus', name: 'Autoklicker 2', price: 8000, desc: ['Klickt jetzt alle 4 statt', '5 Sekunden'], once: true, needs: 'auto' },
+  { id: 'klick2', cat: 'haus', name: 'Doppel-Klick', price: 12000, desc: ['Jeder Klick aufs Tier', 'bringt 2 € statt 1 €'], once: true, needs: 'auto2' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
@@ -5264,7 +5269,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5318,6 +5323,7 @@ function webPic(id, cx, cy, sz) {
   if (id.startsWith('acc_')) { g.restore(); g.save(); drawBobFig(cx, cy + 50, sz / 640, 0.6, 0, 1, 'gruen', false, [id.slice(4)]); g.restore(); return; }
   if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
+  if (id === 'auto2' || id === 'klick2') { g.fillStyle = id === 'auto2' ? '#555b66' : '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = id === 'auto2' ? '#3cff5a' : '#7a5a00'; g.font = '900 ' + (id === 'auto2' ? 26 : 30) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'auto2' ? '4s' : '×2', 0, 2); g.restore(); return; }
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
   if (id === 'klick') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.arc(18, -14, 22, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 18, -13); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-30, -20); g.lineTo(-30, 30); g.lineTo(-18, 18); g.lineTo(-8, 38); g.lineTo(0, 34); g.lineTo(-10, 14); g.lineTo(6, 14); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'lv3gold') { webPic('tf3', 0, 0, 100); g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.ellipse(30, 38, 16, 9, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.ellipse(30, 29, 10, 6, 0, 0, 7); g.fill(); g.stroke(); g.restore(); return; }
@@ -6792,8 +6798,8 @@ function drawKal() {
 }
 const PASSES = [
   { id: 'bob', name: 'Bob-Pass', col: '#ffe14a', dark: '#2a2a2a', sub: '100 Level', open: true },
-  { id: 'affe', name: 'Affen-Pass', col: '#c98a4a', dark: '#2a2016', sub: 'Bald verfügbar', open: false },
-  { id: 'gold', name: 'Gold-Pass', col: '#ffcc1a', dark: '#2a2208', sub: 'Bald verfügbar', open: false },
+  { id: 'x1', name: '???', col: '#666', dark: '#1e1e1e', sub: 'Gesperrt', open: false },
+  { id: 'x2', name: '???', col: '#666', dark: '#1e1e1e', sub: 'Gesperrt', open: false },
 ];
 // Haare/Wolken als Puffs mit Tiefe (dreht sich mit Bob)
 function hairPuff(hx, hy, t, col, blobs) {
@@ -6848,9 +6854,9 @@ function drawPassTab(C, btns, txt) {
       g.restore();
       // Bild
       if (p.id === 'bob') { g.lineWidth = 4; g.strokeStyle = '#111'; cube(x + cw / 2 - 55, y + 90, 110, 82, 18, YEL, true, 0.4); if (face.complete && face.width) g.drawImage(face, x + cw / 2 - 55 + 6, y + 98, 98, 70); cube(x + cw / 2 - 58, y + 172, 116, 70, 18, mkPal('#13c000', '#2fe01a'), true, 0.4); g.fillStyle = '#111'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.fillText('BoB', x + cw / 2, y + 210); }
-      else { g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(x + cw / 2, y + 170, 70, 0, 7); g.fill(); txt(p.id === 'affe' ? '🐒' : '👑', x + cw / 2, y + 172, '400 64px system-ui', '#000', 'center'); txt('🔒', x + cw - 30, y + 30, '400 26px system-ui', '#000', 'center'); }
-      txt(p.name, x + cw / 2, y + 300, '900 26px system-ui', p.open ? p.col : '#888', 'center');
-      txt(p.sub, x + cw / 2, y + 334, '600 16px system-ui', p.open ? '#ddd' : '#777', 'center');
+      else { g.fillStyle = 'rgba(255,255,255,.06)'; g.beginPath(); g.arc(x + cw / 2, y + 190, 80, 0, 7); g.fill(); txt('🔒', x + cw / 2, y + 192, '400 70px system-ui', '#000', 'center'); }
+      txt(p.open ? p.name : '???', x + cw / 2, y + 320, '900 26px system-ui', p.open ? p.col : '#666', 'center');
+      txt(p.open ? p.sub : 'Gesperrt', x + cw / 2, y + 354, '600 16px system-ui', p.open ? '#ddd' : '#666', 'center');
       if (p.open) {
         const lv = passLevel(); g.fillStyle = '#444'; g.beginPath(); g.roundRect(x + 20, y + 366, cw - 40, 14, 7); g.fill(); g.fillStyle = p.col; g.beginPath(); g.roundRect(x + 20, y + 366, (cw - 40) * lv / PASS_LV, 14, 7); g.fill();
         txt('Level ' + lv + ' / ' + PASS_LV, x + cw / 2, y + 396, '700 15px system-ui', '#ddd', 'center');
@@ -7624,7 +7630,7 @@ function frame(t) {
   list.push({ y: -1e9, f: drawSeasonGround });
   if (cur === 'garten' && lief.hundehaus) list.push({ y: HH.y, f: drawHundehaus });
   if (cur === 'garten' && lief.klo) list.push({ y: KLO.y, f: drawKlo });
-  if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+1 €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+1 €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
+  if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+' + clickVal() + ' €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+' + clickVal() + ' €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
   if (cur === 'garten' && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
