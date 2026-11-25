@@ -4927,31 +4927,34 @@ try { const v = JSON.parse(localStorage.getItem('bob-zeit') || 'null'); if (v &&
 let gtSave = 0;
 // ---------- Computer: Online-Laden „bobnet“ – Essen bestellen, kommt nach einer Weile ----------
 const WEB_ITEMS = [
-  { id: 'tf1',  cat: 'tier', name: 'Futter Lv1',    price: 5,   desc: ['1× Futter Lv1', '+30 % satt, +10 XP'], food: [1, 1] },
+  { id: 'tf1',  cat: 'tier', cur: 'bar', name: 'Futter Lv1',    price: 5,   desc: ['1× Futter Lv1', '+30 % satt, +10 XP'], food: [1, 1] },
   { id: 'tf1x', cat: 'tier', name: 'Futter Lv1 ×10', price: 35,  desc: ['Vorratspack', 'billiger als im Laden'], food: [1, 10] },
-  { id: 'tf2',  cat: 'tier', name: 'Futter Lv2',    price: 10,  desc: ['1× Futter Lv2', '+50 % satt, +25 XP'], food: [2, 1] },
+  { id: 'tf2',  cat: 'tier', cur: 'bar', name: 'Futter Lv2',    price: 10,  desc: ['1× Futter Lv2', '+50 % satt, +25 XP'], food: [2, 1] },
   { id: 'tf2x', cat: 'tier', name: 'Futter Lv2 ×10', price: 80,  desc: ['Vorratspack', 'billiger als im Laden'], food: [2, 10] },
-  { id: 'tf3',  cat: 'tier', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
-  { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Große Rasenfläche hinterm Haus:', 'im Haus ganz nach unten'], once: true },
+  { id: 'tf3',  cat: 'tier', cur: 'bar', name: 'Futter Lv3',    price: 22,  desc: ['1× Futter Lv3', '+80 % satt, +50 XP'], food: [3, 1] },
   { id: 'tf3x', cat: 'tier', name: 'Futter Lv3 ×6', price: 110, desc: ['Vorratspack', 'billiger als im Laden'], food: [3, 6] },
+  { id: 'garten', cat: 'haus', name: 'Garten', price: 2500, desc: ['Große Rasenfläche hinterm Haus:', 'im Haus ganz nach unten'], once: true },
 ];
-const WEB_FILTERS = [['tier', 'Tierfutter', '#3cff5a'], ['haus', 'Haus', '#2fb4ff']];
-const web = { open: false, filter: 'tier', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
+const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a'], ['bar', 'Bargeld', '#ffd23a']];
+const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
 let lief = { orders: [], pkgs: [], snacks: {} };
 try { const d = JSON.parse(localStorage.getItem('bob-lieferung') || 'null'); if (d) lief = Object.assign(lief, d); } catch (e) {}
 setTimeout(() => gartenSetup());
 function saveLief() { try { localStorage.setItem('bob-lieferung', JSON.stringify(lief)); } catch (e) {} }
-function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || it.cat === web.filter); }
+function webCur(it) { return it.cur === 'bar' ? 'bar' : 'konto'; }
+function webHave(it) { return webCur(it) === 'bar' ? Math.floor(bank.cash || 0) : bank.money; }
+function webPay(it) { if (webCur(it) === 'bar') { bank.cash = (bank.cash || 0) - it.price; saveBank(); } else { bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank(); } }
+function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || webCur(it) === web.filter); }
 function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now(); keys.clear(); joy.on = false; }
 function webOrder(it) {
   if (it.once) {
     if (lief[it.id]) return;
-    if (bank.money < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
-    bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank(); lief[it.id] = true; saveLief(); gartenSetup();
+    if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
+    webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
     web.msg = 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).'; web.msgT = 5; return;
   }
-  if (bank.money < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
-  bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank();
+  if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
+  webPay(it);
   // kurz nacheinander bestellt -> gleiche Lieferung
   let o = lief.orders.find(o => o.t - gt.T > 15 && gt.T - o.t0 < 10);
   if (!o) { o = { items: {}, t0: gt.T, t: gt.T + 30 + Math.floor(Math.random() * 31) }; lief.orders.push(o); }
@@ -4999,7 +5002,7 @@ function drawPkg(p) {
 function webPic(id, cx, cy, sz) {
   g.save(); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#3a2a1a'; g.lineJoin = 'round'; g.lineCap = 'round';
   const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
-  if (id === 'garten') { g.fillStyle = '#5fb8ff'; g.fillRect(-50, -50, 100, 60); g.fillStyle = '#45c43a'; g.fillRect(-50, 10, 100, 40); g.fillStyle = '#c98a4a'; for (let x = -48; x < 50; x += 14) { g.fillRect(x, -10, 10, 26); } g.fillRect(-50, -4, 100, 5); g.fillStyle = '#8a4316'; g.fillRect(18, -30, 8, 40); g.fillStyle = '#1fa830'; g.beginPath(); g.arc(22, -36, 22, 0, 7); g.fill(); g.fillStyle = '#e0262b'; for (const [a, b] of [[14, -40], [28, -30], [24, -48]]) { g.beginPath(); g.arc(a, b, 4, 0, 7); g.fill(); } g.fillStyle = '#2f9be0'; g.beginPath(); g.ellipse(-20, 30, 24, 8, 0, 0, 7); g.fill(); for (const [a, c] of [[-40, '#ff3b3b'], [-30, '#ffd23a'], [40, '#ff7ac6']]) { g.fillStyle = c; g.beginPath(); g.arc(a, 22, 5, 0, 7); g.fill(); } g.fillStyle = '#ffee00'; g.beginPath(); g.arc(-34, -34, 10, 0, 7); g.fill(); g.restore(); return; }
+  if (id === 'garten') { g.fillStyle = '#5fb8ff'; g.fillRect(-50, -50, 100, 56); g.fillStyle = '#ffee00'; g.beginPath(); g.arc(-30, -32, 11, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(14, -30, 9, 0, 7); g.arc(26, -34, 11, 0, 7); g.arc(38, -30, 8, 0, 7); g.fill(); g.fillStyle = '#4dbb3a'; g.beginPath(); g.ellipse(-20, 8, 50, 16, 0, Math.PI, 0); g.fill(); g.fillStyle = '#45c43a'; g.fillRect(-50, 6, 100, 44); g.fillStyle = 'rgba(255,255,255,.12)'; for (let x = -50; x < 50; x += 20) g.fillRect(x, 6, 10, 44); g.restore(); return; }
   if (id === 'pizza') { g.fillStyle = '#e9b04a'; g.beginPath(); g.arc(0, 0, 44, 0, 7); g.fill(); g.stroke(); circ(0, 0, 36, '#d8442a'); g.fillStyle = 'rgba(255,230,150,.85)'; for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.cos(i * 2.4) * 22, Math.sin(i * 2.4) * 22, 9, 6, i, 0, 7); g.fill(); } for (const [a, b] of [[-16, -12], [14, -18], [18, 12], [-10, 18], [0, 0]]) circ(a, b, 7, '#a8202a'); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(Math.cos(i * 0.785) * 44, Math.sin(i * 0.785) * 44); g.lineTo(-Math.cos(i * 0.785) * 44, -Math.sin(i * 0.785) * 44); g.stroke(); } }
   else if (id === 'burger') { g.fillStyle = '#e0a040'; g.beginPath(); g.ellipse(0, -14, 44, 26, 0, Math.PI, 0); g.fill(); g.stroke(); g.fillStyle = '#fff6d0'; for (const [a, b] of [[-18, -28], [0, -32], [16, -26], [-6, -22]]) { g.beginPath(); g.ellipse(a, b, 3, 2, 0.4, 0, 7); g.fill(); } g.fillStyle = '#4bc040'; g.fillRect(-46, -14, 92, 8); g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(-44, -6); g.lineTo(44, -6); g.lineTo(30, 6); g.lineTo(-30, 6); g.closePath(); g.fill(); g.fillStyle = '#6a3a1a'; g.beginPath(); g.roundRect(-44, 0, 88, 16, 8); g.fill(); g.stroke(); g.fillStyle = '#e0a040'; g.beginPath(); g.roundRect(-42, 16, 84, 18, 9); g.fill(); g.stroke(); }
   else if (id === 'doener') { g.fillStyle = '#f0d9a0'; g.beginPath(); g.moveTo(-40, -36); g.lineTo(40, -36); g.lineTo(0, 46); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#9a5a2a'; g.beginPath(); g.ellipse(0, -34, 38, 12, 0, 0, 7); g.fill(); g.fillStyle = '#4bc040'; for (const a of [-24, -8, 10, 26]) { g.beginPath(); g.ellipse(a, -40, 8, 5, 0.3, 0, 7); g.fill(); } g.fillStyle = '#e0262b'; for (const a of [-16, 4, 20]) { g.beginPath(); g.arc(a, -44, 5, 0, 7); g.fill(); } g.fillStyle = '#fff'; g.beginPath(); g.ellipse(-2, -30, 20, 4, 0, 0, 7); g.fill(); }
@@ -5031,7 +5034,7 @@ function drawWeb(dt) {
   btns.push({ b: xb, act: () => { web.open = false; } });
   // Status
   const n = lief.orders.length, next = n ? Math.max(1, Math.round(Math.min(...lief.orders.map(o => o.t)) - gt.T)) : 0;
-  const st = web.msgT > 0 ? web.msg : n ? '🛵 ' + n + ' Lieferung' + (n > 1 ? 'en' : '') + ' unterwegs · nächste in ' + next + ' Min.' : lief.pkgs.length ? '📦 Deine Bestellung liegt vor der Haustür!' : 'Konto: ' + money(Math.floor(bank.money)) + ' · Lieferung direkt vor die Haustür';
+  const st = web.msgT > 0 ? web.msg : n ? '🛵 ' + n + ' Lieferung' + (n > 1 ? 'en' : '') + ' unterwegs · nächste in ' + next + ' Min.' : lief.pkgs.length ? '📦 Deine Bestellung liegt vor der Haustür!' : 'Konto: ' + money(Math.floor(bank.money)) + ' · Bargeld: ' + money(Math.floor(bank.cash || 0)) + ' · Lieferung vor die Haustür';
   outl(st, P.x + P.w / 2, P.y + 118, '700 20px "Trebuchet MS", system-ui', web.msgT > 0 ? '#ffe14a' : '#cfd6e4', 4);
   // Raster
   const its = webItems(), rows = Math.ceil(its.length / L.cols), maxS = Math.max(0, rows - 2); web.scroll = Math.max(0, Math.min(maxS, web.scroll));
@@ -5039,10 +5042,10 @@ function drawWeb(dt) {
   its.forEach((it, i) => {
     const r = Math.floor(i / L.cols) - web.scroll, c = i % L.cols, x = P.x + 25 + c * (L.cw + L.gap), y = L.gy + r * (L.ch + 14);
     if (y > P.y + P.h || y + L.ch < L.gy) return;
-    const own = it.once && lief[it.id], ok = !own && bank.money >= it.price, hov = web.hover === it.id;
+    const own = it.once && lief[it.id], ok = !own && webHave(it) >= it.price, hov = web.hover === it.id;
     g.fillStyle = '#fff'; g.fillRect(x, y, L.cw, 132); webPic(it.id, x + L.cw / 2, y + 66, 110);
     outl(it.name, x + L.cw / 2, y + 160, '800 25px "Trebuchet MS", system-ui', '#fff', 5);
-    outl('Preis: ' + it.price + ' €', x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', '#5aff3a', 5);
+    outl('Preis: ' + it.price + ' €' + (webCur(it) === 'bar' ? ' bar' : ''), x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', webCur(it) === 'bar' ? '#ffd23a' : '#5aff3a', 5);
     it.desc.forEach((d, k) => outl(d, x + L.cw / 2, y + 224 + k * 24, '700 17px "Trebuchet MS", system-ui', '#e8e8e8', 4));
     const b = { x, y: L.ch - 56 + y, w: L.cw, h: 56 };
     g.fillStyle = ok ? (hov ? '#3cff2a' : '#1fd81a') : '#1a7a1a'; g.fillRect(b.x, b.y, b.w, b.h); g.strokeStyle = '#0a3a0a'; g.lineWidth = 3; g.strokeRect(b.x, b.y, b.w, b.h);
