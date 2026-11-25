@@ -5687,6 +5687,40 @@ try { const d = JSON.parse(localStorage.getItem('bob-krypto') || 'null'); if (d)
 for (const [k, c] of Object.entries(COINS)) { if (!(kr.p[k] > 0)) kr.p[k] = c.start; if (!kr.h[k] || !kr.h[k].length) { kr.h[k] = []; let v = c.start; for (let i = 0; i < KR_HIST; i++) { v *= Math.exp((Math.random() - 0.5) * 2 * c.vol); kr.h[k].push(v); } kr.p[k] = v; } }
 if (!kr.T) kr.T = Math.floor(gt.T / KR_STEP);
 let krSave = 0;
+const KR_ALARM_PREIS = 20000;
+if (!kr.al) kr.al = {};
+kr.edit = null; kr.editTxt = '';
+function krSetAl(k, v) { kr.al[k] = Math.max(0, Math.min(99999999, Math.floor(v))); kr.edit = null; saveKr(); }
+function krEditDone() { if (kr.edit) krSetAl(kr.edit, +kr.editTxt || 0); kr.edit = null; }
+addEventListener('keydown', e => {
+  if (!kr.edit) return;
+  if (!(phone.open && phone.app === 'krypto' && kr.tab === kr.edit)) { kr.edit = null; return; }
+  const d = /^(Digit|Numpad)(\d)$/.exec(e.code);
+  if (d) { if (kr.editTxt.length < 8) kr.editTxt = (kr.editTxt + d[2]).replace(/^0+/, ''); }
+  else if (e.code === 'Backspace') kr.editTxt = kr.editTxt.slice(0, -1);
+  else if (e.code === 'Enter' || e.code === 'NumpadEnter') krEditDone();
+  else if (e.code === 'Escape') kr.edit = null;
+  else return;
+  e.preventDefault(); e.stopImmediatePropagation();
+}, true);
+// Alarm-Anzeige außerhalb vom Handy
+const krHit = {};
+function krAlarms() { if (!kr.alarm) return []; const L = []; for (const k of Object.keys(COINS)) { const t = kr.al[k] || 0; if (t > 0 && (kr.hold[k] || 0) > 0) { const pl = krPL(k); if (pl >= t) { if (!krHit[k]) krHit[k] = performance.now(); L.push({ k, pl, t }); continue; } } krHit[k] = 0; } return L; }
+function drawKrAlarm() {
+  const L = krAlarms(); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
+  const now = performance.now();
+  L.forEach((a, i) => {
+    const c = COINS[a.k], w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - krHit[a.k]) / 1000;
+    const slide = Math.min(1, age * 4), xx = x + (1 - slide) * (w + 40);
+    g.save();
+    g.fillStyle = 'rgba(12,16,26,.88)'; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.fill();
+    g.strokeStyle = '#16c784'; g.lineWidth = 3; g.globalAlpha = age < 4 ? 0.5 + 0.5 * Math.abs(Math.sin(age * 6)) : 0.8; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.stroke(); g.globalAlpha = 1;
+    krCoinIcon(a.k, xx + 30, y + h / 2, 17);
+    g.fillStyle = '#8a93a6'; g.font = '700 12px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(c.sym + ' · Ziel +' + money(a.t) + ' erreicht', xx + 58, y + 18);
+    g.fillStyle = '#16c784'; g.font = '900 19px system-ui'; g.fillText('+' + money(a.pl) + ' beim Verkauf', xx + 58, y + 38);
+    g.restore();
+  });
+}
 function saveKr() { try { localStorage.setItem('bob-krypto', JSON.stringify(kr)); } catch (e) {} }
 function krRand() { return (Math.random() + Math.random() + Math.random() - 1.5) * 1.4; }
 function krStep() {
@@ -5762,23 +5796,43 @@ function drawKryptoApp(s) {
     else txt('Kurse ändern sich alle 10 Spielminuten · 1 % Gebühr', s.x + s.w / 2, y + 14, '500 12px system-ui', '#4a5468', 'center');
   } else {
     const k = kr.tab, c = COINS[k], ch = krChange(k), have = kr.hold[k] || 0;
-    btns.push({ b: { x: s.x, y: s.y + 30, w: 90, h: 60 }, act: () => { kr.tab = null; } });
+    btns.push({ b: { x: s.x, y: s.y + 30, w: 90, h: 60 }, act: () => { kr.edit = null; kr.tab = null; } });
     krCoinIcon(k, s.x + s.w / 2 - 70, s.y + 62, 16); txt(c.name, s.x + s.w / 2 - 46, s.y + 62, '800 22px system-ui', '#fff');
     txt(krFmt(kr.p[k]), L, s.y + 112, '800 30px system-ui', '#fff'); txt((ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(2) + ' % (24 h)', L, s.y + 142, '700 14px system-ui', ch >= 0 ? '#16c784' : '#ea3943');
-    krChart(k, L + 4, s.y + 180, Wd - 8, 170, true);
-    g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(L, s.y + 372, Wd, 66, 12); g.fill();
-    txt('Du hast', L + 14, s.y + 392, '600 13px system-ui', '#8a93a6'); txt(have.toLocaleString('de-DE', { maximumFractionDigits: 6 }) + ' ' + c.sym, L + 14, s.y + 416, '700 16px system-ui', '#fff');
-    txt(krFmt(have * kr.p[k]), L + Wd - 14, s.y + 396, '800 18px system-ui', '#fff', 'right');
-    if (have > 0) { const pl = krPL(k); txt((pl >= 0 ? '+' : '') + money(pl) + ' seit Kauf', L + Wd - 14, s.y + 420, '700 13px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'right'); }
-    txt('Kaufen (vom Konto: ' + money(Math.floor(bank.money)) + ')', L, s.y + 460, '700 14px system-ui', '#8a93a6');
+    krChart(k, L + 4, s.y + 178, Wd - 8, 118, true);
+    g.fillStyle = '#141a26'; g.beginPath(); g.roundRect(L, s.y + 322, Wd, 66, 12); g.fill();
+    txt('Du hast', L + 14, s.y + 342, '600 13px system-ui', '#8a93a6'); txt(have.toLocaleString('de-DE', { maximumFractionDigits: 6 }) + ' ' + c.sym, L + 14, s.y + 366, '700 16px system-ui', '#fff');
+    txt(krFmt(have * kr.p[k]), L + Wd - 14, s.y + 346, '800 18px system-ui', '#fff', 'right');
+    if (have > 0) { const pl = krPL(k); txt((pl >= 0 ? '+' : '') + money(pl) + ' seit Kauf', L + Wd - 14, s.y + 370, '700 13px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'right'); }
+    txt('Kaufen (vom Konto: ' + money(Math.floor(bank.money)) + ')', L, s.y + 410, '700 14px system-ui', '#8a93a6');
     const bw = (Wd - 16) / 3;
-    [[100, '100 €'], [1000, '1.000 €'], [0, 'Alles']].forEach(([v, lab], i) => btn({ x: L + i * (bw + 8), y: s.y + 474, w: bw, h: 44 }, lab, '#16a36b', v ? bank.money >= v : bank.money >= 1, () => krBuy(k, v || bank.money)));
-    txt('Verkaufen', L, s.y + 540, '700 14px system-ui', '#8a93a6');
+    [[100, '100 €'], [1000, '1.000 €'], [0, 'Alles']].forEach(([v, lab], i) => btn({ x: L + i * (bw + 8), y: s.y + 424, w: bw, h: 44 }, lab, '#16a36b', v ? bank.money >= v : bank.money >= 1, () => krBuy(k, v || bank.money)));
+    txt('Verkaufen', L, s.y + 490, '700 14px system-ui', '#8a93a6');
     [[0.25, '25 %'], [0.5, '50 %'], [1, 'Alles']].forEach(([p, lab], i) => {
-      btn({ x: L + i * (bw + 8), y: s.y + 554, w: bw, h: 44 }, lab, '#d6334a', have > 0, () => krSell(k, p));
-      if (have > 0) { const pl = krPL(k, p); txt('= ' + money(krNet(k, p)), L + i * (bw + 8) + bw / 2, s.y + 614, '700 13px system-ui', '#cfd6e4', 'center'); txt((pl >= 0 ? '+' : '') + money(pl), L + i * (bw + 8) + bw / 2, s.y + 632, '700 12px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'center'); }
+      btn({ x: L + i * (bw + 8), y: s.y + 504, w: bw, h: 44 }, lab, '#d6334a', have > 0, () => krSell(k, p));
+      if (have > 0) { const pl = krPL(k, p); txt('= ' + money(krNet(k, p)), L + i * (bw + 8) + bw / 2, s.y + 564, '700 13px system-ui', '#cfd6e4', 'center'); txt((pl >= 0 ? '+' : '') + money(pl), L + i * (bw + 8) + bw / 2, s.y + 582, '700 12px system-ui', pl >= 0 ? '#16c784' : '#ea3943', 'center'); }
     });
-    if (have > 0) txt('nach 1 % Gebühr · Plus/Minus ggü. Kaufpreis', s.x + s.w / 2, s.y + 656, '500 11px system-ui', '#4a5468', 'center');
+    if (have > 0) txt('nach 1 % Gebühr · Plus/Minus ggü. Kaufpreis', s.x + s.w / 2, s.y + 604, '500 11px system-ui', '#4a5468', 'center');
+    // Profit-Alarm
+    const ay = s.y + 620;
+    if (!kr.alarm) {
+      const b = { x: L, y: ay, w: Wd, h: 42 }, ok = bank.money >= KR_ALARM_PREIS;
+      g.fillStyle = ok ? '#f0b90b' : '#1c2230'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill();
+      txt('Profit-Alarm kaufen · ' + money(KR_ALARM_PREIS), b.x + b.w / 2, b.y + 21, '800 15px system-ui', ok ? '#1b1d22' : '#4a5468', 'center');
+      btns.push({ b, act: () => { if (bank.money < KR_ALARM_PREIS) return; bank.money -= KR_ALARM_PREIS; bank.log.push({ t: 'Profit-Alarm', v: -KR_ALARM_PREIS }); saveBank(); kr.alarm = true; saveKr(); } });
+    } else {
+      const v = kr.al[k] || 0, ed = kr.edit === k, f = { x: L, y: ay, w: 128, h: 42 };
+      g.fillStyle = ed ? '#2a3448' : '#141a26'; g.beginPath(); g.roundRect(f.x, f.y, f.w, f.h, 10); g.fill();
+      if (ed) { g.strokeStyle = '#f0b90b'; g.lineWidth = 2; g.stroke(); }
+      txt('Alarm ab', f.x + 10, f.y + 12, '600 11px system-ui', '#8a93a6');
+      const shown = ed ? '+' + (kr.editTxt ? (+kr.editTxt).toLocaleString('de-DE') : '') + ((performance.now() / 500 | 0) % 2 ? '|' : ' ') + ' €' : v > 0 ? '+' + money(v) : 'aus';
+      txt(shown, f.x + 10, f.y + 29, '800 16px system-ui', v > 0 || ed ? '#f0b90b' : '#4a5468');
+      btns.push({ b: f, act: () => { if (kr.edit === k) krEditDone(); else { kr.edit = k; kr.editTxt = v > 0 ? String(v) : ''; } } });
+      const bw2 = (Wd - 136 - 16) / 3;
+      [['+100', () => krSetAl(k, (kr.al[k] || 0) + 100)], ['+1.000', () => krSetAl(k, (kr.al[k] || 0) + 1000)], ['Aus', () => krSetAl(k, 0)]].forEach(([lab, act], i) =>
+        btn({ x: L + 136 + i * (bw2 + 8), y: ay, w: bw2, h: 42 }, lab, i === 2 ? '#3a4152' : '#8a6d0b', true, act));
+      if (ed) txt('Zahl tippen, Enter = fertig', s.x + s.w / 2, ay + 56, '500 11px system-ui', '#8a93a6', 'center');
+    }
   }
 }
 function saveTime() { try { localStorage.setItem('bob-zeit', JSON.stringify(gt)); } catch (e) {} }
@@ -6808,6 +6862,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.44', 'Profit-Alarm', 'Krypto: Ziel-Plus pro Währung einstellen – erreicht, wird es direkt auf dem Bildschirm angezeigt'],
   ['1.43', 'Fähigkeiten & Tasten', 'Outfits und Accessoires können Fähigkeiten haben (oben links) – Bobi reitet auf einer Welle. Alle Tasten frei belegbar'],
   ['1.42', 'Tierhaus', 'Neues Haus im Garten mit Tierbett, Napf, Klo, Maid und Kalender'],
   ['1.41', 'Bob-Pass gefüllt', 'Alle 100 Level: Outfits, farbige Bobs, Accessoires wie Krone, Zylinder und Lolli, Geld und Futter'],
@@ -7945,7 +8000,7 @@ function frame(t) {
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawKrAlarm(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
