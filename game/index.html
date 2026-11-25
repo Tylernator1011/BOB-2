@@ -1841,7 +1841,7 @@ function openMenu() {
   if (nearKasse() || nearPakete()) { startWork(); return; }
   if (nearSchalter()) {
     const c = Math.floor(bank.cash || 0);
-    menu.kind = 'bank'; menu.title = 'Bank – Konto: ' + money(bank.money) + ' · Bargeld: ' + money(c);
+    menu.kind = 'bank'; menu.title = 'Bank – Konto: ' + money(bank.money) + ' · Bargeld: ' + money(c) + ' · 2 % Zinsen pro Tag aufs Konto';
     const it = [{ label: c > 0 ? 'Bargeld einzahlen' : 'Kein Bargeld dabei', dep: c, disabled: c < 1, tag: c > 0 ? money(c) : null }, { label: 'Tschüss' }];
     menu.items = it; MENU.row = Math.min(76, Math.floor((H - 220) / it.length)); menu.t0 = performance.now();
     menu.open = true; menu.sel = Math.max(0, it.findIndex(i => !i.disabled)); keys.clear(); return;
@@ -1885,8 +1885,9 @@ function openMenu() {
                   { label: 'Abbrechen' }];
   } else if (nearBett()) {
     menu.kind = 'sleep'; menu.title = 'Schlafen – ' + hm(gMin()) + ' Uhr';
-    menu.items = [{ label: 'Bis morgen früh', sleep: 'morgen' }];
-    if (canSleepNight()) menu.items.push({ label: 'Bis in die Nacht', sleep: 'nacht' });
+    const muede = gMin() >= 18 * 60 || gMin() < 6 * 60;
+    menu.items = muede ? [{ label: 'Bis morgen früh', sleep: 'morgen' }] : [{ label: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr', disabled: true }];
+    if (muede && canSleepNight()) menu.items.push({ label: 'Bis in die Nacht', sleep: 'nacht' });
     menu.items.push({ label: 'Abbrechen' });
   } else if (nearHaendler() && haendler().shop === 'moebel') { openCatalog(); return;
   } else if (nearHaendler()) {
@@ -2791,7 +2792,13 @@ if (bank.cash == null) bank.cash = 0;
 if (bank.save) { bank.money += bank.save; bank.save = 0; }
 function earn(v) { bank.cash = (bank.cash || 0) + v; saveBank(); cashPop = { v, t: 2 }; }
 let cashPop = null;
-function bankInterest() {}
+// 2 % Zinsen pro Tag auf das Konto
+function bankInterest() {
+  if (bank.zDay == null) { bank.zDay = gDay(); saveBank(); return; }
+  let ch = false;
+  while (bank.zDay < gDay()) { bank.zDay++; const z = Math.floor(Math.max(0, bank.money) * 0.02); if (z > 0) { bank.money += z; bank.log.push({ t: 'Zinsen', v: z }); ch = true; } }
+  if (ch) saveBank();
+}
 function saveBank() { try { localStorage.setItem('bob-bank', JSON.stringify(bank)); } catch (e) {} }
 
 const phone = { open: false, app: null, a: 0, msg: '' };
