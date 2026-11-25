@@ -89,7 +89,25 @@ const ROOMS = {
                 { type: 'moebel', t: 'pflanze', fx: 1040, base: 520, r: 0 },
                 { type: 'moebel', t: 'sofa', fx: 1250, base: 760, r: 0 },
               ] },
-  haltestelle: { name: 'Bushaltestelle', outside: true, kind: 'street', grass: true, exits: { l: 'draussen' }, maxY: H - 175, objs: [{ type: 'gulli', x: 420, y: 672, base: 600, to: ['kanal5', 800] }],
+  polizeiplatz: { name: 'Polizeistation', outside: true, kind: 'street', facade: 'polizei', exits: { l: 'haltestelle' }, maxY: H - 175, wide: [-650, 1850],
+              door: { x: 500, w: 200, to: 'wache', at: [600, FLOOR + 80], bank: true } },
+  wache: { name: 'Polizeiwache', wall: ['#cfd8e6', '#e8eef6'], floorStyle: 'fliesen', exits: { l: 'zellen' }, wide: [-500, 1700],
+              door: { x: 510, w: 180, to: 'polizeiplatz', at: [600, FLOOR + 70] },
+              objs: [
+                { type: 'npc', outfit: 'polizist', x: 1100, base: 560, w: 120, depth: 30, t: -1 },
+                { type: 'theke', x: 950, w: 320, base: 640, h: 130, depth: 70 },
+                { type: 'npc', outfit: 'polizist', x: 200, base: 720, w: 120, depth: 30, t: 1 },
+                { type: 'moebel', t: 'sofa', fx: 1450, base: 620, r: 0 },
+                { type: 'moebel', t: 'pflanze', fx: -120, base: 520, r: 0 },
+              ] },
+  zellen: { name: 'Gefängnis', kind: 'zellen', exits: { r: 'wache' }, maxY: H - 30, wide: [0, 1200],
+              objs: [
+                { type: 'zwand', x: 395, w: 20, base: 700, depth: 260 }, { type: 'zwand', x: 785, w: 20, base: 700, depth: 260 },
+                { type: 'gitter', x: 20, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 310, w: 90, base: 700, h: 400, depth: 24 },
+                { type: 'gitter', x: 410, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 700, w: 90, base: 700, h: 400, depth: 24 },
+                { type: 'gitter', x: 800, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 1090, w: 90, base: 700, h: 400, depth: 24 },
+              ] },
+  haltestelle: { name: 'Bushaltestelle', outside: true, kind: 'street', grass: true, exits: { l: 'draussen', r: 'polizeiplatz' }, maxY: H - 175, objs: [{ type: 'gulli', x: 420, y: 672, base: 600, to: ['kanal5', 800] }],
               stop: { x: 760, name: 'Zuhause', dests: ['tierladen', 'moebelhaus'] } },
   tierladen: { name: 'Tierladen', outside: true, kind: 'street', shop: true, exits: {}, maxY: H - 175,
               stop: { x: 260, name: 'Tierladen', dests: ['haltestelle', 'moebelhaus'] },
@@ -146,6 +164,99 @@ function drawRoad() {
   g.fillStyle = '#fff';
   for (let x = 30 + Math.floor((XL - 30) / 160) * 160; x < XR; x += 160) g.fillRect(x, ROAD + 80, 90, 10);
 }
+// ---------- Polizeistation und Gefängnis ----------
+function drawPolizeiFacade() {
+  for (const tx of [-430, 1580]) {
+    g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
+    g.fillStyle = '#1fa830'; g.beginPath(); g.arc(tx, FLOOR - 160, 70, 0, 7); g.fill(); g.stroke();
+  }
+  const X0 = -200, X1 = 1400, top = 120, t = performance.now() / 1000;
+  g.lineWidth = 6; g.strokeStyle = LINE;
+  g.fillStyle = '#e9eef5'; g.fillRect(X0, top, X1 - X0, FLOOR - top); g.strokeRect(X0, top, X1 - X0, FLOOR - top);
+  g.fillStyle = '#1f4f9e'; g.fillRect(X0, top + 120, X1 - X0, 26); g.strokeRect(X0, top + 120, X1 - X0, 26);
+  g.fillStyle = '#c9d3df'; g.fillRect(X0 - 20, top - 20, X1 - X0 + 40, 26); g.strokeRect(X0 - 20, top - 20, X1 - X0 + 40, 26);
+  // Schild
+  g.fillStyle = '#1f4f9e'; g.beginPath(); g.roundRect(420, 30, 360, 74, 12); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.font = '900 46px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('POLIZEI', 600, 68);
+  // Blaulicht auf dem Dach
+  const b = Math.sin(t * 10) > 0;
+  g.save(); g.shadowColor = '#2f6fff'; g.shadowBlur = b ? 40 : 0; g.fillStyle = b ? '#4f8bff' : '#1a2f6a'; g.beginPath(); g.roundRect(570, -2, 60, 30, [14, 14, 0, 0]); g.fill(); g.restore(); g.lineWidth = 5; g.stroke();
+  // Fenster mit Gittern
+  for (let x = X0 + 60; x < X1 - 80; x += 170) {
+    if (x > 380 && x < 800) continue;
+    g.fillStyle = '#9ad8f0'; g.fillRect(x, 200, 100, 120); g.lineWidth = 5; g.strokeRect(x, 200, 100, 120);
+    g.lineWidth = 4; for (let k = 1; k < 5; k++) { g.beginPath(); g.moveTo(x + k * 20, 200); g.lineTo(x + k * 20, 320); g.stroke(); }
+  }
+  g.fillStyle = '#c9d3df'; g.fillRect(450, FLOOR - 16, 300, 16); g.lineWidth = 5; g.strokeRect(450, FLOOR - 16, 300, 16);
+}
+function drawStreifenwagen(x) {
+  const y = ROAD + 120, t = performance.now() / 1000, bl = Math.sin(t * 8) > 0;
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#e8ecf0'; g.beginPath(); g.moveTo(x - 190, y); g.lineTo(x - 190, y - 70); g.lineTo(x - 120, y - 80); g.lineTo(x - 80, y - 140); g.lineTo(x + 60, y - 140); g.lineTo(x + 110, y - 80); g.lineTo(x + 170, y - 70); g.lineTo(x + 170, y); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#1f4f9e'; g.fillRect(x - 190, y - 56, 360, 22); g.strokeRect(x - 190, y - 56, 360, 22);
+  g.fillStyle = '#fff'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('POLIZEI', x - 10, y - 44);
+  g.fillStyle = '#9ad8f0'; g.beginPath(); g.moveTo(x - 66, y - 84); g.lineTo(x - 40, y - 128); g.lineTo(x + 50, y - 128); g.lineTo(x + 86, y - 84); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = bl ? '#2f6fff' : '#22325a'; g.fillRect(x - 30, y - 156, 26, 16); g.strokeRect(x - 30, y - 156, 26, 16);
+  g.fillStyle = !bl ? '#ff2a2a' : '#5a2222'; g.fillRect(x + 10, y - 156, 26, 16); g.strokeRect(x + 10, y - 156, 26, 16);
+  for (const wx of [x - 120, x + 100]) { g.fillStyle = '#111'; g.beginPath(); g.arc(wx, y + 4, 30, 0, 7); g.fill(); g.fillStyle = '#888'; g.beginPath(); g.arc(wx, y + 4, 12, 0, 7); g.fill(); }
+}
+function drawTheke(o) {
+  const top = o.base - o.h;
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(o.x + 10, o.base - 6, o.w + 10, 16);
+  g.fillStyle = '#5d6b80'; g.fillRect(o.x, top + 26, o.w, o.h - 26); g.strokeRect(o.x, top + 26, o.w, o.h - 26);
+  g.fillStyle = '#1f4f9e'; g.fillRect(o.x, top + 60, o.w, 18); g.strokeRect(o.x, top + 60, o.w, 18);
+  g.fillStyle = '#dfe5ee'; g.fillRect(o.x - 10, top, o.w + 20, 30); g.strokeRect(o.x - 10, top, o.w + 20, 30);
+  g.fillStyle = '#ffcc1a'; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 12 : 26; g.lineTo(o.x + o.w / 2 + Math.cos(a) * r, top + 105 + Math.sin(a) * r); } g.closePath(); g.fill(); g.lineWidth = 3; g.stroke();
+}
+function drawGesucht() {
+  if (!(cnt('dw') > 0 || cnt('flucht') > 0)) return;
+  const x = 860, y = 120;
+  g.save(); g.translate(x, y); g.rotate(0.04);
+  g.fillStyle = '#f3e2b8'; g.fillRect(-90, 0, 180, 230); g.lineWidth = 4; g.strokeStyle = LINE; g.strokeRect(-90, 0, 180, 230);
+  g.fillStyle = '#7a1f1f'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('GESUCHT', 0, 26);
+  g.fillStyle = '#ffee00'; g.fillRect(-60, 48, 120, 96); g.strokeRect(-60, 48, 120, 96);
+  if (face.complete && face.width) g.drawImage(face, -60 + 6, 48 + 9, 108, 75);
+  g.fillStyle = '#3a2a14'; g.font = '800 18px system-ui'; g.fillText('„BoB“', 0, 166); g.font = '900 24px system-ui'; g.fillText('1.000 €', 0, 200);
+  g.restore();
+}
+function drawWacheExtras() {
+  drawGesucht();
+  // Schild zu den Zellen
+  g.fillStyle = '#1f4f9e'; g.beginPath(); g.roundRect(-380, 200, 200, 52, 10); g.fill(); g.lineWidth = 4; g.strokeStyle = LINE; g.stroke();
+  g.fillStyle = '#fff'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('← ZELLEN', -280, 227);
+}
+function drawZellen(R) {
+  // Betonwand und Boden
+  g.fillStyle = '#7d848c'; g.fillRect(XL, 0, VW, FLOOR);
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let y = 60; y < FLOOR; y += 60) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); }
+  g.fillStyle = '#9aa1a8'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  g.fillStyle = '#6d747b'; g.fillRect(XL, 706, VW, H - 706);
+  // Zellen-Einrichtung
+  for (const cx of [210, 600, 990]) {
+    g.fillStyle = '#c4f0fc'; g.fillRect(cx - 40, 120, 80, 60); g.lineWidth = 5; g.strokeStyle = LINE; g.strokeRect(cx - 40, 120, 80, 60);
+    g.lineWidth = 4; for (const k of [-20, 0, 20]) { g.beginPath(); g.moveTo(cx + k, 120); g.lineTo(cx + k, 180); g.stroke(); }
+    // Pritsche
+    g.fillStyle = '#5d646c'; g.fillRect(cx - 150, FLOOR - 10, 170, 70); g.strokeRect(cx - 150, FLOOR - 10, 170, 70);
+    g.fillStyle = '#ff7a1a'; g.fillRect(cx - 146, FLOOR - 30, 162, 30); g.strokeRect(cx - 146, FLOOR - 30, 162, 30);
+    g.fillStyle = '#fff'; g.fillRect(cx - 146, FLOOR - 36, 46, 22); g.strokeRect(cx - 146, FLOOR - 36, 46, 22);
+    // Klo
+    g.fillStyle = '#f2f2f2'; g.beginPath(); g.roundRect(cx + 80, FLOOR - 30, 60, 70, 10); g.fill(); g.stroke();
+    g.fillStyle = '#d9d9d9'; g.beginPath(); g.ellipse(cx + 110, FLOOR + 40, 36, 14, 0, 0, 7); g.fill(); g.stroke();
+  }
+  // Striche an der Wand
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 3; for (let i = 0; i < 9; i++) { const x = 700 + i * 12; g.beginPath(); g.moveTo(x, 240); g.lineTo(x + (i % 5 === 4 ? -50 : 0), 280); g.stroke(); }
+  g.fillStyle = '#1f4f9e'; g.beginPath(); g.roundRect(XR - 260, 40, 200, 52, 10); g.fill(); g.lineWidth = 4; g.strokeStyle = LINE; g.stroke();
+  g.fillStyle = '#fff'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('AUSGANG →', XR - 160, 67);
+}
+function drawGitter(o) {
+  const top = o.base - o.h;
+  g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = '#5d646c'; g.fillRect(o.x, top, o.w, 16); g.strokeRect(o.x, top, o.w, 16); g.fillRect(o.x, o.base - 12, o.w, 12); g.strokeRect(o.x, o.base - 12, o.w, 12);
+  g.strokeStyle = '#3a3f44'; g.lineWidth = 9; for (let x = o.x + 14; x < o.x + o.w - 6; x += 32) { g.beginPath(); g.moveTo(x, top + 16); g.lineTo(x, o.base - 12); g.stroke(); }
+  g.strokeStyle = '#8a9199'; g.lineWidth = 3; for (let x = o.x + 14; x < o.x + o.w - 6; x += 32) { g.beginPath(); g.moveTo(x - 2, top + 20); g.lineTo(x - 2, o.base - 16); g.stroke(); }
+}
+function drawZwand(o) { g.fillStyle = '#6d747b'; g.fillRect(o.x, o.base - o.depth - 40, o.w, o.depth + 40); g.lineWidth = 4; g.strokeStyle = LINE; g.strokeRect(o.x, o.base - o.depth - 40, o.w, o.depth + 40); }
 function drawBankFacade() {
   // Bäume links und rechts
   for (const tx of [-560, -380, 1600, 1780]) {
@@ -189,6 +300,7 @@ function drawStreet(R) {
   for (const [cx, cy] of [[160, 80], [900, 120]]) { g.beginPath(); g.arc(cx, cy, 30, 0, 7); g.arc(cx + 38, cy - 10, 40, 0, 7); g.arc(cx + 80, cy, 30, 0, 7); g.fill(); }
   g.lineWidth = 6; g.strokeStyle = LINE;
   if (R.facade === 'bank') drawBankFacade();
+  else if (R.facade === 'polizei') drawPolizeiFacade();
   else if (R.facade === 'moebel') {
     for (const tx of [90, 330]) {
       g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
@@ -489,6 +601,9 @@ function drawObj(o) {
   else if (o.type === 'gulli') drawGulli(o);
   else if (o.type === 'schatz') drawSchatz(o);
   else if (o.type === 'npc') drawNpc(o);
+  else if (o.type === 'theke') drawTheke(o);
+  else if (o.type === 'gitter') drawGitter(o);
+  else if (o.type === 'zwand') drawZwand(o);
   else if (o.type === 'stand') drawStand(o);
   else if (o.type === 'bar') drawBar(o);
 }
@@ -519,6 +634,7 @@ const NPC_LINES = {
   punk: ['Oi! Was guckst du?', 'Die Musik oben ist langweilig.', 'Kanal-Limo macht dich schnell, glaub mir.'],
   hoodie: ['…', 'Ich war nie hier. Du auch nicht.', 'Hab gehört, irgendwo hier unten steht eine Truhe.'],
   mantel: ['Ein Glücks-Shot und du bist reich. Oder pleite.', 'Ich handel mit allem. Fast allem.', 'Die Augen im Tunnel? Frag lieber nicht.'],
+  polizist: ['Alles ruhig heute.', 'Wir suchen einen Würfel mit Sturmmaske …', 'Die Zellen sind links durch die Tür.', 'Kanalisation? Da gehen wir nicht runter.', 'Hast du was gesehen? Nein? Gut.'],
   barkeeper: ['Was darf es sein?', 'Hier unten fragt keiner, woher das Geld kommt.'],
 };
 let boostUntil = 0;
@@ -836,9 +952,9 @@ function chaseEnd() {
     toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
   } else {
     const lost = Math.floor(bank.cash || 0); bank.cash = 0; const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
-    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); go('spawn', [600, 700]);
+    gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); go('zellen', [600, 600]);
     if (!wear.owned.includes('gefangener')) wear.owned.push('gefangener'); wear.on = 'gefangener'; saveWear();
-    toast = { text: 'Festgenommen! Eine Nacht in der Zelle – du trägst jetzt Orange. Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
+    toast = { text: 'Festgenommen! Eine Nacht im Gefängnis – jetzt bist du wieder frei, aber in Orange. Bargeld weg (' + money(lost) + ')' + (fine ? ', ' + money(fine) + ' Strafe' : '') + '.', t: 6 };
   }
 }
 // Flucht im Fluchtwagen (einfacher): von oben, Spur wechseln
@@ -1254,6 +1370,7 @@ function drawOutside() {
 function room() {
   const R = ROOMS[cur];
   if (R.kind === 'kanal') drawKanal(R);
+  else if (R.kind === 'zellen') drawZellen(R);
   else if (R.kind === 'markt') drawMarkt(R);
   else if (R.kind === 'house') drawOutside();
   else if (R.kind === 'street') drawStreet(R);
@@ -1296,6 +1413,8 @@ function room() {
   }
   if (R.door) drawDoor(R.door);
   if (cur === 'bank_innen') drawTresor();
+  if (cur === 'wache') drawWacheExtras();
+  if (cur === 'polizeiplatz') drawStreifenwagen(1250);
 }
 
 // Raumwechsel mit kurzem Abblenden
@@ -1795,6 +1914,20 @@ Object.assign(OUTFITS, {
       g.restore();
     } },
   mutant: { name: 'Demibob', custom: drawDemibob },
+  polizist: { name: 'Polizist', bp: mkPal('#1f3a6e', '#2a4c8a'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.fillStyle = '#c9d3df'; g.beginPath(); g.moveTo(x + 86, y); g.lineTo(x + w / 2, y + 34); g.lineTo(x + w - 86, y); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#ffcc1a'; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 10 : 22; g.lineTo(x + 70 + Math.cos(a) * r, y + 70 + Math.sin(a) * r); } g.closePath(); g.fill(); g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#16294f'; g.fillRect(x + w - 110, y + 54, 64, 40); g.strokeRect(x + w - 110, y + 54, 64, 40);
+      g.fillStyle = '#111'; g.fillRect(x, y + h - 26, w, 14);
+    },
+    front: (bx, by, hx, hy, t) => {
+      const CP = mkPal('#1f3a6e', '#2a4c8a'); g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx + 2 + 6 * t, hy - 46, HEAD.w - 4, 50, DEPTH - 2, CP, true, t);
+      cube(hx - 8 + 6 * t, hy - 4, HEAD.w + 16, 12, DEPTH + 12, mkPal('#111', '#222'), true, t);
+      g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(hx + HEAD.w / 2 + 6 * t, hy - 22, 13, 0, 7); g.fill(); g.lineWidth = 3; g.stroke();
+    } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -3308,6 +3441,8 @@ const ADMIN = {
     ['Bushaltestelle', '#ff8a1a', tpTo('haltestelle', [600, 650])],
     ['Kanalisation', '#3b5a3a', tpTo('kanal1', [250, FLOOR + 80])],
     ['Schwarzmarkt', '#3a2d4a', tpTo('schwarzmarkt', [-350, FLOOR + 80])],
+    ['Polizei', '#1f4f9e', tpTo('polizeiplatz', [600, 650])],
+    ['Gefängnis', '#ff7a1a', tpTo('zellen', [600, 600])],
   ],
 };
 function drawAdminApp(s) {
