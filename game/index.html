@@ -46,6 +46,50 @@ addEventListener('keydown', e => {
   if (!ch) return; adminBuf = (adminBuf + ch).slice(-7);
   if (adminBuf === 'BOB1011') { adminBuf = ''; try { localStorage.setItem('bob-admin-geraet', '1'); } catch (er) {} openAdmin(); toast = { text: 'Admin freigeschaltet – ab jetzt öffnet F9 (oder Alt+A) das Menü.', t: 4 }; }
 }, true);
+// Tastenbelegung: gedrückte Taste wird auf die Standard-Taste der Aktion übersetzt
+const KB_DEF = [
+  ['Bewegung'], ['u', 'Nach oben laufen', 'KeyW'], ['l', 'Nach links laufen', 'KeyA'], ['d', 'Nach unten laufen', 'KeyS'], ['r', 'Nach rechts laufen', 'KeyD'], ['run', 'Rennen', 'ShiftLeft'],
+  ['Allgemein'], ['e', 'Interagieren / Reden', 'KeyE'], ['space', 'Aktion (Schießen, Springen, OK)', 'Space'], ['phone', 'Handy', 'KeyH'], ['bag', 'Inventar', 'KeyI'], ['build', 'Bauen', 'KeyB'], ['rot', 'Drehen beim Bauen', 'KeyR'], ['tab', 'Kategorie wechseln', 'KeyQ'],
+  ['Hotbar'], ['hb1', 'Hotbar 1', 'Digit1'], ['hb2', 'Hotbar 2', 'Digit2'], ['hb3', 'Hotbar 3', 'Digit3'], ['hb4', 'Hotbar 4', 'Digit4'], ['hb5', 'Hotbar 5', 'Digit5'], ['hb6', 'Hotbar 6', 'Digit6'],
+  ['Fähigkeiten'], ['ab1', 'Fähigkeit 1', 'KeyF'], ['ab2', 'Fähigkeit 2', 'KeyG'], ['ab3', 'Fähigkeit 3', 'KeyC'], ['ab4', 'Fähigkeit 4', 'KeyV'], ['ab5', 'Fähigkeit 5', 'KeyX'],
+];
+const KB_ACT = KB_DEF.filter(r => r.length === 3), KB_STD = Object.fromEntries(KB_ACT.map(r => [r[0], r[2]]));
+const KB_BAD = ['Escape', 'Enter', 'NumpadEnter', 'Backspace', 'Tab', 'F9', 'MetaLeft', 'MetaRight', 'ContextMenu'];
+let kbBind = {}; try { kbBind = JSON.parse(localStorage.getItem('bob-tasten') || '{}') || {}; } catch (er) {}
+let kbTrans = {};
+function kbCode(id) { return kbBind[id] || KB_STD[id]; }
+function kbBuild() { kbTrans = {}; const ch = KB_ACT.filter(r => kbCode(r[0]) !== r[2]); for (const r of ch) kbTrans[kbCode(r[0])] = r[2]; for (const r of ch) if (!(r[2] in kbTrans)) kbTrans[r[2]] = 'None'; }
+function kbSave() { try { localStorage.setItem('bob-tasten', JSON.stringify(kbBind)); } catch (er) {} kbBuild(); }
+kbBuild();
+function keyName(c) {
+  if (!c) return '–'; if (/^Key[A-Z]$/.test(c)) return c.slice(3); if (/^Digit\d$/.test(c)) return c.slice(5); if (/^Numpad\d$/.test(c)) return 'Num ' + c.slice(6);
+  return ({ Space: 'Leer', ShiftLeft: 'Shift', ShiftRight: 'Shift R', ControlLeft: 'Strg', ControlRight: 'Strg R', AltLeft: 'Alt', AltRight: 'Alt Gr', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', CapsLock: 'Caps', Comma: ',', Period: '.', Minus: '-', Slash: '/', Semicolon: 'Ö', Quote: 'Ä', BracketLeft: 'Ü', BracketRight: '+', Backquote: '^', Backslash: '#', IntlBackslash: '<', Equal: '´' })[c] || c;
+}
+const kb = { open: false, wait: null, scroll: 0, rows: [], msg: '', msgT: 0, t0: 0 };
+function kbAssign(id, code) {
+  if (KB_BAD.includes(code)) { kb.msg = 'Diese Taste geht nicht.'; kb.msgT = 2; return; }
+  const old = kbCode(id), other = KB_ACT.find(r => r[0] !== id && kbCode(r[0]) === code);
+  kbBind[id] = code; if (other) kbBind[other[0]] = old;
+  for (const r of KB_ACT) if (kbBind[r[0]] === r[2]) delete kbBind[r[0]];
+  kbSave(); kb.msg = other ? 'Getauscht mit „' + other[1] + '“' : ''; kb.msgT = other ? 2.5 : 0;
+}
+function kbFix(e) {
+  if (e.ctrlKey || e.metaKey) return;
+  try { if (phone.open && phone.locked) return; } catch (er) { return; }
+  const to = kbTrans[e.code]; if (!to) return;
+  Object.defineProperty(e, 'code', { value: to }); Object.defineProperty(e, 'key', { value: to === 'ShiftLeft' ? 'Shift' : 'Unidentified' });
+}
+addEventListener('keydown', e => {
+  if (kb.open) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (kb.wait) { if (e.code === 'Escape') kb.wait = null; else { kbAssign(kb.wait, e.code); kb.wait = null; } return; }
+    if (e.code === 'Escape') kb.open = false;
+    else if (e.code === 'ArrowDown') kb.scroll += 44; else if (e.code === 'ArrowUp') kb.scroll -= 44;
+    return;
+  }
+  kbFix(e);
+}, true);
+addEventListener('keyup', e => { if (kb.open) return; kbFix(e); }, true);
 const W = 1200, H = 880, FLOOR = 440;
 let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
 const LINE = '#111';
@@ -3426,7 +3470,8 @@ function drawBob() {
   const s = scaleAt(bob.y), k = BASE_W / BODY.w * s;
   const hop = bob.moving ? -Math.abs(Math.sin(bob.phase)) * 9 * s : Math.sin(bob.phase * 0.5) * 1.2 * s;
   const sq = bob.moving ? 1 - Math.abs(Math.sin(bob.phase)) * 0.03 : 1;
-  drawBobFig(bob.x, bob.y, k, bob.turn, hop, sq, wear.on, true, accWorn());
+  const lift = waveLift();
+  drawBobFig(bob.x, bob.y - lift, k, bob.turn, lift > 0 ? Math.sin(performance.now() / 120) * 3 * s : hop, sq, wear.on, lift < 5, accWorn());
 }
 
 // Steuerung
@@ -4041,6 +4086,8 @@ function autoClickTick(dt) {
 cv.addEventListener('contextmenu', e => { if (!lief.klick) return; e.preventDefault(); const [x, y] = toCanvas(e); const pt = petAt(x, y); if (pt && !menu.open && !phone.open) openPetPanel(pt.id); });
 cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, y] = toCanvas(e);
   if (!device) { deviceClick(x, y); return; }
+  if (kb.open) { kbClick(x, y); return; }
+  if (abilClick(x, y)) return;
   if (stz.on) { stzClick(x, y); return; }
   if (apoClick(x, y)) return;
   if (chase.on) { if (chase.mode === 'car') { if (!chase.done) chase.lane = y < (chase.py || 540) ? Math.max(0, chase.lane - 1) : Math.min(2, chase.lane + 1); } else chaseJump(); return; }
@@ -4923,7 +4970,7 @@ const APPS = [
   { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 setTimeout(() => { if (dw.access && !APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); });
-function canPhone() { return !web.open && !kal.open && !tres.on && !chase.on && !stz.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
+function canPhone() { return !kb.open && !web.open && !kal.open && !tres.on && !chase.on && !stz.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
@@ -6759,7 +6806,9 @@ function drawSeasonAir(dt) {
   }
 }
 // Große Updates
+OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.43', 'Fähigkeiten & Tasten', 'Outfits und Accessoires können Fähigkeiten haben (oben links) – Bobi reitet auf einer Welle. Alle Tasten frei belegbar'],
   ['1.42', 'Tierhaus', 'Neues Haus im Garten mit Tierbett, Napf, Klo, Maid und Kalender'],
   ['1.41', 'Bob-Pass gefüllt', 'Alle 100 Level: Outfits, farbige Bobs, Accessoires wie Krone, Zylinder und Lolli, Geld und Futter'],
   ['1.40', 'Accessoires', 'Neue Kleidungsart für Kopf, Gesicht, Hals und Rücken – passt auf jedes Outfit'],
@@ -7458,7 +7507,7 @@ function drawHotbar() {
   if (!bag.open && hbHidden) { drawBagBtn(); return; }
   for (let i = 0; i < HB.n; i++) {
     if (!bag.open && !(hotbar[i] && itemInfo(hotbar[i]).n > 0)) continue;
-    drawSlot(hbRect(i), hotbar[i], bag.open && bag.drag && hbAt(bag.px, bag.py) === i, String(i + 1));
+    drawSlot(hbRect(i), hotbar[i], bag.open && bag.drag && hbAt(bag.px, bag.py) === i, keyName(kbCode('hb' + (i + 1))));
   }
   drawBagBtn();
   // Schalter über der Hotbar (nur im Inventar)
@@ -7619,10 +7668,179 @@ function drawSettingsApp(s) {
     if (on) { g.textAlign = 'right'; g.fillText('✓', b.x + b.w - 20, b.y + 27); }
     btns.push({ b, act: () => setDevice(d) });
   });
+  let iy = s.y + 320;
+  if (!isTouch()) {
+    const b = { x: s.x + 20, y: s.y + 304, w: s.w - 40, h: 56 };
+    g.fillStyle = '#1b1d22'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill();
+    g.fillStyle = '#fff'; g.font = '800 18px system-ui'; g.textAlign = 'left'; g.fillText('⌨  Tastenbelegung', b.x + 20, b.y + 29);
+    g.textAlign = 'right'; g.fillText('›', b.x + b.w - 20, b.y + 29);
+    btns.push({ b, act: () => { togglePhone(false); kb.open = true; kb.wait = null; kb.scroll = 0; kb.t0 = performance.now(); } });
+    iy = s.y + 392;
+  }
   g.fillStyle = '#6b7280'; g.font = '500 15px system-ui'; g.textAlign = 'left';
-  const info = isTouch() ? ['Touch: Ziehen zum Laufen,', 'Taschen-Knopf für das Inventar.'] : ['Tastatur: WASD laufen, E reden,', 'I Inventar, 1–6 Hotbar, H Handy.'];
-  info.forEach((l, i) => g.fillText(l, s.x + 26, s.y + 320 + i * 22));
+  const K = id => keyName(kbCode(id));
+  const info = isTouch() ? ['Touch: Ziehen zum Laufen,', 'Taschen-Knopf für das Inventar.', 'Fähigkeiten oben links antippen.'] : ['Tastatur: ' + K('u') + K('l') + K('d') + K('r') + ' laufen, ' + K('e') + ' reden,', K('bag') + ' Inventar, ' + K('phone') + ' Handy, ' + K('ab1') + ' Fähigkeit.'];
+  info.forEach((l, i) => g.fillText(l, s.x + 26, iy + i * 22));
 }
+
+// ---------- Fähigkeiten (von Outfits und Accessoires) ----------
+const ABIL = {
+  welle: { name: 'Welle reiten', cd: 12, dur: 3.6, col: '#1e88e5', use() { waveStart(); } },
+};
+function abilOf(o) { return (o && o.abil) || []; }
+function activeAbils() { const L = [...abilOf(OUTFITS[wear.on])]; for (const a of accWorn()) L.push(...abilOf(ACC[a])); return [...new Set(L)].filter(id => ABIL[id]).slice(0, 5); }
+const abCd = {};
+function abilFree() { return !((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device || kb.open || bob.hidden); }
+function useAbil(i) {
+  const id = activeAbils()[i]; if (!id || !abilFree()) return;
+  if ((abCd[id] || 0) > 0) { toast = { text: ABIL[id].name + ' lädt noch (' + Math.ceil(abCd[id]) + ' s)', t: 1.2 }; return; }
+  abCd[id] = ABIL[id].cd; ABIL[id].use();
+}
+addEventListener('keydown', e => {
+  if (e.repeat) return; const i = ['KeyF', 'KeyG', 'KeyC', 'KeyV', 'KeyX'].indexOf(e.code); if (i < 0) return;
+  if (!activeAbils()[i] || !abilFree()) return; e.preventDefault(); useAbil(i);
+});
+function abilTick(dt) { for (const k in abCd) if (abCd[k] > 0) abCd[k] = Math.max(0, abCd[k] - dt); waveTick(dt); }
+const ABH = { w: 268, h: 50, gap: 8 };
+function abilRect(i) { const y0 = apo.on && !apo.won && ROOMS[cur] && ROOMS[cur].apo ? 312 : 18; return { x: XL + 18, y: y0 + i * (ABH.h + ABH.gap), w: ABH.w, h: ABH.h }; }
+function abilHudOn() { return !(build.on || phone.open || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open || pp.open || bag.open || !device); }
+function abilClick(x, y) { if (!abilHudOn()) return false; const L = activeAbils(); for (let i = 0; i < L.length; i++) { const r = abilRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) { useAbil(i); return true; } } return false; }
+function abilIcon(id, x, y, sz, t) {
+  g.save(); g.translate(x, y); const q = sz / 40;
+  if (id === 'welle') {
+    g.fillStyle = '#1e88e5'; g.beginPath(); g.moveTo(-20 * q, 14 * q); g.quadraticCurveTo(-14 * q, -18 * q, 10 * q, -16 * q); g.quadraticCurveTo(22 * q, -14 * q, 18 * q, -4 * q); g.quadraticCurveTo(8 * q, -10 * q, 4 * q, 0); g.quadraticCurveTo(2 * q, 10 * q, 20 * q, 14 * q); g.closePath(); g.fill();
+    g.fillStyle = '#e8f7ff'; g.beginPath(); g.arc(14 * q, -10 * q, 3.4 * q, 0, 7); g.arc(6 * q, -15 * q, 3 * q, 0, 7); g.arc(-4 * q, -14 * q, 2.6 * q, 0, 7); g.fill();
+    g.fillStyle = '#7fd0ff'; g.fillRect(-20 * q, 14 * q, 40 * q, 4 * q);
+  }
+  g.restore();
+}
+function drawAbilHud() {
+  const L = activeAbils(); if (!L.length || !abilHudOn()) return;
+  const t = performance.now() / 1000;
+  L.forEach((id, i) => {
+    const A = ABIL[id], r = abilRect(i), cd = abCd[id] || 0, act = id === 'welle' && wave.t > 0;
+    g.save();
+    g.fillStyle = 'rgba(12,16,26,.72)'; g.beginPath(); g.roundRect(r.x, r.y, r.w, r.h, 12); g.fill();
+    if (act) { g.strokeStyle = A.col; g.lineWidth = 3; g.globalAlpha = 0.6 + 0.4 * Math.sin(t * 10); g.beginPath(); g.roundRect(r.x, r.y, r.w, r.h, 12); g.stroke(); g.globalAlpha = 1; }
+    // Tasten-Kappe (3D)
+    const kn = keyName(kbCode('ab' + (i + 1))), kw = Math.max(36, 16 + kn.length * 11);
+    g.fillStyle = '#9aa3b2'; g.beginPath(); g.roundRect(r.x + 8, r.y + 10, kw, 34, 7); g.fill();
+    g.fillStyle = '#eef1f6'; g.beginPath(); g.roundRect(r.x + 8, r.y + 6, kw, 32, 7); g.fill();
+    g.fillStyle = '#1b1d22'; g.font = '900 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(kn, r.x + 8 + kw / 2, r.y + 23);
+    const ix = r.x + kw + 34; abilIcon(id, ix, r.y + 25, 34, t);
+    g.fillStyle = cd > 0 ? '#9aa3b2' : '#fff'; g.font = '800 17px system-ui'; g.textAlign = 'left'; g.fillText(A.name, ix + 24, r.y + 25);
+    if (cd > 0) {
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.roundRect(r.x, r.y, r.w * cd / A.cd, r.h, 12); g.fill();
+      g.fillStyle = '#ffd23a'; g.font = '900 16px system-ui'; g.textAlign = 'right'; g.fillText(Math.ceil(cd) + ' s', r.x + r.w - 12, r.y + 25);
+    }
+    if (act) { g.fillStyle = A.col; g.fillRect(r.x + 10, r.y + r.h - 6, (r.w - 20) * wave.t / A.dur, 3); }
+    g.restore();
+  });
+}
+
+// Bobis Welle: kurz darauf reiten, schneller, macht Schaden
+const wave = { t: 0, age: 0, dir: 1, hit: new Set(), parts: [], pops: [] };
+function waveStart() { wave.t = ABIL.welle.dur; wave.age = 0; wave.dir = bob.face || 1; wave.hit = new Set(); toast = { text: 'Bobi ruft eine Welle! 🌊', t: 1.6 }; }
+function waveAmt() { if (wave.t <= 0) return 0; return Math.min(1, wave.age * 4, wave.t * 2.5); }
+function waveLift() { return waveAmt() * 80 * scaleAt(bob.y); }
+function waveTick(dt) {
+  for (const p of wave.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.l -= dt; }
+  wave.parts = wave.parts.filter(p => p.l > 0 && p.y < p.gy);
+  for (const p of wave.pops) p.t -= dt; wave.pops = wave.pops.filter(p => p.t > 0);
+  if (wave.t <= 0) return;
+  wave.t -= dt; wave.age += dt; if (bob.face) wave.dir = bob.face;
+  const s = scaleAt(bob.y), a = waveAmt();
+  for (let i = 0; i < 3; i++) wave.parts.push({ x: bob.x - wave.dir * (40 + Math.random() * 120) * s, y: bob.y - (60 + Math.random() * 90) * s * a, vx: (-wave.dir * 60 + (Math.random() - 0.5) * 160) * s, vy: -(120 + Math.random() * 220), l: 0.8, gy: bob.y + 4, sz: (4 + Math.random() * 6) * s });
+  if (bob.moving && Math.random() < 0.5) wave.parts.push({ x: bob.x + wave.dir * 80 * s, y: bob.y - 10, vx: wave.dir * (80 + Math.random() * 120), vy: -(200 + Math.random() * 200), l: 0.7, gy: bob.y + 6, sz: 5 * s });
+  // Schaden an Gegnern
+  if (apo.on && !apo.won) {
+    const hitIt = (e, dmg, rx) => { if (wave.hit.has(e) || Math.abs(e.x - bob.x) > rx * s || Math.abs(e.y - bob.y) > 90) return; wave.hit.add(e); e.hp -= dmg; e.hit = 0.25; e.st = 'alert'; if (!e.boss) e.x = Math.max(XL + 60, Math.min(XR - 60, e.x + wave.dir * 160)); wave.pops.push({ x: e.x, y: e.y - 300 * s, t: 1, v: dmg }); for (let i = 0; i < 14; i++) wave.parts.push({ x: e.x, y: e.y - 80 * s, vx: (Math.random() - 0.5) * 400, vy: -(150 + Math.random() * 300), l: 0.9, gy: e.y + 4, sz: 6 * s }); };
+    for (const e of AP.en) hitIt(e, 2, 190);
+    if (AP.bossE) hitIt(AP.bossE, 4, 260);
+  }
+}
+const WAVE_PAL = mkPal('#1877d2', '#3fb0f2'), WAVE_DEEP = mkPal('#0f5aa8', '#1e84d6'), FOAM_PAL = mkPal('#dff3ff', '#ffffff');
+function drawWave() {
+  const s = scaleAt(bob.y), a = waveAmt(), dir = wave.dir, t = performance.now() / 1000, tt = bob.turn;
+  if (a > 0) {
+    const N = 22, cw = 22 * s, front = bob.x + dir * 100 * s, base = bob.y + 8 * s;
+    g.save(); g.fillStyle = 'rgba(20,80,160,.28)'; g.beginPath(); g.ellipse(bob.x - dir * 120 * s, bob.y + 6 * s, 270 * s * a, 24 * s, 0, 0, 7); g.fill(); g.restore();
+    const cols = [];
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1); let h = u < 0.55 ? 0.12 + 0.88 * Math.pow(u / 0.55, 1.6) : 1 - Math.pow((u - 0.55) / 0.45, 0.8) * 0.75;
+      h = (h * 300 + Math.sin(t * 9 + i * 0.7) * 6) * s * a;
+      cols.push({ x: front - dir * (i + 1) * cw, i, h, u });
+    }
+    const order = tt > 0 ? [...cols].sort((p, q) => q.x - p.x) : [...cols].sort((p, q) => p.x - q.x);
+    for (const c of order) {
+      const y0 = base - c.h, foam = c.u > 0.38 && c.u < 0.7;
+      cube(c.x, y0, cw + 1, c.h, 26 * s, c.u > 0.72 ? WAVE_DEEP : WAVE_PAL, !foam, tt);
+      if (foam) cube(c.x, y0 - 10 * s, cw + 1, 10 * s + 1, 26 * s, FOAM_PAL, true, tt);
+    }
+    // überschlagende Krone: Bogen nach vorne
+    const crest = cols[Math.round((N - 1) * 0.55)];
+    for (let j = 1; j <= 6; j++) {
+      const q = j / 6, lw = cw * 1.05, lx = crest.x + dir * j * cw * 0.95, ly = base - crest.h - 18 * s - Math.sin(q * Math.PI * 0.8) * 26 * s + q * q * 60 * s + Math.sin(t * 7 + j) * 2 * s, lh = (24 - q * 10) * s;
+      cube(lx, ly, lw, lh, 24 * s, q > 0.8 ? FOAM_PAL : WAVE_PAL, false, tt);
+      cube(lx, ly - 9 * s, lw, 9 * s, 24 * s, FOAM_PAL, true, tt);
+    }
+    // Schaum vorne am Boden
+    for (let j = 0; j < 4; j++) { const fx = front - dir * j * 22 * s + Math.sin(t * 12 + j) * 4 * s; cube(fx - 10 * s, base - 12 * s, 20 * s, 12 * s, 18 * s, FOAM_PAL, true, tt); }
+  }
+  for (const p of wave.parts) { g.globalAlpha = Math.max(0, Math.min(1, p.l * 2)); g.fillStyle = p.sz > 8 ? '#bfe6ff' : '#ffffff'; g.fillRect(p.x - p.sz / 2, p.y - p.sz / 2, p.sz, p.sz); g.fillStyle = 'rgba(30,136,229,.6)'; g.fillRect(p.x - p.sz / 2 + p.sz * 0.25, p.y + p.sz * 0.1, p.sz * 0.5, p.sz * 0.5); }
+  g.globalAlpha = 1;
+  for (const p of wave.pops) { g.globalAlpha = Math.min(1, p.t * 2); g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 6; g.strokeStyle = '#08305c'; g.strokeText('-' + p.v, p.x, p.y - (1 - p.t) * 40); g.fillStyle = '#4fc3f7'; g.fillText('-' + p.v, p.x, p.y - (1 - p.t) * 40); }
+  g.globalAlpha = 1;
+}
+
+// ---------- Tastenbelegung (Fenster) ----------
+const KBP = { w: 760, h: 780 };
+function kbBox() { return { x: W / 2 - KBP.w / 2, y: H / 2 - KBP.h / 2, w: KBP.w, h: KBP.h }; }
+function drawKeybinds(dt) {
+  if (!kb.open) return;
+  if (kb.msgT > 0) kb.msgT -= dt;
+  const b = kbBox(); g.save();
+  g.fillStyle = 'rgba(5,8,14,.72)'; g.fillRect(XL, 0, XR - XL, H);
+  g.fillStyle = '#1b1f2a'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 24); g.fill();
+  g.fillStyle = '#fff'; g.font = '900 32px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText('⌨  Tastenbelegung', b.x + 32, b.y + 48);
+  kb.rows = [];
+  const top = b.y + 96, bot = b.y + b.h - 92, RH = 46;
+  let total = 0; for (const r of KB_DEF) total += r.length === 1 ? 52 : RH;
+  kb.scroll = Math.max(0, Math.min(Math.max(0, total - (bot - top)), kb.scroll));
+  g.save(); g.beginPath(); g.rect(b.x, top, b.w, bot - top); g.clip();
+  let y = top - kb.scroll;
+  for (const r of KB_DEF) {
+    if (r.length === 1) { g.fillStyle = '#7ea6ff'; g.font = '900 16px system-ui'; g.textAlign = 'left'; g.fillText(r[0].toUpperCase(), b.x + 36, y + 32); y += 52; continue; }
+    const [id, label, std] = r, rb = { x: b.x + 24, y: y + 3, w: b.w - 48, h: RH - 6 }, w8 = kb.wait === id, ch = kbCode(id) !== std;
+    g.fillStyle = w8 ? '#2f6fe0' : '#262b38'; g.beginPath(); g.roundRect(rb.x, rb.y, rb.w, rb.h, 10); g.fill();
+    g.fillStyle = '#e9edf5'; g.font = '700 17px system-ui'; g.textAlign = 'left'; g.fillText(label, rb.x + 16, rb.y + rb.h / 2);
+    const kn = w8 ? 'Taste drücken …' : keyName(kbCode(id)); g.font = '900 16px system-ui'; const kw = Math.max(54, g.measureText(kn).width + 28);
+    g.fillStyle = '#9aa3b2'; g.beginPath(); g.roundRect(rb.x + rb.w - kw - 12, rb.y + 7, kw, rb.h - 10, 7); g.fill();
+    g.fillStyle = w8 ? '#ffd23a' : '#eef1f6'; g.beginPath(); g.roundRect(rb.x + rb.w - kw - 12, rb.y + 4, kw, rb.h - 12, 7); g.fill();
+    g.fillStyle = '#1b1d22'; g.textAlign = 'center'; g.fillText(kn, rb.x + rb.w - 12 - kw / 2, rb.y + rb.h / 2 - 2);
+    if (ch && !w8) { g.fillStyle = '#7ea6ff'; g.font = '600 13px system-ui'; g.textAlign = 'right'; g.fillText('Standard: ' + keyName(std), rb.x + rb.w - kw - 24, rb.y + rb.h / 2); }
+    if (y + RH > top && y < bot) kb.rows.push({ b: rb, id });
+    y += RH;
+  }
+  g.restore();
+  if (total > bot - top) { const sh = (bot - top) * (bot - top) / total, sy = top + (bot - top - sh) * kb.scroll / Math.max(1, total - (bot - top)); g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.roundRect(b.x + b.w - 14, sy, 6, sh, 3); g.fill(); }
+  // Knöpfe unten
+  const bs = { x: b.x + 24, y: b.y + b.h - 70, w: 220, h: 50 }, bf = { x: b.x + b.w - 224, y: b.y + b.h - 70, w: 200, h: 50 };
+  g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(bs.x, bs.y, bs.w, bs.h, 14); g.fill();
+  g.fillStyle = '#13b84a'; g.beginPath(); g.roundRect(bf.x, bf.y, bf.w, bf.h, 14); g.fill();
+  g.fillStyle = '#fff'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.fillText('Standard', bs.x + bs.w / 2, bs.y + 25); g.fillText('Fertig', bf.x + bf.w / 2, bf.y + 25);
+  kb.btnStd = bs; kb.btnOk = bf;
+  g.fillStyle = kb.msgT > 0 ? '#ffd23a' : '#8a93a6'; g.font = '600 14px system-ui'; g.fillText(kb.msgT > 0 ? kb.msg : (kb.wait ? 'Esc = abbrechen' : 'Klick auf eine Aktion, dann neue Taste drücken'), b.x + b.w / 2, bs.y + 25);
+  g.restore();
+}
+function kbClick(x, y) {
+  const inb = (r) => r && x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h;
+  if (inb(kb.btnOk)) { kb.open = false; kb.wait = null; return; }
+  if (inb(kb.btnStd)) { kbBind = {}; kbSave(); kb.wait = null; kb.msg = 'Alles auf Standard zurückgesetzt.'; kb.msgT = 2; return; }
+  for (const r of kb.rows) if (inb(r.b)) { kb.wait = kb.wait === r.id ? null : r.id; return; }
+  if (!inb(kbBox())) { kb.open = false; kb.wait = null; } else kb.wait = null;
+}
+cv.addEventListener('wheel', e => { if (!kb.open) return; e.preventDefault(); kb.scroll += e.deltaY * 0.8; }, { passive: false });
 
 function fit() {
   const a = innerWidth / Math.max(1, innerHeight);
@@ -7648,12 +7866,12 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if ((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device) { vx = 0; vy = 0; }
+  if ((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device || kb.open) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
     if (m > 1) { vx /= m; vy /= m; }
-    const sp = SPEED * (keys.has('run') ? 1.7 : 1) * (gt.T < boostUntil ? 1.4 : 1) * scaleAt(bob.y);
+    const sp = SPEED * (keys.has('run') ? 1.7 : 1) * (gt.T < boostUntil ? 1.4 : 1) * (wave.t > 0 ? 1.85 : 1) * scaleAt(bob.y);
     const nx = bob.x + vx * sp * dt, ny = bob.y + vy * sp * 0.8 * dt;
     if (!blocked(nx, bob.y)) bob.x = nx;
     if (!blocked(bob.x, ny)) bob.y = ny;
@@ -7687,7 +7905,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); kryptoTick(dt); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); abilTick(dt); kryptoTick(dt); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -7708,14 +7926,14 @@ function frame(t) {
   if (cur === petRoom() && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
-  if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else list.push({ y: bob.y + 0.01, f: drawBob }); }
+  if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else { if (wave.t > 0 || wave.parts.length) list.push({ y: bob.y + 0.005, f: drawWave }); list.push({ y: bob.y + 0.01, f: drawBob }); } }
   apoListItems(list);
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
   drawSeasonAir(dt);
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
