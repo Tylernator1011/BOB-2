@@ -4432,6 +4432,7 @@ function furnBox(f) {
 function solids(room) {
   const list = (ROOMS[room].objs || []).filter(o => !o.jailDoor || jailed()).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o.type === 'npc' ? { x: o.x - o.w / 2, w: o.w, base: o.base, depth: o.depth } : o);
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall) list.push(furnBox(f));
+  if (room === 'garten' && lief.tierhaus) list.push({ x: TH.x - 220 - 54, w: 440 + 54, base: TH.y, depth: 90 });
   return list;
 }
 
@@ -7973,6 +7974,7 @@ function frame(t) {
   if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
   for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, a.ay || FLOOR + 70]); doorLock = true; }
+  if (cur === 'garten' && lief.tierhaus && !doorLock && !fade.dir && vy < -0.3 && Math.abs(bob.x - TH.x) < 75 && bob.y <= TH.y + 22) { go('tierhaus', [600, FLOOR + 70]); doorLock = true; }
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
