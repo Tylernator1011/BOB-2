@@ -91,7 +91,7 @@ addEventListener('keydown', e => {
 }, true);
 addEventListener('keyup', e => { if (kb.open) return; kbFix(e); }, true);
 const W = 1200, H = 880, FLOOR = 440;
-let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
+let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0, camZ = 1, camZv = 1, camLeft = 0, camRoom = null; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
 const LINE = '#111';
 
 // Wandstreifen wie im alten Spawn (helle und dunkle Bahnen)
@@ -185,6 +185,8 @@ const ROOMS = {
                      { type: 'loot', k: 'auto', x: -300, base: 620 }, { type: 'loot', k: 'auto', x: 650, base: 720 }, { type: 'loot', k: 'auto', x: 1650, base: 660 }, { type: 'loot', k: 'kiste', x: 950, base: 580 }, { type: 'loot', k: 'tonne', x: 400, base: 560 }, { type: 'loot', k: 'kiste', x: 1850, base: 760 }] },
   tierhaus: { name: 'Tierhaus', kind: 'tierhaus', exits: {}, wide: [-300, 1550], maxY: H - 30,
               arches: [{ x: 600, to: 'garten', ax: 1320, ay: 640, label: 'Garten' }] },
+  tierhaus2: { name: 'Tierhaus oben', kind: 'tierhaus2', exits: {}, wide: [-300, 1550], maxY: H - 30,
+              arches: [{ x: -120, to: 'tierhaus', ax: -120, label: 'Runter' }] },
   garten: { name: 'Garten', outside: true, kind: 'garten', exits: {}, wide: [-450, 1650], maxY: H - 30,
               arches: [{ x: 600, to: 'pink', ax: W / 2, ay: H - 60, label: 'Ins Haus' }] },
   laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
@@ -1944,7 +1946,7 @@ function apoClick(x, y) {
   for (const b of apoBagRects()) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { useBag(b.k); return true; }
   if (isTouch()) { const b = apoBtn(); if (Math.hypot(x - b.x, y - b.y) < b.r + 10) { apoShootNearest(); return true; } return false; }
   if (pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) return false;
-  apoShoot(x + camX, y); return true;
+  apoShoot(...toWorld(x, y)); return true;
 }
 function chaseEnd() {
   chase.on = false;
@@ -2389,6 +2391,7 @@ function room() {
   else if (R.kind === 'house') drawOutside();
   else if (R.kind === 'garten') drawGarten(R);
   else if (R.kind === 'tierhaus') drawTierhausRoom(R);
+  else if (R.kind === 'tierhaus2') drawTierhaus2Room(R);
   else if (R.kind === 'street') drawStreet(R);
   else if (R.openTop) {
     // Laden geht nach oben einfach weiter: nur Boden
@@ -4072,6 +4075,7 @@ function updateBus(dt) {
 
 // Touch-/Maus-Joystick
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
+function toWorld(x, y) { return [(x - SXL) / camZv + camLeft, (y - H * (1 - camZv)) / camZv]; }
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 const petClicks = [];
 let lastPetClick = 0;
@@ -4850,6 +4854,7 @@ const ADMIN = {
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
     ['Tierhaus', '#e8a25a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; saveLief(); gartenSetup(); }],
+    ['Tierhaus 2. Stock', '#c97a3a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; saveLief(); gartenSetup(); }],
     ['Autoklicker 2 + ×2', '#ffcc1a', () => { lief.klick = true; lief.auto = true; lief.auto2 = true; lief.klick2 = true; saveLief(); }],
     ['Alle Accessoires', '#9b5de5', () => { wear.accOwned = Object.keys(ACC); saveWear(); }],
     ['Kalender', '#e0262b', () => { lief.garten = true; lief.kalender = true; saveLief(); gartenSetup(); }],
@@ -5302,6 +5307,7 @@ const WEB_ITEMS = [
   { id: 'klick2', cat: 'haus', name: 'Doppel-Klick', price: 12000, desc: ['Jeder Klick aufs Tier', 'bringt 2 € statt 1 €'], once: true, needs: 'auto2' },
   { id: 'tierhaus', cat: 'haus', name: 'Tierhaus', price: 15000, desc: ['Neues Haus im Garten: Tierbett,', 'Napf, Klo, Maid & Kalender'], once: true, needs: 'hundehaus' },
   { id: 'kralarm', cat: 'haus', name: 'Profit-Alarm', price: 20000, desc: ['Krypto: Ziel-Plus', 'wird direkt angezeigt'], once: true },
+  { id: 'tierhaus2', cat: 'haus', name: 'Tierhaus 2. Stock', price: 30000, desc: ['Das Tierhaus wird', 'zweistöckig'], once: true, needs: 'tierhaus' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
@@ -5323,7 +5329,7 @@ function webOrder(it) {
     if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5377,6 +5383,7 @@ function webPic(id, cx, cy, sz) {
   if (id.startsWith('acc_')) { g.restore(); g.save(); drawBobFig(cx, cy + 50, sz / 640, 0.6, 0, 1, 'gruen', false, [id.slice(4)]); g.restore(); return; }
   if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
+  if (id === 'tierhaus2') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 36, 100, 14); g.fillStyle = '#e8a25a'; g.fillRect(-30, -24, 60, 62); g.strokeRect(-30, -24, 60, 62); g.beginPath(); g.moveTo(-30, 8); g.lineTo(30, 8); g.stroke(); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-40, -22); g.lineTo(0, -50); g.lineTo(40, -22); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#c8ecff'; for (const [a, b] of [[-22, -16], [8, -16], [-22, 14], [8, 14]]) { g.fillRect(a, b, 14, 14); g.strokeRect(a, b, 14, 14); } g.fillStyle = '#ffd23a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2', 34, -40); g.restore(); return; }
   if (id === 'kralarm') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#f0b90b'; g.beginPath(); g.moveTo(-30, 20); g.quadraticCurveTo(-26, -34, 0, -36); g.quadraticCurveTo(26, -34, 30, 20); g.lineTo(38, 28); g.lineTo(-38, 28); g.closePath(); g.fill(); g.stroke(); circ(0, 36, 8, '#f0b90b'); g.stroke(); circ(0, -40, 6, '#f0b90b'); g.stroke(); g.fillStyle = '#16c784'; g.beginPath(); g.arc(30, -26, 18, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('+', 30, -25); g.restore(); return; }
   if (id === 'tierhaus') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 30, 100, 20); g.fillStyle = '#e8a25a'; g.fillRect(-36, -8, 72, 44); g.strokeRect(-36, -8, 72, 44); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-46, -6); g.lineTo(0, -46); g.lineTo(46, -6); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#5a2e14'; g.fillRect(-10, 10, 20, 26); g.fillStyle = '#c8ecff'; g.fillRect(-30, 0, 14, 14); g.fillRect(16, 0, 14, 14); g.restore(); return; }
   if (id === 'auto2' || id === 'klick2') { g.fillStyle = id === 'auto2' ? '#555b66' : '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = id === 'auto2' ? '#3cff5a' : '#7a5a00'; g.font = '900 ' + (id === 'auto2' ? 26 : 30) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'auto2' ? '4s' : '×2', 0, 2); g.restore(); return; }
@@ -5471,11 +5478,22 @@ function gartenOwned() { return !!lief.garten; }
 function petRoom() { return lief.tierhaus ? 'tierhaus' : 'garten'; }
 const TH = { x: 1320, y: 560 };
 function drawTierhausAussen() {
-  const x = TH.x, y = TH.y, w = 440, h = 300, t = 0.45, d = 120, dx = -d * t, dy = -d * 0.55;
+  const x = TH.x, y = TH.y, w = 440, h = lief.tierhaus2 ? 560 : 300, t = 0.45, d = 120, dx = -d * t, dy = -d * 0.55;
   g.save(); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
   g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x, y + 6, w * 0.62, 22, 0, 0, 7); g.fill();
   cube(x - w / 2, y - h, w, h, d, mkPal('#e8a25a', '#f0b26a'), false, t);
-  g.strokeStyle = 'rgba(120,60,20,.35)'; g.lineWidth = 3; for (let k = 1; k < 8; k++) { g.beginPath(); g.moveTo(x - w / 2, y - h + k * h / 8); g.lineTo(x + w / 2, y - h + k * h / 8); g.stroke(); }
+  g.strokeStyle = 'rgba(120,60,20,.35)'; g.lineWidth = 3; for (let k = 1; k < h / 37; k++) { g.beginPath(); g.moveTo(x - w / 2, y - h + k * 37.5); g.lineTo(x + w / 2, y - h + k * 37.5); g.stroke(); }
+  if (lief.tierhaus2) {
+    // Stockwerk-Balken + Fenster oben + kleiner Balkon
+    g.strokeStyle = LINE; g.lineWidth = 5; const fy = y - 300;
+    g.fillStyle = '#a8662e'; g.fillRect(x - w / 2 - 6, fy - 10, w + 12, 20); g.strokeRect(x - w / 2 - 6, fy - 10, w + 12, 20);
+    for (const wx of [x - 160, x + 90]) { g.fillStyle = '#c8ecff'; g.fillRect(wx, fy - 200, 70, 90); g.strokeRect(wx, fy - 200, 70, 90); g.beginPath(); g.moveTo(wx + 35, fy - 200); g.lineTo(wx + 35, fy - 110); g.moveTo(wx, fy - 155); g.lineTo(wx + 70, fy - 155); g.lineWidth = 3; g.stroke(); g.lineWidth = 5; g.fillStyle = '#7a4020'; g.fillRect(wx - 12, fy - 204, 14, 98); g.strokeRect(wx - 12, fy - 204, 14, 98); g.fillRect(wx + 68, fy - 204, 14, 98); g.strokeRect(wx + 68, fy - 204, 14, 98); }
+    g.fillStyle = '#c8ecff'; g.fillRect(x - 40, fy - 190, 80, 140); g.strokeRect(x - 40, fy - 190, 80, 140);
+    g.fillStyle = '#7a4020'; g.fillRect(x - 70, fy - 60, 140, 14); g.strokeRect(x - 70, fy - 60, 140, 14);
+    for (let i = 0; i <= 6; i++) { g.fillRect(x - 66 + i * 21, fy - 98, 6, 38); g.strokeRect(x - 66 + i * 21, fy - 98, 6, 38); }
+    g.fillRect(x - 70, fy - 104, 140, 10); g.strokeRect(x - 70, fy - 104, 140, 10);
+    g.fillStyle = '#2fa84f'; for (const px of [x - 52, x + 52]) { g.beginPath(); g.arc(px, fy - 116, 12, 0, 7); g.fill(); g.stroke(); }
+  }
   g.strokeStyle = LINE; g.lineWidth = 5;
   const L = x - w / 2 - 24, R = x + w / 2 + 24, top = y - h - 150, eave = y - h + 6;
   g.fillStyle = '#5a2e14'; g.beginPath(); g.moveTo(x, top); g.lineTo(x + dx, top + dy); g.lineTo(L + dx, eave + dy); g.lineTo(L, eave); g.closePath(); g.fill(); g.stroke();
@@ -5504,13 +5522,50 @@ function drawTierhausRoom(R) {
   g.fillStyle = '#5a2e14'; g.lineWidth = 6; g.strokeStyle = LINE; g.fillRect(510, FLOOR - 230, 180, 230); g.strokeRect(510, FLOOR - 230, 180, 230); g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(660, FLOOR - 115, 10, 0, 7); g.fill(); g.stroke();
   g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(530, FLOOR - 280, 140, 36, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Garten', 600, FLOOR - 261);
   // Bilder mit Pfoten
-  for (const [px, c] of [[-150, '#9b5de5'], [800, '#2fa84f']]) { g.fillStyle = '#fff'; g.lineWidth = 5; g.strokeStyle = '#7a4a24'; g.fillRect(px - 50, 120, 100, 90); g.strokeRect(px - 50, 120, 100, 90); g.fillStyle = c; g.beginPath(); g.ellipse(px, 175, 16, 13, 0, 0, 7); g.fill(); for (const [a, b] of [[-18, -16], [-6, -26], [6, -26], [18, -16]]) { g.beginPath(); g.arc(px + a, 175 + b, 6, 0, 7); g.fill(); } }
+  for (const [px, c] of (lief.tierhaus2 ? [[800, '#2fa84f']] : [[-150, '#9b5de5'], [800, '#2fa84f']])) { g.fillStyle = '#fff'; g.lineWidth = 5; g.strokeStyle = '#7a4a24'; g.fillRect(px - 50, 120, 100, 90); g.strokeRect(px - 50, 120, 100, 90); g.fillStyle = c; g.beginPath(); g.ellipse(px, 175, 16, 13, 0, 0, 7); g.fill(); for (const [a, b] of [[-18, -16], [-6, -26], [6, -26], [18, -16]]) { g.beginPath(); g.arc(px + a, 175 + b, 6, 0, 7); g.fill(); } }
   // Holzboden
   g.fillStyle = '#b07a42'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.strokeStyle = 'rgba(80,40,10,.25)'; g.lineWidth = 3; for (let y = FLOOR + 40; y < H; y += 44) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); } for (let y = FLOOR, r = 0; y < H; y += 44, r++) for (let x = Math.floor(XL / 220) * 220 + (r % 2) * 110; x < XR; x += 220) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 44); g.stroke(); }
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   // runder Teppich
   g.fillStyle = '#ffd0e8'; g.beginPath(); g.ellipse(700, 720, 260, 70, 0, 0, 7); g.fill(); g.strokeStyle = '#ff8ac8'; g.lineWidth = 6; g.beginPath(); g.ellipse(700, 720, 230, 58, 0, 0, 7); g.stroke();
   if (lief.kalender) drawKalWall();
+  if (lief.tierhaus2) drawTreppe(-120, true);
+}
+// Treppe in der Wand (hoch oder runter)
+function drawTreppe(cx, hoch) {
+  g.save(); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
+  const x0 = cx - 110, w = 220, top = FLOOR - 300;
+  g.fillStyle = '#3a2410'; g.fillRect(x0, top, w, 300); g.strokeRect(x0, top, w, 300);
+  for (let i = 0; i < 7; i++) {
+    const sy = hoch ? FLOOR - 38 - i * 38 : top + 20 + i * 38, sw = w - 24 - i * (hoch ? 10 : -0), sx = cx - sw / 2;
+    if (!hoch && i > 5) break;
+    g.fillStyle = i % 2 ? '#c98a4a' : '#d89a58'; g.fillRect(sx, sy, sw, 30); g.strokeRect(sx, sy, sw, 30);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(sx, sy + 22, sw, 8);
+  }
+  g.fillStyle = '#7a4020'; g.fillRect(x0 - 12, top - 14, w + 24, 18); g.strokeRect(x0 - 12, top - 14, w + 24, 18);
+  g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(cx - 60, top - 62, 120, 36, 8); g.fill(); g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(hoch ? '↑ Oben' : '↓ Unten', cx, top - 44);
+  g.restore();
+}
+function drawTierhaus2Room(R) {
+  const t = performance.now() / 1000;
+  g.fillStyle = '#e9f1df'; g.fillRect(XL, 0, VW, FLOOR);
+  g.strokeStyle = 'rgba(90,130,70,.18)'; g.lineWidth = 3; for (let x = Math.floor(XL / 60) * 60; x < XR; x += 60) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, FLOOR); g.stroke(); }
+  // Dachschrägen
+  g.fillStyle = '#8a5a30'; g.strokeStyle = LINE; g.lineWidth = 6;
+  g.beginPath(); g.moveTo(XL, 0); g.lineTo(XL + 260, 0); g.lineTo(XL, 220); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(XR, 0); g.lineTo(XR - 260, 0); g.lineTo(XR, 220); g.closePath(); g.fill(); g.stroke();
+  for (let x = Math.floor(XL / 220) * 220 + 110; x < XR; x += 220) { g.fillStyle = '#7a4a24'; g.fillRect(x - 14, 0, 28, 34); g.strokeRect(x - 14, 0, 28, 34); }
+  g.fillStyle = '#a7c48a'; g.fillRect(XL, FLOOR - 60, VW, 60); g.fillStyle = LINE; g.fillRect(XL, FLOOR - 62, VW, 4);
+  // runde Fenster
+  for (const wx of [420, 1150]) { g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#9ad9ff'; g.beginPath(); g.arc(wx, 180, 80, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(wx - 80, 180); g.lineTo(wx + 80, 180); g.moveTo(wx, 100); g.lineTo(wx, 260); g.stroke(); g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.arc(wx - 30, 150, 18, 0, 7); g.fill(); }
+  // Bilder
+  for (const [px, c] of [[780, '#ff7ac6'], [200, '#4aa3ff']]) { g.fillStyle = '#fff'; g.lineWidth = 5; g.strokeStyle = '#7a4a24'; g.fillRect(px - 45, 140, 90, 80); g.strokeRect(px - 45, 140, 90, 80); g.fillStyle = c; g.beginPath(); g.ellipse(px, 190, 14, 11, 0, 0, 7); g.fill(); for (const [a, b] of [[-15, -14], [-5, -22], [5, -22], [15, -14]]) { g.beginPath(); g.arc(px + a, 190 + b, 5, 0, 7); g.fill(); } }
+  // Holzboden
+  g.fillStyle = '#c08a52'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.strokeStyle = 'rgba(80,40,10,.22)'; g.lineWidth = 3; for (let y = FLOOR + 40; y < H; y += 44) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); }
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  g.fillStyle = '#cfe8b8'; g.beginPath(); g.ellipse(650, 720, 280, 72, 0, 0, 7); g.fill(); g.strokeStyle = '#8cc46a'; g.lineWidth = 6; g.beginPath(); g.ellipse(650, 720, 250, 60, 0, 0, 7); g.stroke();
+  drawTreppe(-120, false);
 }
 function drawTierbett() {
   const s = scaleAt(HH.y), x = HH.x, y = HH.y, t = performance.now() / 1000;
@@ -5638,6 +5693,7 @@ function drawKlo() {
   g.restore();
 }
 function gartenSetup() {
+  ROOMS.tierhaus.arches = ROOMS.tierhaus.arches.filter(a => a.to !== 'tierhaus2'); if (lief.tierhaus2) ROOMS.tierhaus.arches.push({ x: -120, to: 'tierhaus2', ax: -120, label: 'Oben' });
   if (!gartenOwned()) return;
   ROOMS.pink.exits.d = 'garten';
   if (lief.feld) { furn.garten = furn.garten || []; if (!furn.garten.some(f => f.feld)) { for (const [x, y] of FELD.slots) furn.garten.push({ t: 'topf', x, y, r: 0, feld: true }); saveFurn(); } }
@@ -5661,7 +5717,7 @@ function gartenTree(x, s, apples) {
 }
 function drawGarten(R) {
   const t = performance.now() / 1000;
-  const sky = g.createLinearGradient(0, 0, 0, FLOOR); sky.addColorStop(0, '#5fb8ff'); sky.addColorStop(1, '#c8ecff'); g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
+  const sky = g.createLinearGradient(0, -450, 0, FLOOR); sky.addColorStop(0, '#3f9cf0'); sky.addColorStop(0.45, '#5fb8ff'); sky.addColorStop(1, '#c8ecff'); g.fillStyle = sky; g.fillRect(XL - 50, -600, VW + 100, FLOOR + 600);
   g.fillStyle = '#ffee00'; g.beginPath(); g.arc(XL + 200 + camX * 0.6, 100, 55, 0, 7); g.fill();
   g.fillStyle = '#fff'; for (const [cx, cy] of [[-200, 80], [500, 120], [1250, 70]]) { const x = cx + ((t * 8) % 2400) - 300; g.beginPath(); g.arc(x, cy, 30, 0, 7); g.arc(x + 38, cy - 12, 40, 0, 7); g.arc(x + 80, cy, 30, 0, 7); g.fill(); }
   g.fillStyle = '#4dbb3a'; g.beginPath(); g.ellipse(-100, FLOOR + 30, 520, 130, 0, Math.PI, 0); g.ellipse(1350, FLOOR + 30, 600, 150, 0, Math.PI, 0); g.fill();
@@ -6867,6 +6923,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.45', 'Tierhaus 2. Stock', 'Das Tierhaus wird zweistöckig – in der Nähe zoomt die Kamera raus'],
   ['1.44', 'Profit-Alarm', 'Krypto: Ziel-Plus pro Währung einstellen – erreicht, wird es direkt auf dem Bildschirm angezeigt'],
   ['1.43', 'Fähigkeiten & Tasten', 'Outfits und Accessoires können Fähigkeiten haben (oben links) – Bobi reitet auf einer Welle. Alle Tasten frei belegbar'],
   ['1.42', 'Tierhaus', 'Neues Haus im Garten mit Tierbett, Napf, Klo, Maid und Kalender'],
@@ -7201,6 +7258,7 @@ function nearPet() {
   return null;
 }
 function petAt(x, y) {
+  [x, y] = toWorld(x, y);
   for (const id of activeList()) {
     const p = petFor(id); if (p.room !== cur) continue;
     const s = scaleAt(p.y), w = PETS[id].w * s;
@@ -7932,8 +7990,18 @@ function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   // große Räume: Kamera folgt Bob
   { const RW = ROOMS[cur].wide; XL = SXL; XR = SXR; VW = SVW; camX = 0;
-    if (RW) { camX = RW[1] - RW[0] <= SVW ? (RW[0] + RW[1]) / 2 - (SXL + SXR) / 2 : Math.max(RW[0] - SXL, Math.min(RW[1] - SXR, bob.x - (SXL + SXR) / 2)); XL = RW[0]; XR = RW[1]; VW = XR - XL; } }
-  g.setTransform(1, 0, 0, 1, -(SXL + camX), 0);
+    const zt = cur === 'garten' && lief.tierhaus2 && !build.on && Math.abs(bob.x - TH.x) < 650 ? 0.68 : 1;
+    if (camRoom !== cur) { camRoom = cur; camZ = zt; }
+    camZ += (zt - camZ) * Math.min(1, dt * 2.5); if (Math.abs(camZ - zt) < 0.002) camZ = zt;
+    let z = 1;
+    if (RW) {
+      z = Math.min(1, Math.max(camZ, SVW / (RW[1] - RW[0])));
+      const vw = SVW / z;
+      camLeft = RW[1] - RW[0] <= vw ? (RW[0] + RW[1]) / 2 - vw / 2 : Math.max(RW[0], Math.min(RW[1] - vw, bob.x - vw / 2));
+      camX = camLeft - SXL; XL = RW[0]; XR = RW[1]; VW = XR - XL;
+    } else camLeft = SXL;
+    camZv = z; }
+  g.setTransform(camZv, 0, 0, camZv, -camZv * camLeft, H * (1 - camZv));
   let vx = (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0);
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
