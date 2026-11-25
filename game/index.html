@@ -1019,16 +1019,16 @@ function drawJailHud() {
 }
 // Gefängnisarbeit: Nummernschilder stanzen (ohne Lohn, aber die Zeit vergeht)
 const stz = { on: false };
-const STZ_TEXT = 'BOB-1011';
+function stzPlate() { const L = 'ABCDEFGHKLMNPRSTUVWXYZ', r = n => Array.from({ length: n }, () => L[Math.floor(Math.random() * L.length)]).join(''); return r(1 + Math.floor(Math.random() * 2)) + '-' + r(2) + ' ' + (10 + Math.floor(Math.random() * 9990)); }
 function nearWerkbank() { return cur === 'zellen' && jailed() && bob.x >= 640 && bob.y < 640 && !fade.dir; }
-function startStanze() { Object.assign(stz, { on: true, i: 0, pos: 0, dir: 1, zone: stzZone(), plates: stz.plates || 0, shake: 0, flash: 0, t0: performance.now() }); keys.clear(); joy.on = false; }
+function startStanze() { Object.assign(stz, { on: true, text: stzPlate(), i: 0, pos: 0, dir: 1, zone: stzZone(), plates: stz.plates || 0, shake: 0, flash: 0, t0: performance.now() }); keys.clear(); joy.on = false; }
 function stzZone() { const w = 0.16 + Math.random() * 0.08; const a = Math.random() * (1 - w); return [a, a + w]; }
 function stzHit() {
   if (!stz.on) return;
   if (stz.pos >= stz.zone[0] && stz.pos <= stz.zone[1]) {
-    stz.i++; stz.flash = 0.25; stz.zone = stzZone();
-    if (stz.i >= STZ_TEXT.length) {
-      stz.plates++; stz.i = 0; gt.T += 45; saveTime(); stz.done = 1.4;
+    stz.i++; while (stz.i < stz.text.length && stz.text[stz.i] === ' ') stz.i++; stz.flash = 0.25; stz.zone = stzZone();
+    if (stz.i >= stz.text.length) {
+      stz.plates++; stz.i = 0; stz.text = stzPlate(); gt.T += 45; saveTime(); stz.done = 1.4;
       if (stz.plates % 4 === 0 && jailed()) { jail.until = Math.max(gt.T, jail.until - 180); saveJail(); stz.bonus = 2.5; }
     }
   } else stz.shake = 0.35;
@@ -1056,9 +1056,10 @@ function drawStanze(dt) {
   g.fillStyle = '#f4f4f4'; g.beginPath(); g.roundRect(px, py, 660, 150, 18); g.fill(); g.lineWidth = 6; g.strokeStyle = LINE; g.stroke();
   g.fillStyle = '#1f4f9e'; g.fillRect(px + 6, py + 6, 60, 138); g.fillStyle = '#ffcc1a'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('D', px + 36, py + 118);
   g.font = '900 86px ui-monospace, monospace';
-  for (let k = 0; k < STZ_TEXT.length; k++) { g.fillStyle = k < stz.i ? '#111' : 'rgba(0,0,0,.12)'; g.fillText(STZ_TEXT[k], px + 110 + k * 70, py + 80); }
+  const cw = Math.min(70, 540 / stz.text.length); g.font = '900 ' + Math.round(cw * 1.2) + 'px ui-monospace, monospace';
+  for (let k = 0; k < stz.text.length; k++) { g.fillStyle = k < stz.i ? '#111' : 'rgba(0,0,0,.12)'; g.fillText(stz.text[k], px + 110 + k * cw, py + 80); }
   // Stanze über dem nächsten Buchstaben
-  const kx = px + 110 + stz.i * 70, down = stz.flash > 0;
+  const kx = px + 110 + Math.min(stz.i, stz.text.length - 1) * cw, down = stz.flash > 0;
   g.fillStyle = '#8c949c'; g.fillRect(kx - 30, down ? py - 30 : py - 110, 60, 80); g.lineWidth = 5; g.strokeRect(kx - 30, down ? py - 30 : py - 110, 60, 80);
   g.fillStyle = '#5d646c'; g.fillRect(kx - 10, 0, 20, down ? py - 30 : py - 110);
   // Takt-Balken
@@ -1085,7 +1086,7 @@ function chaseEnd() {
     toast = { text: 'Entkommen! Du bist in einen Gulli gesprungen.' + (chase.loot ? ' +' + money(chase.loot) + ' Bargeld' : ''), t: 5 };
   } else {
     const pct = Math.min(50, 10 * (jail.count + 2)), lost = Math.round((bank.cash || 0) * pct / 100); bank.cash = Math.max(0, (bank.cash || 0) - lost); const fine = Math.min(200, Math.max(0, Math.floor(bank.money))); bank.money -= fine; if (fine) bank.log.push({ t: 'Strafe', v: -fine }); saveBank();
-    jail.count++; const hrs = Math.min(60, 12 * jail.count);
+    jail.count++; jail.num = 1000 + Math.floor(Math.random() * 9000); const hrs = Math.min(60, 12 * jail.count);
     gt.T = (gDay() + 1) * 1440 + 8 * 60; saveTime(); jail.until = gt.T + hrs * 60; jail.free = false; saveJail(); go('zellen', [600, 600]);
     guard.state = 'off'; guard.next = 20;
     if (!wear.owned.includes('gefangener')) wear.owned.push('gefangener'); wear.on = 'gefangener'; saveWear();
@@ -2100,7 +2101,7 @@ Object.assign(OUTFITS, {
       g.strokeStyle = '#111'; g.lineWidth = 4;
       g.fillStyle = '#e0661a'; g.beginPath(); g.moveTo(x + 80, y); g.lineTo(x + w / 2, y + 40); g.lineTo(x + w - 80, y); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = '#fff'; g.fillRect(x + 30, y + 58, 96, 40); g.strokeRect(x + 30, y + 58, 96, 40);
-      g.fillStyle = '#111'; g.font = '900 20px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1011', x + 78, y + 79);
+      g.fillStyle = '#111'; g.font = '900 20px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(jail.num || 1011), x + 78, y + 79);
       g.fillStyle = '#c85510'; for (const xx of [x + w - 70, x + w - 40]) g.fillRect(xx, y + 50, 12, h - 60);
     } },
   einbrecher: { name: 'Einbrecher', bp: mkPal('#161616', '#242424'), hp: mkPal('#161616', '#242424'), noText: true,
