@@ -1383,7 +1383,6 @@ function gunMuzzle(kind, gx, gy, dir, s, a) {
   return { x: gx + dir * (px * c - py * sn) * s, y: gy + (px * sn + py * c) * s };
 }
 function gunAim(gx, gy, dir, tx, ty) { return Math.max(-0.6, Math.min(0.6, Math.atan2(ty - gy, (tx - gx) * dir))); }
-function poly(pts, fill) { g.fillStyle = fill; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fill(); g.stroke(); }
 function box(x, y, w, h, fill, r) { g.fillStyle = fill; g.beginPath(); g.roundRect(x, y, w, h, r || 0); g.fill(); g.stroke(); }
 function drawGun(kind, gx, gy, dir, s, a, rec, flash) {
   rec = Math.max(0, rec || 0);
@@ -2953,11 +2952,21 @@ Object.assign(OUTFITS, {
     bodyFront: (x, y, w, h) => { g.fillStyle = '#c9d1d9'; g.strokeStyle = '#111'; g.lineWidth = 3; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(x + 10 + i * 20, y + 10); g.lineTo(x + 20 + i * 20, y - 22); g.lineTo(x + 30 + i * 20, y + 10); g.closePath(); g.fill(); g.stroke(); } g.fillStyle = '#eee'; g.beginPath(); g.arc(x + w - 70, y + 70, 26, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#111'; g.beginPath(); g.arc(x + w - 80, y + 66, 6, 0, 7); g.arc(x + w - 60, y + 66, 6, 0, 7); g.fill(); },
     headFront: (x, y, w, h) => { bobFace(x, y); },
     front: (bx, by, hx, hy, t) => {
-      const ox = hx - 5 + 5 * t, top = hy + 92, hh = HEAD.h - 92 + 4, ww = HEAD.w + 10;
-      g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(ox, top, ww, hh, DEPTH + 8, mkPal('#b8322a', '#c94236'), true, t);
-      g.fillStyle = 'rgba(255,255,255,.55)'; for (let k = 18; k < ww; k += 34) for (const r of [24, 56]) { g.beginPath(); g.arc(ox + k + (r === 56 ? 17 : 0), top + r, 4.5, 0, 7); g.fill(); }
-      // Knoten an der Seite
-      const kx = t > 0 ? ox : ox + ww; g.fillStyle = '#b8322a'; g.beginPath(); g.moveTo(kx, top + 30); g.lineTo(kx + (t > 0 ? -34 : 34), top + 50); g.lineTo(kx + (t > 0 ? -26 : 26), top + 80); g.closePath(); g.fill(); g.stroke();
+      // Tuch liegt genau auf Vorder- und Seitenfläche des Kopfes
+      const dx = -DEPTH * t, dy = -DEPTH * 0.55, y0 = hy + 92, y1 = hy + HEAD.h + 3, x0 = hx - 3, x1 = hx + HEAD.w + 3;
+      g.lineWidth = 4.5; g.strokeStyle = '#111'; g.lineJoin = 'round';
+      if (Math.abs(dx) > 0.5) {
+        const ex = dx < 0 ? x0 : x1, ex2 = ex + dx * 1.08;
+        poly([[ex, y0], [ex2, y0 + dy], [ex2, y1 + dy], [ex, y1]], '#8e241d');
+        g.fillStyle = 'rgba(255,255,255,.45)'; for (const f of [0.3, 0.7]) for (const r of [0.3, 0.75]) { g.beginPath(); g.ellipse(ex + dx * f, y0 + dy * f + (y1 - y0) * r, 2.5, 4, 0, 0, 7); g.fill(); }
+        // Knoten hinten an der Seite
+        const kx = ex2, ky = y0 + dy + 18, sd = Math.sign(dx);
+        g.fillStyle = '#a82c24'; g.beginPath(); g.arc(kx, ky, 9, 0, 7); g.fill(); g.stroke();
+        poly([[kx, ky + 4], [kx + sd * 10, ky + 46], [kx + sd * 2, ky + 52], [kx - sd * 4, ky + 8]], '#a82c24');
+        poly([[kx, ky + 4], [kx + sd * 26, ky + 34], [kx + sd * 20, ky + 42], [kx - sd * 2, ky + 10]], '#b8322a');
+      }
+      poly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], '#c0392b');
+      g.fillStyle = 'rgba(255,255,255,.55)'; for (let k = 22; k < x1 - x0; k += 34) for (const [r, o] of [[24, 0], [58, 17]]) { if (k + o < x1 - x0 - 8) { g.beginPath(); g.arc(x0 + k + o, y0 + r, 4.5, 0, 7); g.fill(); } }
     } },
   gefangener: { name: 'Gefangener', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
     bodyFront: (x, y, w, h) => {
