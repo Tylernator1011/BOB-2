@@ -3203,8 +3203,9 @@ function nearBox() {
 function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); return job && job.id === 'liefer' && onShift() && o && !fade.dir && Math.abs(bob.x - o.fx) < 200 && Math.abs(bob.y - o.base) < 160 && o; }
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
+function nearRevier() { if (!(job && job.id === 'polizei' && onShift() && cur === 'wache' && !fade.dir)) return null; const o = (ROOMS.wache.objs || []).find(o => o.type === 'theke'); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !web.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus()); }
+function canInteract() { return !web.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3407,7 +3408,7 @@ function openMenu() {
   { const tg = interactTarget(); if (tg && tg.pet) { openPetPanel(tg.pet); return; } }
   if (nearBox()) { openWardrobe('pet'); return; }
   if (nearSchrank()) { openWardrobe('bob'); return; }
-  if (nearKasse() || nearPakete()) { startWork(); return; }
+  if (nearKasse() || nearPakete() || nearRevier()) { startWork(); return; }
   if (nearSchalter()) {
     const c = Math.floor(bank.cash || 0);
     menu.kind = 'bank'; menu.title = 'Bank – Konto: ' + money(bank.money) + ' · Bargeld: ' + money(c) + ' · 2 % Zinsen pro Tag aufs Konto';
@@ -3547,6 +3548,7 @@ function interactTarget() {
   if (bx) return { x: bx.x - 10, y: furnBox(bx).top - 16, label: 'Haustiere' };
   const ks = nearKasse() && kasse();
   if (ks) return { x: ks.x + ks.w / 2, y: ks.base - ks.h - 110, label: 'Arbeiten' };
+  { const rv = nearRevier(); if (rv) return { x: rv.x + rv.w / 2, y: rv.base - rv.h - 110, label: 'Dienst antreten' }; }
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
@@ -5322,6 +5324,7 @@ function drawSleep(dt) {
 // ---------- Jobs ----------
 const JOBS = {
   kasse:  { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60, outfit: 'tierladen', go: 'ab zur Kasse!', extra: '+ Trinkgeld' },
+  polizei: { name: 'Polizist auf der Wache', place: 'Polizeiwache', wage: 22, days: [1, 2, 4, 6], from: 8 * 60, to: 12 * 60, outfit: 'polizist', mode: 'polizei', go: 'ab zur Wache an die Theke!', extra: '+ 8 € pro Einsatz' },
   liefer: { name: 'Lieferfahrer im Möbelhaus', place: 'Möbelhaus', wage: 18, days: [1, 3, 6], from: 12 * 60, to: 16 * 60, outfit: 'liefer', mode: 'liefer', go: 'ab ins Möbelhaus zu den Paketen!', extra: '+ 4 € pro Paket' },
 };
 const MAX_WARN = 3, MAX_SICK = 3, BAN_DAYS = 30, UNEMP_PAY = 40;
@@ -5701,11 +5704,206 @@ function lfMove(x, y) {
   if (d.px > m.x && d.px < m.x + m.w && d.py > m.y - 40 && d.py < m.y + m.h + 40) { d.placed = true; d.drag = null; }
 }
 function lfUp() { const d = wk.door; if (d && d.drag) { d.drag = null; d.px = W / 2; d.py = 790; } }
+// ---------- Polizei-Job: 6 verschiedene Einsätze ----------
+const POL_MISSIONS = {
+  radar:    { name: 'Blitzer-Kontrolle',  how: 'Halte zu schnelle Autos an (über 50): Leertaste oder Klick, wenn sie im Blitzer sind.' },
+  jagd:     { name: 'Verfolgungsjagd',    how: 'Fang den Dieb! Springe mit Leertaste über Hindernisse.' },
+  phantom:  { name: 'Zeugenaussage',      how: 'Hör der Zeugin zu und klick den richtigen Verdächtigen an.' },
+  dieb:     { name: 'Taschendieb',        how: 'Beobachte die Menge – klick den Taschendieb an, wenn er zugreift.' },
+  kreuzung: { name: 'Verkehr regeln',     how: 'Schalte die Ampel mit Leertaste/Klick um. Kein Unfall und niemand wartet zu lange!' },
+  spuren:   { name: 'Spurensicherung',    how: 'Such mit der Lupe die 4 Spuren und klick sie an.' },
+};
+const POL_COLS = ['#e74c3c', '#2f7bff', '#2fa84f', '#9b5de5', '#ff9a1a', '#555b66'], POL_CN = { '#e74c3c': 'rote', '#2f7bff': 'blaue', '#2fa84f': 'grüne', '#9b5de5': 'lila', '#ff9a1a': 'orange', '#555b66': 'graue' };
+function polPal(c) { return { front: c, front2: shade(c, 0.25), side: shade(c, -0.25), side2: shade(c, -0.42), top: shade(c, -0.12), top2: shade(c, -0.22) }; }
+function polStart() { wk.served = 0; wk.failed = 0; wk.last = null; polNext(); }
+function polNext() {
+  const ks = Object.keys(POL_MISSIONS).filter(k => k !== wk.last), k = ks[Math.floor(Math.random() * ks.length)];
+  wk.last = k; wk.pm = { k, ph: 'brief', t: 2.6, mist: 0 };
+  const m = wk.pm, R = () => Math.random();
+  if (k === 'radar') { m.cars = []; let x = XL - 200; for (let i = 0; i < 9; i++) { const sp = R() < 0.45 ? 55 + Math.floor(R() * 40) : 30 + Math.floor(R() * 19); m.cars.push({ x, sp, col: POL_COLS[i % 6], st: 'drive' }); x -= 380 + R() * 260; } m.time = 30; }
+  if (k === 'jagd') { m.dist = 520; m.y = 0; m.vy = 0; m.obs = []; let x = W + 200; for (let i = 0; i < 14; i++) { m.obs.push({ x, k: R() < 0.5 ? 'tonne' : 'kiste' }); x += 380 + R() * 300; } m.time = 26; m.scroll = 0; }
+  if (k === 'phantom') {
+    const pick = a => a[Math.floor(R() * a.length)], mk = () => ({ col: pick(POL_COLS), hat: pick([null, '#e74c3c', '#111', '#2f7bff']), glasses: R() < 0.5 });
+    const key = p => p.col + p.hat + p.glasses; const sus = [mk()]; while (sus.length < 4) { const p = mk(); if (!sus.some(s => key(s) === key(p))) sus.push(p); }
+    // Mindestens einer ähnelt dem Täter stark
+    const tat = sus[0]; sus[1] = Object.assign({}, tat, { glasses: !tat.glasses });
+    m.sus = sus.sort(() => R() - 0.5); m.tat = tat; m.time = 20;
+    m.say = 'Er trug eine ' + POL_CN[tat.col] + ' Jacke' + (tat.hat ? ', eine ' + (tat.hat === '#111' ? 'schwarze' : POL_CN[tat.hat]) + ' Mütze' : ', keine Mütze') + (tat.glasses ? ' und eine Brille!' : ' und keine Brille!');
+  }
+  if (k === 'dieb') { m.ppl = []; for (let i = 0; i < 9; i++) m.ppl.push({ x: XL + 80 + R() * (VW - 160), y: 520 + (i % 3) * 70, v: (R() < 0.5 ? -1 : 1) * (40 + R() * 50), col: POL_COLS[Math.floor(R() * 6)], thief: i === 0, grab: 0 }); m.next = 2.5 + R() * 2; m.time = 22; }
+  if (k === 'kreuzung') { m.cars = []; m.green = 'h'; m.passed = 0; m.need = 10; m.spawn = 0.5; m.time = 32; m.crash = 0; }
+  if (k === 'spuren') { const kinds = ['finger', 'schuh', 'haar', 'huelse']; m.cl = kinds.map((kk, i) => ({ k: kk, x: XL + 160 + (i * (VW - 320) / 3) + (R() - 0.5) * 140, y: 330 + R() * 320, found: false })); m.mx = W / 2; m.my = H / 2; m.time = 24; }
+}
+function polDone(ok, msg) {
+  const m = wk.pm; if (m.ph !== 'play') return; m.ph = 'res'; m.t = 2; m.ok = ok; m.msg = msg;
+  if (ok) { wk.served++; if (!unpaid()) { wk.bonus += 8; wk.tip = { v: 8, t: 1.8 }; } } else wk.failed++;
+}
+function updatePolice(dt) {
+  const m = wk.pm; if (!m) return;
+  if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
+  if (m.ph === 'brief') { m.t -= dt; if (m.t <= 0) m.ph = 'play'; return; }
+  if (m.ph === 'res') { m.t -= dt; if (m.t <= 0) polNext(); return; }
+  m.time -= dt; const R = Math.random;
+  if (m.k === 'radar') {
+    for (const c of m.cars) { if (c.st === 'drive') c.x += c.sp * 6.5 * dt; else if (c.st === 'stop') { c.stopT = (c.stopT || 0) + dt; if (c.stopT > 1.2) { c.st = 'gone'; } } else if (c.st === 'gone') c.x += 200 * dt;
+      if (c.st === 'drive' && c.x > XR + 150 && !c.out) { c.out = true; if (c.sp > 50) { m.mist++; m.flash = { t: 1.2, txt: 'Raser entkommen!' }; } } }
+    if (m.flash) { m.flash.t -= dt; if (m.flash.t <= 0) m.flash = null; }
+    if (m.mist > 1) polDone(false, 'Zu viele Fehler bei der Kontrolle.');
+    else if (m.cars.every(c => c.out || c.st !== 'drive') || m.time <= 0) polDone(m.mist <= 1, m.mist <= 1 ? 'Saubere Kontrolle!' : 'Zu viele Fehler.');
+  }
+  if (m.k === 'jagd') {
+    const sp = 520; m.scroll += sp * dt; m.vy += 2400 * dt; m.y = Math.min(0, m.y + m.vy * dt); if (m.y === 0) m.vy = 0;
+    m.dist -= 26 * dt; const bx = XL + 260;
+    for (const o of m.obs) { o.x -= sp * dt; if (!o.hit && o.x > bx - 50 && o.x < bx + 50 && m.y > -70) { o.hit = true; m.dist += 90; m.bump = 0.4; } }
+    if (m.bump) m.bump = Math.max(0, m.bump - dt);
+    if (m.dist <= 60) polDone(true, 'Gefasst! Handschellen klicken.');
+    else if (m.time <= 0 || m.dist > 760) polDone(false, 'Der Dieb ist entkommen…');
+  }
+  if (m.k === 'phantom' && m.time <= 0) polDone(false, 'Zu lange gezögert.');
+  if (m.k === 'dieb') {
+    for (const p of m.ppl) { p.x += p.v * dt; if (p.x < XL + 40 || p.x > XR - 40) p.v *= -1; if (p.grab > 0) p.grab -= dt; }
+    m.next -= dt; if (m.next <= 0) { const th = m.ppl[0]; th.grab = 1.1; m.next = 3 + R() * 2.5; }
+    if (m.time <= 0) polDone(false, 'Der Taschendieb ist abgehauen.');
+  }
+  if (m.k === 'kreuzung') {
+    const CX = W / 2, CY = 470, half = 90;
+    m.spawn -= dt; if (m.spawn <= 0) { m.spawn = 1.1 + R() * 1.1; const d = R() < 0.5 ? 'h' : 'v'; m.cars.push(d === 'h' ? { d, x: XL - 80, y: CY + 30, col: POL_COLS[Math.floor(R() * 6)], wait: 0 } : { d, x: CX - 30, y: H + 60, col: POL_COLS[Math.floor(R() * 6)], wait: 0 }); }
+    for (const c of m.cars) {
+      const go = m.green === c.d, stopLine = c.d === 'h' ? CX - half - 70 : CY + half + 70, pos = c.d === 'h' ? c.x : c.y, before = c.d === 'h' ? pos < stopLine : pos > stopLine;
+      const ahead = m.cars.filter(o => o !== c && o.d === c.d && (c.d === 'h' ? o.x > c.x && o.x - c.x < 130 : o.y < c.y && c.y - o.y < 130)).length;
+      let move = !(ahead) && (go || !before || Math.abs(pos - stopLine) > 6);
+      if (!go && before && Math.abs(pos - stopLine) <= 6) move = false;
+      if (move) { if (c.d === 'h') c.x += 260 * dt; else c.y -= 260 * dt; c.wait = 0; } else c.wait += dt;
+      if (c.wait > 9) { polDone(false, 'Ein Auto hat zu lange gewartet – Stau!'); return; }
+      if (!c.done && (c.d === 'h' ? c.x > XR + 60 : c.y < -60)) { c.done = true; m.passed++; }
+    }
+    const inH = m.cars.filter(c => c.d === 'h' && Math.abs(c.x - CX) < half), inV = m.cars.filter(c => c.d === 'v' && Math.abs(c.y - CY) < half);
+    if (inH.length && inV.length && inH.some(a => inV.some(b => Math.abs(a.x - b.x) < 80 && Math.abs(a.y - b.y) < 80))) { m.crash = 1; polDone(false, 'Unfall auf der Kreuzung!'); return; }
+    m.cars = m.cars.filter(c => !c.done);
+    if (m.passed >= m.need) polDone(true, 'Der Verkehr läuft!'); else if (m.time <= 0) polDone(false, 'Zu wenige Autos durchgelassen.');
+  }
+  if (m.k === 'spuren') { if (m.cl.every(c => c.found)) polDone(true, 'Alle Spuren gesichert!'); else if (m.time <= 0) polDone(false, 'Nicht alle Spuren gefunden.'); }
+}
+function polAction(x, y) {
+  const m = wk.pm; if (!m || m.ph !== 'play') return;
+  if (m.k === 'radar') {
+    const zx = W / 2; const c = x == null ? m.cars.find(c => c.st === 'drive' && Math.abs(c.x - zx) < 150) : m.cars.find(c => c.st === 'drive' && Math.abs(c.x - x) < 110 && y > 470 && y < 660);
+    if (!c) return; if (Math.abs(c.x - zx) > 170) return;
+    c.st = 'stop'; c.out = true; if (c.sp > 50) m.flash = { t: 1, txt: 'Gestoppt: ' + c.sp + ' km/h!' }; else { m.mist++; m.flash = { t: 1.2, txt: 'Der war gar nicht zu schnell!' }; }
+  }
+  if (m.k === 'jagd' && m.y === 0) m.vy = -900;
+  if (m.k === 'kreuzung') m.green = m.green === 'h' ? 'v' : 'h';
+  if (x == null) return;
+  if (m.k === 'phantom') { const i = m.sus.findIndex((p, i) => Math.abs(x - polSusX(i)) < 110 && y > 300 && y < 700); if (i < 0) return; polDone(m.sus[i] === m.tat, m.sus[i] === m.tat ? 'Richtig – das ist er!' : 'Falsche Person festgenommen!'); }
+  if (m.k === 'dieb') { const p = m.ppl.find(p => Math.abs(x - p.x) < 60 && y > p.y - 190 && y < p.y + 10); if (!p) return; if (p.thief) polDone(p.grab > 0 || true, p.grab > 0 ? 'Auf frischer Tat ertappt!' : 'Erwischt – die Geldbörse war in seiner Tasche!'); else { m.mist++; if (m.mist >= 2) polDone(false, 'Zwei Unschuldige verdächtigt…'); else m.flash = { t: 1.2, txt: 'Der war unschuldig!' }; } }
+  if (m.k === 'spuren') { const c = m.cl.find(c => !c.found && Math.hypot(x - c.x, y - c.y) < 45); if (c) c.found = true; }
+}
+function polSusX(i) { return W / 2 + (i - 1.5) * 250; }
+function polDown(x, y) { polAction(x, y); }
+function polMove(x, y) { const m = wk.pm; if (m && m.k === 'spuren') { m.mx = x; m.my = y; } }
+function polKey(code) { if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW') polAction(); }
+function polCar(x, y, col, dir, s) {
+  g.save(); g.translate(x, y); g.scale(dir * s, s); g.lineWidth = 4; g.strokeStyle = LINE;
+  g.fillStyle = col; g.beginPath(); g.roundRect(-90, -55, 180, 45, 12); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-50, -55); g.lineTo(-30, -95); g.lineTo(35, -95); g.lineTo(60, -55); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#c8ecff'; g.beginPath(); g.moveTo(-38, -58); g.lineTo(-24, -88); g.lineTo(2, -88); g.lineTo(2, -58); g.closePath(); g.fill(); g.beginPath(); g.moveTo(10, -58); g.lineTo(10, -88); g.lineTo(30, -88); g.lineTo(48, -58); g.closePath(); g.fill();
+  g.fillStyle = '#222'; for (const wx of [-52, 52]) { g.beginPath(); g.arc(wx, -10, 20, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#888'; g.beginPath(); g.arc(wx, -10, 7, 0, 7); g.fill(); g.fillStyle = '#222'; }
+  g.fillStyle = '#ffee88'; g.fillRect(80, -48, 10, 12); g.restore();
+}
+function polAcc(p, x, y, k) {
+  const hy = y + (-BODY.h - HEAD.h + 2) * k, hx = x - HEAD.w / 2 * k;
+  if (p.glasses) { g.lineWidth = 5 * k + 1; g.strokeStyle = '#111'; g.fillStyle = 'rgba(120,200,255,.35)'; for (const ex of [0.3, 0.7]) { g.beginPath(); g.arc(hx + HEAD.w * k * ex, hy + 70 * k, 26 * k, 0, 7); g.fill(); g.stroke(); } g.beginPath(); g.moveTo(hx + HEAD.w * k * 0.3 + 26 * k, hy + 70 * k); g.lineTo(hx + HEAD.w * k * 0.7 - 26 * k, hy + 70 * k); g.stroke(); }
+  if (p.hat) { g.lineWidth = 4; g.strokeStyle = LINE; cube(hx - 6 * k, hy - 34 * k, (HEAD.w + 12) * k, 44 * k, DEPTH * k, polPal(p.hat), true, 1); }
+}
+function drawPolice() {
+  const m = wk.pm, t = performance.now() / 1000; if (!m) return;
+  const pill = (txt, x, y, size, bg) => { g.font = '700 ' + size + 'px system-ui'; const tw = g.measureText(txt).width + 40; g.fillStyle = bg || 'rgba(15,20,30,.65)'; g.beginPath(); g.roundRect(x - tw / 2, y - size, tw, size * 2, size); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, x, y + 1); };
+  // Szene
+  if (m.k === 'radar') {
+    g.fillStyle = '#9ad9ff'; g.fillRect(XL, 0, VW, 420); g.fillStyle = '#7fd96b'; g.fillRect(XL, 360, VW, 120); g.fillStyle = '#555b66'; g.fillRect(XL, 480, VW, 200); g.fillStyle = '#fff'; for (let x = XL; x < XR; x += 120) g.fillRect(x, 576, 60, 8);
+    g.fillStyle = '#7fd96b'; g.fillRect(XL, 680, VW, H - 680);
+    g.fillStyle = 'rgba(255,60,60,.18)'; g.fillRect(W / 2 - 150, 480, 300, 200); g.strokeStyle = '#ff3b3b'; g.lineWidth = 4; g.setLineDash([14, 10]); g.strokeRect(W / 2 - 150, 480, 300, 200); g.setLineDash([]);
+    g.fillStyle = '#333'; g.fillRect(W / 2 - 10, 300, 20, 180); g.fillStyle = '#222'; g.beginPath(); g.roundRect(W / 2 - 70, 250, 140, 70, 10); g.fill(); g.fillStyle = '#3cff5a'; g.font = '800 30px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const inz = m.cars.find(c => c.st === 'drive' && Math.abs(c.x - W / 2) < 150); g.fillStyle = inz && inz.sp > 50 ? '#ff3b3b' : '#3cff5a'; g.fillText(inz ? inz.sp + ' km/h' : '-- km/h', W / 2, 286);
+    g.fillStyle = '#fff'; g.font = '800 26px system-ui'; g.fillText('50', W / 2 + 200, 380); g.lineWidth = 8; g.strokeStyle = '#e0262b'; g.beginPath(); g.arc(W / 2 + 200, 380, 34, 0, 7); g.stroke();
+    for (const c of m.cars) if (c.x > XL - 200 && c.x < XR + 200) polCar(c.x, 600, c.col, 1, 0.95);
+    if (m.flash) pill(m.flash.txt, W / 2, 200, 26, m.flash.txt.startsWith('Gestoppt') ? 'rgba(20,140,60,.85)' : 'rgba(200,40,40,.85)');
+  }
+  if (m.k === 'jagd') {
+    g.fillStyle = '#9ad9ff'; g.fillRect(XL, 0, VW, 520); const off = -(m.scroll * 0.4) % 300;
+    for (let x = XL + off - 300; x < XR + 300; x += 300) { g.fillStyle = ['#c9a46a', '#7aa0b8', '#b8b07a'][Math.abs(Math.round(x / 300)) % 3]; g.fillRect(x, 200, 270, 320); g.strokeStyle = LINE; g.lineWidth = 5; g.strokeRect(x, 200, 270, 320); g.fillStyle = '#c8ecff'; g.fillRect(x + 40, 250, 60, 60); g.fillRect(x + 170, 250, 60, 60); }
+    g.fillStyle = '#a8a29a'; g.fillRect(XL, 520, VW, H - 520); g.fillStyle = 'rgba(0,0,0,.15)'; for (let x = XL - (m.scroll % 120); x < XR; x += 120) g.fillRect(x, 520, 4, H - 520);
+    for (const o of m.obs) { if (o.x < XL - 100 || o.x > XR + 100) continue; g.lineWidth = 4; g.strokeStyle = LINE; if (o.k === 'tonne') { g.fillStyle = '#3a7a3a'; g.beginPath(); g.roundRect(o.x - 35, 610, 70, 90, 8); g.fill(); g.stroke(); g.fillStyle = '#2a5a2a'; g.fillRect(o.x - 40, 600, 80, 16); g.strokeRect(o.x - 40, 600, 80, 16); } else cube(o.x - 40, 630, 80, 70, 24, polPal('#b8864a'), true, 0.5); }
+    const bx = XL + 260, thx = bx + m.dist;
+    // Dieb
+    g.save(); const tb = Math.abs(Math.sin(t * 12)) * 10; drawPerson(polPal('#222'), thx, 700 - tb, 0.5); g.restore();
+    g.fillStyle = '#ffcc1a'; g.beginPath(); g.ellipse(thx - 50, 610 - tb, 18, 12, 0, 0, 7); g.fill(); g.lineWidth = 3; g.strokeStyle = LINE; g.stroke();
+    // Polizist (Bob)
+    const bb = Math.abs(Math.sin(t * 12)) * 8; drawBobFig(bx, 700 + m.y - bb, 0.5, 1, 0, 1, 'polizist', true);
+    if (m.bump) pill('Autsch!', bx, 400, 22, 'rgba(200,40,40,.85)');
+    // Abstand
+    const p = Math.max(0, Math.min(1, 1 - (m.dist - 60) / 700)); g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(W / 2 - 200, 100, 400, 26, 13); g.fill(); g.fillStyle = '#3cff5a'; g.beginPath(); g.roundRect(W / 2 - 196, 104, 392 * p, 18, 9); g.fill(); g.fillStyle = '#fff'; g.font = '700 16px system-ui'; g.textAlign = 'center'; g.fillText('Abstand zum Dieb', W / 2, 146);
+  }
+  if (m.k === 'phantom') {
+    g.fillStyle = '#3a3f4a'; g.fillRect(XL, 0, VW, H); g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 2; for (let y = 160; y < 700; y += 60) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,.6)'; g.font = '700 18px system-ui'; g.textAlign = 'left'; for (let y = 160, h = 200; y < 700; y += 60, h -= 20) g.fillText(h + ' cm', XL + 20, y - 8);
+    m.sus.forEach((p, i) => { const x = polSusX(i); drawPerson(polPal(p.col), x, 690, 0.62); polAcc(p, x, 690, 0.62); g.fillStyle = '#fff'; g.beginPath(); g.roundRect(x - 26, 704, 52, 36, 8); g.fill(); g.fillStyle = '#111'; g.font = '800 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i + 1), x, 723); });
+    g.fillStyle = '#fff'; g.lineWidth = 4; g.strokeStyle = LINE; g.font = '700 23px system-ui'; const tw = g.measureText(m.say).width + 50; g.beginPath(); g.roundRect(W / 2 - tw / 2, 96, tw, 58, 20); g.fill(); g.stroke(); g.fillStyle = '#111'; g.textAlign = 'center'; g.fillText('🗣️ ' + m.say, W / 2, 126);
+  }
+  if (m.k === 'dieb') {
+    g.fillStyle = '#9ad9ff'; g.fillRect(XL, 0, VW, 470); for (let x = XL, i = 0; x < XR; x += 260, i++) { g.fillStyle = ['#d97b5a', '#c9a46a', '#8aa0c8', '#b0c87a'][i % 4]; g.fillRect(x, 120, 250, 350); g.strokeStyle = LINE; g.lineWidth = 5; g.strokeRect(x, 120, 250, 350); g.fillStyle = '#ffeec8'; g.fillRect(x + 30, 300, 190, 120); g.strokeRect(x + 30, 300, 190, 120); g.fillStyle = ['#e74c3c', '#2f7bff', '#2fa84f', '#ff9a1a'][i % 4]; g.fillRect(x + 20, 260, 210, 30); }
+    g.fillStyle = '#cfc8bc'; g.fillRect(XL, 470, VW, H - 470);
+    m.ppl.slice().sort((a, b) => a.y - b.y).forEach(p => { drawPerson(polPal(p.col), p.x, p.y + 150, 0.45); if (p.grab > 0) { g.fillStyle = '#ffcc1a'; g.strokeStyle = LINE; g.lineWidth = 3; const gx = p.x + (p.v > 0 ? 70 : -70); g.beginPath(); g.ellipse(gx, p.y + 70, 16, 11, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#3a2a00'; g.font = '800 14px system-ui'; g.textAlign = 'center'; g.fillText('€', gx, p.y + 71); } });
+    if (m.flash) { m.flash.t -= 1 / 60; if (m.flash.t <= 0) m.flash = null; else pill(m.flash.txt, W / 2, 200, 26, 'rgba(200,40,40,.85)'); }
+  }
+  if (m.k === 'kreuzung') {
+    const CX = W / 2, CY = 470, half = 90;
+    g.fillStyle = '#6cc35a'; g.fillRect(XL, 0, VW, H); g.fillStyle = '#555b66'; g.fillRect(XL, CY - half, VW, half * 2); g.fillRect(CX - half, 0, half * 2, H);
+    g.fillStyle = '#fff'; for (let x = XL; x < XR; x += 100) if (Math.abs(x - CX) > half) g.fillRect(x, CY - 3, 50, 6); for (let y = 0; y < H; y += 100) if (Math.abs(y - CY) > half) g.fillRect(CX - 3, y, 6, 50);
+    g.fillRect(CX - half - 10, CY - half, 8, half * 2); g.fillRect(CX - half, CY + half + 4, half * 2, 8);
+    const lamp = (x, y, on) => { g.fillStyle = '#222'; g.beginPath(); g.roundRect(x - 18, y - 40, 36, 80, 8); g.fill(); g.fillStyle = on ? '#333' : '#ff3b3b'; g.beginPath(); g.arc(x, y - 18, 12, 0, 7); g.fill(); g.fillStyle = on ? '#3cff5a' : '#333'; g.beginPath(); g.arc(x, y + 18, 12, 0, 7); g.fill(); };
+    lamp(CX - half - 50, CY - half - 60, m.green === 'h'); lamp(CX + half + 50, CY + half + 60, m.green === 'v');
+    for (const c of m.cars) { g.save(); g.translate(c.x, c.y); if (c.d === 'v') g.rotate(-Math.PI / 2); g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = c.col; g.beginPath(); g.roundRect(-55, -28, 110, 56, 12); g.fill(); g.stroke(); g.fillStyle = '#c8ecff'; g.fillRect(10, -22, 26, 44); g.fillRect(-36, -22, 18, 44); if (c.wait > 5) { g.rotate(c.d === 'v' ? Math.PI / 2 : 0); g.fillStyle = '#fff'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.fillText('HUP!', 0, -42); } g.restore(); }
+    pill(m.passed + ' / ' + m.need + ' Autos durch', XL + 170, 110, 22);
+  }
+  if (m.k === 'spuren') {
+    g.fillStyle = '#e8dcc6'; g.fillRect(XL, 0, VW, 520); g.fillStyle = '#a5683a'; g.fillRect(XL, 520, VW, H - 520); g.strokeStyle = 'rgba(0,0,0,.15)'; g.lineWidth = 3; for (let x = XL; x < XR; x += 140) { g.beginPath(); g.moveTo(x, 520); g.lineTo(x, H); g.stroke(); }
+    g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#7a4a2a'; g.fillRect(XL + 100, 340, 320, 180); g.strokeRect(XL + 100, 340, 320, 180); g.fillStyle = '#c8ecff'; g.fillRect(W / 2 - 120, 120, 240, 170); g.strokeRect(W / 2 - 120, 120, 240, 170); g.fillStyle = '#3a6a9a'; g.fillRect(XR - 380, 380, 300, 140); g.strokeRect(XR - 380, 380, 300, 140);
+    g.strokeStyle = '#ffd23a'; g.lineWidth = 10; g.setLineDash([30, 20]); g.beginPath(); g.moveTo(XL, 660); g.lineTo(XR, 640); g.stroke(); g.setLineDash([]);
+    const drawClue = (c, a) => { g.globalAlpha = a; g.fillStyle = '#3a2a1a'; g.strokeStyle = '#3a2a1a'; g.lineWidth = 2;
+      if (c.k === 'finger') { for (let r = 4; r < 22; r += 4) { g.beginPath(); g.ellipse(c.x, c.y, r * 0.75, r, 0, 0, 7); g.stroke(); } }
+      else if (c.k === 'schuh') { g.beginPath(); g.ellipse(c.x, c.y - 8, 14, 20, 0.2, 0, 7); g.fill(); g.beginPath(); g.ellipse(c.x + 6, c.y + 22, 11, 9, 0.2, 0, 7); g.fill(); }
+      else if (c.k === 'haar') { g.lineWidth = 3; g.beginPath(); g.moveTo(c.x - 22, c.y); g.bezierCurveTo(c.x - 8, c.y - 22, c.x + 8, c.y + 22, c.x + 22, c.y - 4); g.stroke(); }
+      else { g.fillStyle = '#c99a2a'; g.fillRect(c.x - 6, c.y - 16, 12, 32); }
+      g.globalAlpha = 1; };
+    for (const c of m.cl) { if (c.found) { drawClue(c, 1); g.strokeStyle = '#2fd060'; g.lineWidth = 5; g.beginPath(); g.arc(c.x, c.y, 34, 0, 7); g.stroke(); } else drawClue(c, 0.07); }
+    // Lupe
+    g.save(); g.beginPath(); g.arc(m.mx, m.my, 80, 0, 7); g.clip(); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(m.mx - 80, m.my - 80, 160, 160); for (const c of m.cl) if (!c.found) drawClue(c, 0.95); g.restore();
+    g.lineWidth = 10; g.strokeStyle = '#333'; g.beginPath(); g.arc(m.mx, m.my, 80, 0, 7); g.stroke(); g.lineWidth = 18; g.beginPath(); g.moveTo(m.mx + 58, m.my + 58); g.lineTo(m.mx + 110, m.my + 110); g.stroke();
+    pill(m.cl.filter(c => c.found).length + ' / 4 Spuren', XL + 140, 110, 22);
+  }
+  // Zeit
+  if (m.ph === 'play') pill('⏱ ' + Math.max(0, Math.ceil(m.time)) + ' s', XR - 170, 110, 22, m.time < 6 ? 'rgba(200,40,40,.85)' : null);
+  // Einsatzkarte / Ergebnis
+  if (m.ph === 'brief' || m.ph === 'res') {
+    g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(XL, 0, VW, H);
+    const P = { x: W / 2 - 330, y: H / 2 - 130, w: 660, h: 240 }; g.fillStyle = m.ph === 'res' ? (m.ok ? '#13a040' : '#c0392b') : '#1f3a6e'; g.beginPath(); g.roundRect(P.x, P.y, P.w, P.h, 24); g.fill(); g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (m.ph === 'brief') { g.font = '700 20px system-ui'; g.fillText('🚨 NEUER EINSATZ', W / 2, P.y + 44); g.font = '900 40px system-ui'; g.fillText(POL_MISSIONS[m.k].name, W / 2, P.y + 100); g.font = '600 19px system-ui'; const words = POL_MISSIONS[m.k].how.split(' '); let line = '', ly = P.y + 160; for (const w of words) { if (g.measureText(line + w).width > P.w - 60) { g.fillText(line, W / 2, ly); line = ''; ly += 28; } line += w + ' '; } g.fillText(line, W / 2, ly); }
+    else { g.font = '900 44px system-ui'; g.fillText(m.ok ? 'Einsatz erfolgreich!' : 'Einsatz gescheitert', W / 2, P.y + 90); g.font = '600 22px system-ui'; g.fillText(m.msg, W / 2, P.y + 150); if (m.ok && !unpaid()) { g.font = '800 24px system-ui'; g.fillText('+8 € Bonus', W / 2, P.y + 196); } }
+  }
+  if (wk.tip && m.ph !== 'res') { g.globalAlpha = Math.min(1, wk.tip.t); marker('+' + wk.tip.v + ' € Bonus!', W / 2, 250 - (1.8 - wk.tip.t) * 30, 34, '#0a8a2f'); g.globalAlpha = 1; }
+  const info = 'Schicht bis ' + hm(JOBS[job.id].to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   Einsätze: ' + wk.served + (wk.failed ? '   ·   Gescheitert: ' + wk.failed : '') + (unpaid() ? '   ·   Strafe: ohne Lohn' : '');
+  g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40; g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(info, XL + 40, 42);
+  const cb = wkSize().close; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d'; g.beginPath(); g.arc(cb.x, cb.y, cb.r, 0, 7); g.fill(); g.stroke();
+  g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cb.x - 15, cb.y - 15); g.lineTo(cb.x + 15, cb.y + 15); g.moveTo(cb.x + 15, cb.y - 15); g.lineTo(cb.x - 15, cb.y + 15); g.stroke(); g.lineCap = 'butt';
+}
 function startWork() {
   if (!job.worked.includes(gDay())) { job.worked.push(gDay()); bump('work'); saveJob(); }
   wk.mode = JOBS[job.id].mode || 'kasse';
   Object.assign(wk, { on: true, t0: performance.now(), start: gt.T, bonus: 0, items: [], cust: null, phase: 'wait', wait: 0.8, drag: null, flash: 0, end: false, served: 0, bag: [] });
   if (wk.mode === 'liefer') lfStart();
+  if (wk.mode === 'polizei') polStart();
   keys.clear(); joy.on = false;
 }
 function newCustomer() {
@@ -5740,11 +5938,13 @@ function workDown(x, y) {
   if (wk.end) { if (x > u.ok.x && x < u.ok.x + u.ok.w && y > u.ok.y && y < u.ok.y + u.ok.h) finishWork(); return; }
   if (Math.hypot(x - u.close.x, y - u.close.y) < u.close.r + 8) { wk.end = true; return; }
   if (wk.mode === 'liefer') { lfDown(x, y); return; }
+  if (wk.mode === 'polizei') { polDown(x, y); return; }
   if (wk.phase === 'pay' && x > u.pay.x && x < u.pay.x + u.pay.w && y > u.pay.y && y < u.pay.y + u.pay.h) { payNow(); return; }
   const it = wkItemAt(x, y); if (it && wk.phase === 'scan') { wk.drag = { it, dx: it.x - x, dy: it.y - y }; it.held = true; }
 }
 cv.addEventListener('pointermove', e => {
   if (wk.on && wk.mode === 'liefer') { const [x, y] = toCanvas(e); lfMove(x, y); return; }
+  if (wk.on && wk.mode === 'polizei') { const [x, y] = toCanvas(e); polMove(x, y); return; }
   if (!wk.on || !wk.drag) return;
   const [x, y] = toCanvas(e), it = wk.drag.it; it.x = x + wk.drag.dx; it.y = y + wk.drag.dy;
   if (it.x > SCAN.x0 - 20 && it.x < SCAN.x1 + 20 && it.y > SCAN.y0 && it.y < SCAN.y1 + 40) { scanItem(it); it.held = false; wk.drag = null; }
@@ -5755,6 +5955,7 @@ addEventListener('keydown', e => {
   e.preventDefault(); e.stopImmediatePropagation();
   if (wk.end) { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') finishWork(); return; }
   if (e.code === 'Escape') wk.end = true;
+  if (wk.mode === 'polizei' && !e.repeat) polKey(e.code);
   if (wk.mode === 'liefer' && !e.repeat) { if (e.code === 'ArrowLeft' || e.code === 'KeyA') lfPress('l'); else if (e.code === 'ArrowRight' || e.code === 'KeyD') lfPress('r'); else if (e.code === 'Space') lfPress('stop'); }
 
 }, true);
@@ -5792,6 +5993,7 @@ function updateWork(dt) {
   if (!wk.on || wk.end) return;
   if (gt.T >= shiftEndT() || !onShift(60 * 24)) { wk.end = true; return; }
   if (wk.mode === 'liefer') { updateLiefer(dt); return; }
+  if (wk.mode === 'polizei') { updatePolice(dt); return; }
   wk.flash = Math.max(0, wk.flash - dt);
   if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
   const c = wk.cust;
@@ -5813,7 +6015,7 @@ function drawWork(dt) {
   updateWork(dt);
   if (!wk.on) return;
   const t = performance.now() / 1000, u = wkSize();
-  if (wk.mode === 'liefer') drawLiefer(); else {
+  if (wk.mode === 'polizei') drawPolice(); else if (wk.mode === 'liefer') drawLiefer(); else {
   // Laden hinten
   for (const s of stripes) { g.fillStyle = s.light ? '#cdf5bf' : '#7fd96b'; g.fillRect(s.x, 0, s.w, 460); g.fillStyle = LINE; g.fillRect(s.x - 2, 0, 4, 460); }
   drawShelf({ x: XL + 30, w: 360, base: 440, h: 300, seed: 7 });
@@ -5889,7 +6091,7 @@ function drawWork(dt) {
     const J = JOBS[job.id], mins = workedMin(), lohn = unpaid() ? 0 : Math.round(mins / 60 * J.wage);
     g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '800 32px system-ui'; g.fillText(gt.T >= shiftEndT() ? 'Feierabend!' : 'Schicht beendet', P.x + 110, P.y + 44);
     g.font = '600 18px system-ui'; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(JOBS[job.id].name, P.x + 110, P.y + 76);
-    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], [wk.mode === 'liefer' ? 'Pakete' : 'Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], [wk.mode === 'liefer' ? 'Paket-Bonus & Trinkgeld' : 'Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
+    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], [wk.mode === 'liefer' ? 'Pakete' : wk.mode === 'polizei' ? 'Einsätze geschafft' : 'Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], [wk.mode === 'liefer' ? 'Paket-Bonus & Trinkgeld' : 'Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
     rows.forEach(([a, b], i) => {
       const y = P.y + 140 + i * 56;
       g.fillStyle = '#fff'; g.beginPath(); g.roundRect(P.x + 30, y, P.w - 60, 46, 14); g.fill();
