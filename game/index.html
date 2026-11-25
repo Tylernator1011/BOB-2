@@ -1853,11 +1853,8 @@ const RW = '#7a4520', RD = '#55301a';
 // hängt an der Wand (Höhe HANG über dem Boden)
 const HANG = 150;
 FURN.trophaeenregal = { name: 'Trophäenregal', wall: true, boxes: [
-  B(-150, 150, 46, 54, HANG - 10, HANG + 262, RW),
   B(-166, 166, 0, 54, HANG, HANG + 16, RD), B(-166, 166, 0, 54, HANG + 130, HANG + 144, RD),
-  B(-150, -134, 8, 54, HANG - 40, HANG, RD), B(134, 150, 8, 54, HANG - 40, HANG, RD),
-  B(-150, -134, 8, 54, HANG + 90, HANG + 130, RD), B(134, 150, 8, 54, HANG + 90, HANG + 130, RD),
-  B(-60, 60, 40, 46, HANG + 230, HANG + 252, '#ffcc1a'),
+  B(-60, 60, 48, 54, HANG + 248, HANG + 270, '#ffcc1a', 'schild'),
 ] };
 const TROPHY_SLOTS = [[-100, HANG + 16], [0, HANG + 16], [100, HANG + 16], [-55, HANG + 144], [55, HANG + 144]];
 // y so wählen, dass das Teil genau an der Rückwand hängt
@@ -2051,7 +2048,8 @@ function drawFurn(t, x, y, s, alpha, r, extra) {
       const knob = (u, v, r, c) => { const [kx, ky] = at(u, v); g.fillStyle = c || '#ffee00'; g.beginPath(); g.arc(kx, ky, r || 8, 0, 7); g.fill(); g.stroke(); };
       g.lineWidth = 4; g.strokeStyle = LINE;
       const dc = b.deco;
-      if (dc === 'glanz') { quad(0.12, 0.12, 0.26, 0.85, 'rgba(255,255,255,.55)'); }
+      if (dc === 'schild') { const [cx, cy] = at(0.5, 0.5); g.fillStyle = '#7a4a00'; g.font = '900 13px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TROPHÄEN', cx, cy + 1); }
+      else if (dc === 'glanz') { quad(0.12, 0.12, 0.26, 0.85, 'rgba(255,255,255,.55)'); }
       else if (dc === 'pfote' || dc === 'euro' || dc === 'stern' || dc === 'tonne') {
         quad(0.1, 0.08, 0.9, 0.92, shade(b.c, 0.25));
         const [cx, cy] = at(0.5, 0.48), r = Math.min(x1 - x0, y1 - y0) * 0.3;
@@ -2232,7 +2230,7 @@ function drawBuildUI() {
     const wl = FURN[k].wall, py = wl ? wallY(k) : build.py, rr = wl ? 8 : build.rot;
     const ok = placeOk(k, build.px, py, rr), s = scaleAt(py), b = furnBox({ t: k, x: build.px, y: py, r: rr });
     g.fillStyle = ok ? 'rgba(19,240,0,.35)' : 'rgba(255,40,40,.4)';
-    if (wl) { const bot = py - (HANG - 40) * s; g.fillRect(b.left, b.top, b.right - b.left, bot - b.top); }
+    if (wl) { const bot = py - HANG * s; g.fillRect(b.left, b.top, b.right - b.left, bot - b.top); }
     else g.fillRect(b.x, build.py - Math.max(b.depth, 24), b.w, Math.max(b.depth, 24));
     drawFurn(k, build.px, py, s, ok ? 0.8 : 0.45, rr);
   } else if (!k && !inPanel) {
