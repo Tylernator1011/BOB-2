@@ -5701,8 +5701,6 @@ const BH = { x: 300, y: 1230 };
 const BOT_SLOTS = [[-220, 600], [-167, 600], [-114, 600], [-61, 600], [1080, 600], [1133, 600], [1186, 600], [1239, 600], [150, 790], [203, 790], [256, 790], [309, 790], [850, 790], [903, 790], [956, 790], [1009, 790]];
 function drawGartenUnten(R, t) {
   const GB = H + R.tall; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
-  // Steinweg vom Haus nach unten zum Botanik-Haus
-  for (let i = 0; i < 15; i++) { const v = i < 10, q = v ? i / 9 : (i - 9) / 5, x = v ? 640 : 640 + (BH.x + 70 - 640) * q, y = v ? H - 60 + (BH.y + 44 - (H - 60)) * q : BH.y + 44; g.fillStyle = '#b8b2a4'; g.beginPath(); g.ellipse(x, y, 44, 16, 0, 0, 7); g.fill(); g.lineWidth = 3; g.stroke(); }
   // Teich
   g.fillStyle = '#2f8fd8'; g.beginPath(); g.ellipse(1180, 1160, 240, 72, 0, 0, 7); g.fill(); g.lineWidth = 6; g.strokeStyle = '#6a6458'; g.stroke();
   g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(1120 + Math.sin(t) * 20, 1145, 80, 10, 0, 0, 7); g.fill();
@@ -8132,7 +8130,19 @@ function drawPlant(f) {
   g.restore();
 }
 function drawFurnItem(f) {
-  if (f.gtopf) { const s = scaleAt(f.y), w = 53 * s + 1, ph = 84 * s; g.lineWidth = 4; g.strokeStyle = LINE; cube(f.x - w / 2, f.y - ph, w, ph, 38 * s, mkPal('#b0552e', '#c4663a'), true, 0.45); g.fillStyle = '#4a2a14'; g.fillRect(f.x - w / 2 + 3, f.y - ph - 2, w - 6, 9 * s); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(f.x - w / 2, f.y - ph + 14 * s, w, 7 * s); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(f.x - w / 2, f.y - 14 * s, w, 14 * s); drawPlant(f); return; }
+  if (f.gtopf) {
+    const s = scaleAt(f.y), ph = 84 * s, row = (furn[cur] || []).filter(o => o.gtopf && o.y === f.y).sort((p, q) => p.x - q.x);
+    let grp = [], cur2 = [];
+    for (const o of row) { if (cur2.length && o.x - cur2[cur2.length - 1].x > 60) { if (cur2.includes(f)) grp = cur2; cur2 = []; } cur2.push(o); } if (cur2.includes(f)) grp = cur2;
+    if (grp[0] === f) {
+      const x0 = grp[0].x - 27 * s, x1 = grp[grp.length - 1].x + 27 * s, w = x1 - x0, d = 38 * s; g.lineWidth = 4; g.strokeStyle = LINE;
+      cube(x0, f.y - ph, w, ph, d, mkPal('#b0552e', '#c4663a'), true, 0.45);
+      const dx = -d * 0.45, dy = -d * 0.55; g.fillStyle = '#4a2a14'; g.beginPath(); g.moveTo(x0 + 5, f.y - ph - 2); g.lineTo(x1 - 5, f.y - ph - 2); g.lineTo(x1 - 5 + dx, f.y - ph - 2 + dy); g.lineTo(x0 + 5 + dx, f.y - ph - 2 + dy); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x0 + 2, f.y - ph + 14 * s, w - 4, 7 * s); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x0 + 2, f.y - 14 * s, w - 4, 12 * s);
+      g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 2; for (let i = 1; i < grp.length; i++) { const mx = (grp[i - 1].x + grp[i].x) / 2; g.beginPath(); g.moveTo(mx, f.y - ph + 4); g.lineTo(mx, f.y - 4); g.stroke(); }
+    }
+    drawPlant(f); return;
+  }
   if (f.feld) { drawPlant(f); return; }
   drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r, f.t === 'trophaeenregal' ? regalExtra(f) : null); if (f.t === 'topf') drawPlant(f);
   if (f.t === 'napf' && f.food) {
