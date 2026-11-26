@@ -726,6 +726,7 @@ function updatePets(dt) {
           if (e.napf) { if (!e.napf.food) { p.eat = null; p.wait = 1; continue; } e.lvl = e.napf.food; e.napf.food = null; saveFurn(); }
           const st = statsOf(id), F = FOODS[e.lvl || 1]; st.hunger = Math.min(100, st.hunger + F.hunger); p.eat = null; addXp(id, F.xp); p.wait = 1.5;
           if (F.gold) { st.goldUntil = gt.T + GOLD_MIN; st.goldAcc = 0; toast = { text: PETS[id].name + ' ist im Goldmodus und kackt jetzt Geld!', t: 4 }; }
+          else if ((e.lvl || 1) === 2 && lief.lv2gold) { st.goldUntil = Math.max(st.goldUntil || 0, gt.T + GOLD_MIN / 4); st.goldAcc = st.goldAcc || 0; toast = { text: PETS[id].name + ' hat Lv2 gegessen: +' + F.xp + ' XP und kurz Goldmodus!', t: 4 }; }
           else if ((e.lvl || 1) === 3 && lief.lv3gold) { st.goldUntil = Math.max(st.goldUntil || 0, gt.T + GOLD_MIN / 2); st.goldAcc = st.goldAcc || 0; toast = { text: PETS[id].name + ' hat Lv3 gegessen: +' + F.xp + ' XP und kurz Goldmodus!', t: 4 }; }
           else toast = { text: PETS[id].name + ' hat gegessen! +' + F.xp + ' XP', t: 3 };
           savePetStats();
@@ -5008,6 +5009,7 @@ const ADMIN = {
     ['Jahreszeit wechseln', '#5fb8ff', () => { seasonOverride = ((seasonOverride != null ? seasonOverride : seasonIdx()) + 1) % 4; toast = { text: 'Jahreszeit: ' + season().name, t: 2 }; }],
     ['Streichel-Bonus', '#ffcc1a', () => { lief.klick = true; saveLief(); }],
     ['Gold-Rezept Lv3', '#9b5de5', () => { lief.lv3gold = true; saveLief(); }],
+    ['Gold-Rezept Lv2', '#7a4ae0', () => { lief.lv3gold = true; lief.lv2gold = true; saveLief(); }],
     ['Goldenes Klo', '#e6b422', () => { lief.garten = true; lief.hundehaus = true; lief.klo = true; saveLief(); gartenSetup(); }],
     ['Gemüsefeld', '#7a4a24', () => { lief.garten = true; lief.feld = true; saveLief(); gartenSetup(); }],
     ['Maid + Goldkacke', '#1a1a1f', () => { lief.garten = true; lief.hundehaus = true; lief.maid = true; lief.maid2 = true; saveLief(); gartenSetup(); }],
@@ -5448,6 +5450,7 @@ const WEB_ITEMS = [
   { id: 'maid2', cat: 'haus', name: 'Maid: Goldkacke', price: 1500, desc: ['Die Maid sammelt die goldene', 'Kacke ein – direkt aufs Konto'], once: true, needs: 'maid' },
   { id: 'klo', cat: 'haus', name: 'Goldenes Tier-Klo', price: 3000, desc: ['Jede goldene Kacke', 'bringt 10 € mehr'], once: true, needs: 'hundehaus' },
   { id: 'lv3gold', cat: 'haus', name: 'Gold-Rezept Lv3', price: 4000, desc: ['Auch Futter Lv3 macht', 'Goldkacke (halb so lang)'], once: true, needs: 'klo' },
+  { id: 'lv2gold', cat: 'haus', name: 'Gold-Rezept Lv2', price: 9000, desc: ['Auch Futter Lv2 macht', 'Goldkacke (kurz)'], once: true, needs: 'lv3gold' },
   { id: 'klick', cat: 'haus', name: 'Streichel-Bonus', price: 2500, desc: ['Jeder Klick aufs Tier:', '+1 € Bargeld (Rechtsklick: Infos)'], once: true, needs: 'hundehaus' },
   { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
   { id: 'auto2', cat: 'haus', name: 'Autoklicker 2', price: 8000, desc: ['Klickt jetzt alle 4 statt', '5 Sekunden'], once: true, needs: 'auto' },
@@ -5469,7 +5472,7 @@ function saveLief() { try { localStorage.setItem('bob-lieferung', JSON.stringify
 function webCur(it) { return it.cur === 'bar' ? 'bar' : 'konto'; }
 function webHave(it) { return webCur(it) === 'bar' ? Math.floor(bank.cash || 0) : bank.money; }
 function webPay(it) { if (webCur(it) === 'bar') { bank.cash = (bank.cash || 0) - it.price; saveBank(); } else { bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank(); } }
-function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || webCur(it) === web.filter); }
+function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || webCur(it) === web.filter).sort((a, b) => a.price - b.price); }
 function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now(); keys.clear(); joy.on = false; }
 function webOrder(it) {
   if (it.acc) { wear.accOwned = wear.accOwned || []; if (wear.accOwned.includes(it.acc)) return; if (webHave(it) < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; } webPay(it); wear.accOwned.push(it.acc); saveWear(); web.msg = it.name + ' gekauft! Anziehen im Kleiderschrank unter „Accessoires“.'; web.msgT = 4; return; }
@@ -5478,7 +5481,7 @@ function webOrder(it) {
     for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5540,6 +5543,7 @@ function webPic(id, cx, cy, sz) {
   if (id === 'auto2' || id === 'klick2') { g.fillStyle = id === 'auto2' ? '#555b66' : '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = id === 'auto2' ? '#3cff5a' : '#7a5a00'; g.font = '900 ' + (id === 'auto2' ? 26 : 30) + 'px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'auto2' ? '4s' : '×2', 0, 2); g.restore(); return; }
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
   if (id === 'klick') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.arc(18, -14, 22, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 18, -13); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-30, -20); g.lineTo(-30, 30); g.lineTo(-18, 18); g.lineTo(-8, 38); g.lineTo(0, 34); g.lineTo(-10, 14); g.lineTo(6, 14); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
+  if (id === 'lv2gold') { webPic('tf2', 0, 0, 100); g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.ellipse(30, 38, 16, 9, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.ellipse(30, 29, 10, 6, 0, 0, 7); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'lv3gold') { webPic('tf3', 0, 0, 100); g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.ellipse(30, 38, 16, 9, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.ellipse(30, 29, 10, 6, 0, 0, 7); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'klo') { g.lineWidth = 3; g.strokeStyle = '#3a2a00'; g.fillStyle = '#ffd84a'; g.fillRect(-20, -46, 40, 40); g.strokeRect(-20, -46, 40, 40); g.fillStyle = '#e6b422'; g.fillRect(-12, 0, 24, 40); g.strokeRect(-12, 0, 24, 40); g.fillStyle = '#ffd84a'; g.beginPath(); g.ellipse(0, -2, 34, 12, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#6ad0ff'; g.beginPath(); g.ellipse(0, -2, 18, 5, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(30, -36, 4, 0, 7); g.arc(-32, -20, 3, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'feld') { g.fillStyle = '#45c43a'; g.fillRect(-50, -50, 100, 100); g.fillStyle = '#7a4a24'; g.fillRect(-42, -30, 84, 70); g.lineWidth = 3; g.strokeStyle = '#3a2010'; g.strokeRect(-42, -30, 84, 70); for (const [a, b] of [[-24, -10], [0, -10], [24, -10], [-24, 22], [0, 22], [24, 22]]) { g.fillStyle = '#5a3416'; g.beginPath(); g.ellipse(a, b, 10, 4, 0, 0, 7); g.fill(); g.strokeStyle = '#2a8a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(a, b); g.lineTo(a, b - 14); g.stroke(); g.fillStyle = '#2fb84f'; g.beginPath(); g.ellipse(a - 5, b - 10, 5, 3, -0.5, 0, 7); g.ellipse(a + 5, b - 12, 5, 3, 0.5, 0, 7); g.fill(); } g.fillStyle = '#e0262b'; g.beginPath(); g.arc(24, -24, 4, 0, 7); g.fill(); g.restore(); return; }
@@ -5595,7 +5599,7 @@ function drawWeb(dt) {
     g.fillStyle = '#fff'; g.fillRect(x, y, L.cw, 132); webPic(it.id, x + L.cw / 2, y + 66, 110);
     outl(it.name, x + L.cw / 2, y + 160, '800 25px "Trebuchet MS", system-ui', '#fff', 5);
     outl('Preis: ' + it.price + ' €' + (webCur(it) === 'bar' ? ' bar' : ''), x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', webCur(it) === 'bar' ? '#ffd23a' : '#5aff3a', 5);
-    it.desc.forEach((d, k) => outl(d, x + L.cw / 2, y + 224 + k * 24, '700 17px "Trebuchet MS", system-ui', '#e8e8e8', 4));
+    it.desc.forEach((d, k) => { let fs = 17; g.font = '700 17px "Trebuchet MS", system-ui'; while (fs > 11 && g.measureText(d).width > L.cw - 14) { fs--; g.font = '700 ' + fs + 'px "Trebuchet MS", system-ui'; } outl(d, x + L.cw / 2, y + 224 + k * 24, '700 ' + fs + 'px "Trebuchet MS", system-ui', '#e8e8e8', 4); });
     const b = { x, y: L.ch - 56 + y, w: L.cw, h: 56 };
     g.fillStyle = ok ? (hov ? '#3cff2a' : '#1fd81a') : '#1a7a1a'; g.fillRect(b.x, b.y, b.w, b.h); g.strokeStyle = '#0a3a0a'; g.lineWidth = 3; g.strokeRect(b.x, b.y, b.w, b.h);
     outl(own ? 'Gekauft' : lock ? 'Gesperrt' : ok ? (it.once ? 'Kaufen' : 'Bestellen') : 'Zu teuer', b.x + b.w / 2, b.y + 29, '800 32px "Trebuchet MS", system-ui', ok ? '#fff' : '#8acc8a', 6);
@@ -7352,6 +7356,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.48', 'Gold-Rezept Lv2', 'Auch Futter Lv2 macht kurz Goldkacke – bobnet jetzt nach Preis sortiert'],
   ['1.47', 'Gericht', 'Neues Gericht neben dem Labor mit Gerichtssaal – Jobs als Anwalt und Richter mit eigenen Roben und Anzügen'],
   ['1.46', 'Krypto-Händler', 'Autoklicker 3 (alle 3 s) und ein Händler oben im Tierhaus, der deine Krypto beim Profit-Ziel verkauft'],
   ['1.45', 'Tierhaus 2. Stock', 'Das Tierhaus wird zweistöckig – in der Nähe zoomt die Kamera raus'],
