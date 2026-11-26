@@ -187,6 +187,8 @@ const ROOMS = {
               arches: [{ x: 600, to: 'garten', ax: 1320, ay: 640, label: 'Garten' }] },
   botanik: { name: 'Botanik-Haus', kind: 'botanik', exits: {}, wide: [-350, 1550], maxY: H - 30,
               arches: [{ x: 600, to: 'garten', ax: 300, ay: 1300, label: 'Garten' }] },
+  mine: { name: 'Mine', kind: 'mine', exits: {}, wide: [-400, 1600], maxY: H - 30,
+              arches: [{ x: 600, to: 'garten', ax: -1150, ay: 1790, label: 'Garten' }] },
   tierhaus2: { name: 'Tierhaus oben', kind: 'tierhaus2', exits: {}, wide: [-300, 1550], maxY: H - 30,
               arches: [{ x: -120, to: 'tierhaus', ax: -120, label: 'Runter' }] },
   garten: { name: 'Garten', outside: true, kind: 'garten', exits: {}, wide: [-450, 1650], maxY: H - 30,
@@ -2512,6 +2514,7 @@ function room() {
   else if (R.kind === 'botanik') drawBotanikRoom(R);
   else if (R.kind === 'wuestenweg') drawWuestenweg(R);
   else if (R.kind === 'wueste') drawWueste(R);
+  else if (R.kind === 'mine') drawMineRoom(R);
   else if (R.kind === 'street') drawStreet(R);
   else if (R.openTop) {
     // Laden geht nach oben einfach weiter: nur Boden
@@ -3087,6 +3090,10 @@ Object.assign(OUTFITS, {
       g.fillStyle = 'rgba(140,200,255,.35)'; g.fillRect(hx + 16, hy + 28, HEAD.w - 32, 52); g.lineWidth = 5; g.strokeRect(hx + 16, hy + 28, HEAD.w - 32, 52);
       g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(hx + 26, hy + 34, 40, 10);
     } },
+  minenarbeiter: { name: 'Minenarbeiter', bp: mkPal('#ff7a1a', '#ff9440'), noText: true,
+    bodyFront: (x, y, w, h) => { g.strokeStyle = '#111'; g.lineWidth = 4; g.fillStyle = '#e8e8e8'; g.fillRect(x, y + 50, w, 14); g.fillRect(x, y + 100, w, 14); g.fillStyle = '#5a5f6a'; g.fillRect(x + w / 2 - 6, y, 12, h); g.fillStyle = '#3a2a1a'; g.fillRect(x, y + h - 26, w, 14); },
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#ffd23a', '#ffe060'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 10 + 6 * t, hy - 26, HEAD.w + 20, 34, DEPTH + 10, HP, true, t); cube(hx - 24 + 6 * t, hy + 2, HEAD.w + 48, 10, DEPTH + 24, HP, true, t);
+      g.fillStyle = '#fffbe0'; g.beginPath(); g.arc(hx + HEAD.w / 2 + 6 * t, hy - 10, 13, 0, 7); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,250,200,.25)'; g.beginPath(); g.moveTo(hx + HEAD.w / 2 + 6 * t, hy - 10); g.lineTo(hx + HEAD.w / 2 - 60, hy - 80); g.lineTo(hx + HEAD.w / 2 + 70, hy - 80); g.closePath(); g.fill(); } },
   fischer: { name: 'Fischer', bp: mkPal('#ffcc1a', '#ffd84a'), noText: true,
     bodyFront: (x, y, w, h) => { g.strokeStyle = '#111'; g.lineWidth = 4; g.fillStyle = '#2f6a8a'; g.beginPath(); g.roundRect(x + 30, y + 30, w - 60, h - 30, 6); g.fill(); g.stroke(); g.lineWidth = 6; g.beginPath(); g.moveTo(x + 46, y + 32); g.lineTo(x + 36, y); g.moveTo(x + w - 46, y + 32); g.lineTo(x + w - 36, y); g.stroke(); g.fillStyle = '#ffcc1a'; g.fillRect(x + w / 2 - 22, y + 62, 44, 30); g.lineWidth = 3; g.strokeRect(x + w / 2 - 22, y + 62, 44, 30); },
     front: (bx, by, hx, hy, t) => { const HP = mkPal('#ffcc1a', '#ffd84a'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 10 + 6 * t, hy - 34, HEAD.w + 20, 40, DEPTH + 10, HP, true, t); cube(hx - 30 + 6 * t, hy + 2, HEAD.w + 60, 12, DEPTH + 26, HP, true, t); } },
@@ -3691,7 +3698,7 @@ function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse');
 const JOB_SPOTS = { polizei: ['wache', 'theke'], anwalt: ['gerichtssaal', 'gtisch'], richter: ['gerichtssaal', 'richterbank'] };
 function nearRevier() { if (!(job && JOB_SPOTS[job.id] && onShift() && !fade.dir)) return null; const [rm, ty] = JOB_SPOTS[job.id]; if (cur !== rm) return null; const o = (ROOMS[rm].objs || []).find(o => o.type === ty && (ty !== 'gtisch' || o.vert)); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker() || nearAussenBot() || nearTeich() || nearFischer() || nearMitbewohner()); }
+function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker() || nearAussenBot() || nearTeich() || nearFischer() || nearMitbewohner() || nearErz() || !!nearOre()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3930,6 +3937,8 @@ function openMenu() {
     menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear(); return;
   }
   if (nearMuell()) { wuehlen(); return; }
+  if (nearErz()) { erzMenu(); return; }
+  { const n = nearOre(); if (n) { mineHit(n); return; } }
   if (nearMitbewohner()) { mbTalk(); return; }
   if (nearFischer()) { fischerMenu(); return; }
   if (nearTeich()) { fishStart(); return; }
@@ -3997,6 +4006,7 @@ function openMenu() {
 function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
+  if (it.oreSell) { oreSell(it.oreSell); erzMenu(); return; }
   if (it.fishSell) { fishSell(it.fishSell); fischerMenu(); return; }
   if (it.botSeed) { garden.botAllow[it.botSeed] = !garden.botAllow[it.botSeed]; saveGarden(); const sel = menu.items.indexOf(it); botMenu(); menu.sel = sel; return; }
   if (it.hh === 'tier2') { if (owned.length < 2) { toast = { text: 'Du brauchst ein zweites Haustier – kauf eins im Tierladen.', t: 3 }; return; } openWardrobe('pet'); wr.slot = 2; wr.pi = Math.max(0, owned.indexOf(activePet2 || owned.find(k => k !== activePet))); return; }
@@ -4057,6 +4067,8 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  if (nearErz()) return { x: ERZ.x, y: ERZ.y - 380, label: 'Erzhändler' };
+  { const n = nearOre(); if (n) return { x: n.x, y: n.y - 150, label: 'Abbauen (' + n.hp + ')' }; }
   if (nearMitbewohner()) return { x: MB.x, y: MB.y - 400 * scaleAt(MB.y), label: gWd() === 0 && lief.mbWeek !== Math.floor(gDay() / 7) ? 'Miete abholen' : 'Mitbewohner' };
   if (nearFischer()) return { x: FI.x, y: FI.y - 380, label: 'Fischer' };
   if (nearTeich()) return { x: bob.x, y: bob.y - 360 * scaleAt(bob.y), label: 'Angeln' };
@@ -4642,6 +4654,8 @@ function solids(room) {
   if (room === 'tierhaus2' && lief.investor) list.push({ x: TR2.x - 220, w: 440, base: TR2.y, depth: 70 });
   if (room === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ x: BH.x - 260 - 54, w: 520 + 54, base: BH.y, depth: 90 });
   if (room === 'garten' && ROOMS.garten.tall) list.push({ x: 940, w: 480, base: 1200, depth: 80 });
+  if (room === 'garten' && lief.gartenxl) { list.push({ x: MI.x - 260, w: 190, base: MI.y, depth: 90 }); list.push({ x: MI.x + 70, w: 190, base: MI.y, depth: 90 }); }
+  if (room === 'mine') { list.push({ x: ERZ.x - 150, w: 300, base: ERZ.y, depth: 50 }); }
   if (room === 'garten' && lief.fischer && ROOMS.garten.tall) list.push({ x: FI.x - 150, w: 300, base: FI.y, depth: 50 });
   if (room === 'garten' && lief.tierhaus) list.push({ x: TH.x - 220 - 54, w: 440 + 54, base: TH.y, depth: 90 });
   return list;
@@ -5079,6 +5093,7 @@ const ADMIN = {
     ['Gold-Rezept Lv3', '#9b5de5', () => { lief.lv3gold = true; saveLief(); }],
     ['Gold-Rezept Lv2', '#7a4ae0', () => { lief.lv3gold = true; lief.lv2gold = true; saveLief(); }],
     ['Gold-Rezept Lv1', '#5a3ac0', () => { lief.lv3gold = true; lief.lv2gold = true; lief.lv1gold = true; saveLief(); }],
+    ['Riesen-Garten + Mine + 3 Arbeiter', '#7a7060', () => { lief.garten = true; lief.gartengross = true; lief.gartenxl = true; lief.mine = true; lief.mw1 = true; lief.mw2 = true; lief.mw3 = true; saveLief(); gartenSetup(); }],
     ['Mieten-Angestellter + Karte', '#4f8bff', () => { lief.mitbewohner = true; lief.mbdiener = true; lief.mbkarte = true; saveLief(); }],
     ['Mitbewohner (Montag)', '#5a5f6a', () => { lief.mitbewohner = true; saveLief(); gt.T = (Math.floor(gDay() / 7) * 7 + 7) * 1440 + 9 * 60; }],
     ['Eisen-Angel + Glück 3', '#8a8f99', () => { lief.garten = true; lief.gartengross = true; lief.angel = true; lief.fischer = true; lief.eisenangel = true; lief.fluck1 = true; lief.fluck2 = true; lief.fluck3 = true; saveLief(); gartenSetup(); }],
@@ -5579,6 +5594,11 @@ const WEB_ITEMS = [
   { id: 'gartengross', cat: 'haus', name: 'Großer Garten', price: 40000, desc: ['Der Garten wird nach unten', 'viel größer – mit Teich'], once: true, needs: 'garten' },
   { id: 'botanik', cat: 'haus', name: 'Botanik-Haus', price: 80000, desc: ['Gewächshaus unten im Garten', 'mit 16 großen Töpfen'], once: true, needs: 'gartengross' },
   { id: 'angel', cat: 'haus', name: 'Angel', price: 8000, desc: ['Angeln am Teich', 'im großen Garten'], once: true, needs: 'gartengross' },
+  { id: 'gartenxl', cat: 'haus', name: 'Riesen-Garten', price: 120000, desc: ['Garten wird nach unten, links', 'und rechts viel größer'], once: true, needs: 'gartengross' },
+  { id: 'mine', cat: 'haus', name: 'Mine öffnen', price: 80000, desc: ['Mine unten links im Garten:', 'Erze abbauen & verkaufen'], once: true, needs: 'gartenxl' },
+  { id: 'mw1', cat: 'haus', name: 'Minenarbeiter 1', price: 40000, desc: ['Baut automatisch', 'Erze für dich ab'], once: true, needs: 'mine' },
+  { id: 'mw2', cat: 'haus', name: 'Minenarbeiter 2', price: 70000, desc: ['Zweiter Arbeiter:', 'doppelt so viele Erze'], once: true, needs: 'mw1' },
+  { id: 'mw3', cat: 'haus', name: 'Minenarbeiter 3', price: 110000, desc: ['Dritter Arbeiter:', 'dreimal so viele Erze'], once: true, needs: 'mw2' },
   { id: 'fischer', cat: 'haus', name: 'Fischer', price: 15000, desc: ['Steht am Teich und', 'kauft deine Fische'], once: true, needs: 'angel' },
   { id: 'eisenangel', cat: 'haus', name: 'Eisen-Angel', price: 40000, desc: ['Angelt auch direkt', 'Geldsäcke aus dem Teich'], once: true, needs: 'angel' },
   { id: 'fluck1', cat: 'haus', name: 'Fischglück 1', price: 20000, desc: ['Bessere Fische,', 'mehr Geld beim Angeln'], once: true, needs: 'angel' },
@@ -5603,7 +5623,7 @@ function webCur(it) { return it.cur === 'bar' ? 'bar' : 'konto'; }
 function webHave(it) { return webCur(it) === 'bar' ? Math.floor(bank.cash || 0) : bank.money; }
 function webPay(it) { if (webCur(it) === 'bar') { bank.cash = (bank.cash || 0) - it.price; saveBank(); } else { bank.money -= it.price; bank.log.push({ t: 'bobnet: ' + it.name, v: -it.price }); saveBank(); } }
 function webItems() { return WEB_ITEMS.filter(it => web.filter === 'alle' || webCur(it) === web.filter).sort((a, b) => a.price - b.price); }
-function openWeb() { web.open = true; web.scroll = 0; web.t0 = performance.now(); keys.clear(); joy.on = false; }
+function openWeb() { web.open = true; web.scroll = 0; web.ts = 0; web.t0 = performance.now(); keys.clear(); joy.on = false; }
 function webOrder(it) {
   if (it.acc) { wear.accOwned = wear.accOwned || []; if (wear.accOwned.includes(it.acc)) return; if (webHave(it) < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; } webPay(it); wear.accOwned.push(it.acc); saveWear(); web.msg = it.name + ' gekauft! Anziehen im Kleiderschrank unter „Accessoires“.'; web.msgT = 4; return; }
   if (it.once) {
@@ -5611,7 +5631,7 @@ function webOrder(it) {
     for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'lohn5' ? 'Ab jetzt bekommst du bei jedem Job den 5-fachen Stundenlohn!' : it.id === 'mbdiener' ? 'Dein Angestellter holt ab jetzt jeden Montag die Miete für dich ab!' : it.id === 'mbkarte' ? 'Mit dem Kartengerät kommt die Miete jetzt direkt aufs Konto!' : it.id === 'mitbewohner' ? 'Dein Mitbewohner wohnt jetzt im orangen Raum! Hol jeden Montag die Miete ab.' : it.id === 'eisenangel' ? 'Deine Eisen-Angel zieht jetzt auch Geldsäcke aus dem Teich!' : it.id.startsWith('fluck') ? 'Dein Fischglück ist gestiegen!' : it.id === 'angel' ? 'Du hast jetzt eine Angel! Geh im großen Garten zum Teich und drück E.' : it.id === 'fischer' ? 'Der Fischer steht jetzt rechts neben dem Teich und kauft deine Fische!' : it.id === 'geldchance' ? 'Ab jetzt tauchen im Garten Samen auf – mit viel höherer Chance auf Geldsamen!' : it.id === 'gold5' ? 'Ab jetzt ist jede Goldkacke 5× so viel wert!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'abot' ? 'Dein Gärtner ist im Garten! Sprich ihn an und erlaube ihm Samen.' : it.id === 'abot2' ? 'Der Meister-Gärtner erntet jetzt im Garten – die Pflanzen wachsen ab 25 % weiter!' : it.id === 'tagliefer' ? 'Der Pflanzen-Lieferant kommt ab jetzt jeden Tag um 18 Uhr und kauft alle deine Pflanzen – bar auf die Hand!' : it.id === 'botaniker2' ? 'Der Meister-Botaniker erntet jetzt im Botanik-Haus – die Pflanzen wachsen ab 25 % einfach weiter!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'auto6' || it.id === 'auto7' ? 'Der Autoklicker ist jetzt noch schneller!' : it.id === 'klick10' || it.id === 'klick15' ? 'Jeder Klick aufs Tier bringt jetzt ' + (it.id === 'klick10' ? 10 : 15) + ' €!' : it.id === 'klickbank' ? 'Ab jetzt geht das Klick-Geld direkt aufs Konto!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id.startsWith('cz_') ? it.name + ' gehört jetzt zu deinem Clipz-Team!' : it.id.startsWith('server') ? 'Dein Server läuft oben im Tierhaus! Er mint BitBob und bottet deine Clipz-Videos.' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'lohn5' ? 'Ab jetzt bekommst du bei jedem Job den 5-fachen Stundenlohn!' : it.id === 'gartenxl' ? 'Dein Garten ist jetzt riesig – nach unten, links und rechts!' : it.id === 'mine' ? 'Die Mine ist offen! Ganz unten links im Garten.' : /^mw\d$/.test(it.id) ? 'Ein neuer Minenarbeiter baut jetzt Erze für dich ab!' : it.id === 'mbdiener' ? 'Dein Angestellter holt ab jetzt jeden Montag die Miete für dich ab!' : it.id === 'mbkarte' ? 'Mit dem Kartengerät kommt die Miete jetzt direkt aufs Konto!' : it.id === 'mitbewohner' ? 'Dein Mitbewohner wohnt jetzt im orangen Raum! Hol jeden Montag die Miete ab.' : it.id === 'eisenangel' ? 'Deine Eisen-Angel zieht jetzt auch Geldsäcke aus dem Teich!' : it.id.startsWith('fluck') ? 'Dein Fischglück ist gestiegen!' : it.id === 'angel' ? 'Du hast jetzt eine Angel! Geh im großen Garten zum Teich und drück E.' : it.id === 'fischer' ? 'Der Fischer steht jetzt rechts neben dem Teich und kauft deine Fische!' : it.id === 'geldchance' ? 'Ab jetzt tauchen im Garten Samen auf – mit viel höherer Chance auf Geldsamen!' : it.id === 'gold5' ? 'Ab jetzt ist jede Goldkacke 5× so viel wert!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'abot' ? 'Dein Gärtner ist im Garten! Sprich ihn an und erlaube ihm Samen.' : it.id === 'abot2' ? 'Der Meister-Gärtner erntet jetzt im Garten – die Pflanzen wachsen ab 25 % weiter!' : it.id === 'tagliefer' ? 'Der Pflanzen-Lieferant kommt ab jetzt jeden Tag um 18 Uhr und kauft alle deine Pflanzen – bar auf die Hand!' : it.id === 'botaniker2' ? 'Der Meister-Botaniker erntet jetzt im Botanik-Haus – die Pflanzen wachsen ab 25 % einfach weiter!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'auto6' || it.id === 'auto7' ? 'Der Autoklicker ist jetzt noch schneller!' : it.id === 'klick10' || it.id === 'klick15' ? 'Jeder Klick aufs Tier bringt jetzt ' + (it.id === 'klick10' ? 10 : 15) + ' €!' : it.id === 'klickbank' ? 'Ab jetzt geht das Klick-Geld direkt aufs Konto!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id.startsWith('cz_') ? it.name + ' gehört jetzt zu deinem Clipz-Team!' : it.id.startsWith('server') ? 'Dein Server läuft oben im Tierhaus! Er mint BitBob und bottet deine Clipz-Videos.' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5694,6 +5714,9 @@ function webPic(id, cx, cy, sz) {
   if (id === 'auto') { g.fillStyle = '#555b66'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.fillRect(-26, -20, 52, 22); g.fillStyle = '#111'; g.font = '800 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('5s', 0, -9); g.fillStyle = '#e0262b'; g.beginPath(); g.arc(0, 18, 9, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.arc(36, -32, 14, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 16px system-ui'; g.fillText('€', 36, -31); g.restore(); return; }
   if (id === 'klick') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#3a2a00'; g.lineWidth = 3; g.beginPath(); g.arc(18, -14, 22, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', 18, -13); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-30, -20); g.lineTo(-30, 30); g.lineTo(-18, 18); g.lineTo(-8, 38); g.lineTo(0, 34); g.lineTo(-10, 14); g.lineTo(6, 14); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'lohn5') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#7a4a24'; g.fillRect(-36, -14, 72, 46); g.strokeRect(-36, -14, 72, 46); g.fillRect(-12, -24, 24, 12); g.strokeRect(-12, -24, 24, 12); g.fillStyle = '#5fd36a'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 5; g.strokeStyle = '#fff'; g.strokeText('€×5', 0, 10); g.fillText('€×5', 0, 10); g.restore(); return; }
+  if (id === 'gartenxl') { g.fillStyle = '#45c43a'; g.fillRect(-48, -40, 96, 84); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(-48, -40, 96, 84); g.strokeStyle = '#fff'; g.lineWidth = 5; for (const [a, b] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) { g.beginPath(); g.moveTo(a * 6, b * 6); g.lineTo(a * 34, b * 30); g.stroke(); } g.restore(); return; }
+  if (id === 'mine') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#7a7060'; g.beginPath(); g.moveTo(-50, 40); g.quadraticCurveTo(0, -60, 50, 40); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#120c08'; g.beginPath(); g.moveTo(-18, 40); g.lineTo(-18, 8); g.quadraticCurveTo(0, -6, 18, 8); g.lineTo(18, 40); g.closePath(); g.fill(); g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(34, 4); g.lineTo(42, 12); g.lineTo(34, 20); g.lineTo(26, 12); g.closePath(); g.fill(); g.stroke(); g.restore(); return; }
+  if (/^mw\d$/.test(id)) { g.restore(); g.save(); drawBobFig(cx, cy + sz * 0.45, sz / 600, 0.4, 0, 1, 'minenarbeiter', false); g.fillStyle = '#ffd23a'; g.font = '900 22px system-ui'; g.textAlign = 'center'; g.fillText(id.slice(-1), cx + sz * 0.36, cy - sz * 0.3); g.restore(); return; }
   if (id === 'mbdiener') { g.restore(); g.save(); drawBobFig(cx, cy + sz * 0.45, sz / 600, 0.4, 0, 1, 'broker', false); g.restore(); return; }
   if (id === 'mbkarte') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#2a2d33'; g.beginPath(); g.roundRect(-26, -38, 52, 78, 10); g.fill(); g.stroke(); g.fillStyle = '#9ad9ff'; g.fillRect(-18, -30, 36, 22); g.fillStyle = '#ddd'; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) g.fillRect(-16 + c * 12, -2 + r * 11, 8, 7); g.fillStyle = '#ffcc1a'; g.beginPath(); g.roundRect(4, -52, 40, 26, 4); g.fill(); g.stroke(); g.restore(); return; }
   if (id === 'mitbewohner') { g.restore(); g.save(); drawBobFig(cx, cy + sz * 0.45, sz / 600, 0.4, 0, 1, 'hoodie', false, ['kopfhoerer']); g.restore(); return; }
@@ -5752,7 +5775,7 @@ function drawWeb(dt) {
   const st = web.msgT > 0 ? web.msg : n ? '🛵 ' + n + ' Lieferung' + (n > 1 ? 'en' : '') + ' unterwegs · nächste in ' + next + ' Min.' : lief.pkgs.length ? '📦 Deine Bestellung liegt vor der Haustür!' : 'Konto: ' + money(Math.floor(bank.money)) + ' · Lieferung direkt vor die Haustür';
   outl(st, P.x + P.w / 2, P.y + 118, '700 20px "Trebuchet MS", system-ui', web.msgT > 0 ? '#ffe14a' : '#cfd6e4', 4);
   // Raster
-  const its = webItems(), rows = Math.ceil(its.length / L.cols), maxS = Math.max(0, rows - 2); web.scroll = Math.max(0, Math.min(maxS, web.scroll));
+  const its = webItems(), rows = Math.ceil(its.length / L.cols), maxS = Math.max(0, rows - 2); web.ts = Math.max(0, Math.min(maxS, web.ts ?? web.scroll)); { const now = performance.now(), dtw = Math.min(0.05, (now - (web.lt || now)) / 1000); web.lt = now; web.scroll += (web.ts - web.scroll) * Math.min(1, dtw * 14); if (Math.abs(web.ts - web.scroll) < 0.002) web.scroll = web.ts; } web.rowH = L.ch + 14;
   g.save(); g.beginPath(); g.rect(P.x + 10, L.gy - 4, P.w - 20, P.h - (L.gy - P.y) - 10); g.clip();
   its.forEach((it, i) => {
     const r = Math.floor(i / L.cols) - web.scroll, c = i % L.cols, x = P.x + 25 + c * (L.cw + L.gap), y = L.gy + r * (L.ch + 14);
@@ -5775,20 +5798,23 @@ function drawWeb(dt) {
     const b = { x: F.x + 6, y: F.y + 74 + i * 104, w: F.w - 12, h: 92 }, on = web.filter === id;
     g.fillStyle = '#2c2c2e'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill(); g.lineWidth = on ? 5 : 3; g.strokeStyle = on ? '#3cff2a' : '#111'; g.stroke();
     outl(lab, b.x + b.w / 2, b.y + b.h / 2, '800 ' + (lab.length > 7 ? 22 : 30) + 'px "Trebuchet MS", system-ui', col, 5);
-    btns.push({ b, act: () => { web.filter = id; web.scroll = 0; } });
+    btns.push({ b, act: () => { web.filter = id; web.scroll = 0; web.ts = 0; } });
   });
 }
+cv.addEventListener('pointerdown', e => { if (!web.open) return; const [x, y] = toCanvas(e); web.drag = { y, s: web.ts ?? web.scroll, moved: false }; }, true);
+cv.addEventListener('pointermove', e => { if (!web.open || !web.drag || !(e.buttons & 1)) return; const [x, y] = toCanvas(e), dy = y - web.drag.y; if (Math.abs(dy) > 10) web.drag.moved = true; if (web.drag.moved) { web.ts = web.drag.s - dy / (web.rowH || 390); web.scroll = web.ts; } });
+addEventListener('pointerup', () => { if (web.pend && web.drag && !web.drag.moved) web.pend(); web.pend = null; web.drag = null; });
 function webClick(x, y) {
   const u = web.ui; if (!u) return;
-  for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(); return; }
+  for (const { b, act, id } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { if (id) web.pend = act; else act(); return; }
   const { P, F } = webLayout(); if (x < P.x || x > F.x + F.w || y < P.y || y > P.y + P.h) web.open = false;
 }
-cv.addEventListener('wheel', e => { if (phone.open && phone.app === 'jobs' && !job) { e.preventDefault(); phone.jobScroll = (phone.jobScroll || 0) + e.deltaY * 0.8; return; } if (!web.open) return; e.preventDefault(); web.scroll += Math.sign(e.deltaY); }, { passive: false });
+cv.addEventListener('wheel', e => { if (phone.open && phone.app === 'jobs' && !job) { e.preventDefault(); phone.jobScroll = (phone.jobScroll || 0) + e.deltaY * 0.8; return; } if (!web.open) return; e.preventDefault(); web.ts = (web.ts ?? web.scroll) + (e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY) / (web.rowH || 390); }, { passive: false });
 addEventListener('keydown', e => {
   if (!web.open || performance.now() - web.t0 < 150) return;
   if (e.code === 'Escape' || e.code === 'KeyE') { web.open = false; e.preventDefault(); e.stopImmediatePropagation(); }
-  else if (e.code === 'ArrowDown' || e.code === 'KeyS') { web.scroll++; e.preventDefault(); e.stopImmediatePropagation(); }
-  else if (e.code === 'ArrowUp' || e.code === 'KeyW') { web.scroll = Math.max(0, web.scroll - 1); e.preventDefault(); e.stopImmediatePropagation(); }
+  else if (e.code === 'ArrowDown' || e.code === 'KeyS') { web.ts = (web.ts ?? web.scroll) + 0.35; e.preventDefault(); e.stopImmediatePropagation(); }
+  else if (e.code === 'ArrowUp' || e.code === 'KeyW') { web.ts = Math.max(0, (web.ts ?? web.scroll) - 0.35); e.preventDefault(); e.stopImmediatePropagation(); }
 }, true);
 // ---------- Garten (in bobnet kaufen, im Haus ganz nach unten) ----------
 function gartenOwned() { return !!lief.garten; }
@@ -6064,8 +6090,103 @@ function drawFischer() {
   g.restore();
   if (FI.sayT > 0) { FI.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(FI.say).width + 28, bx = x - 40 - tw / 2, by = y - 440; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#0a8a1f'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(FI.say, x - 40, by + 20); }
 }
+// ---------- Mine ----------
+const ORES = {
+  kohle:   { name: 'Kohle',   v: 8,   w: 40, col: '#2a2a2a' },
+  kupfer:  { name: 'Kupfer',  v: 18,  w: 26, col: '#c8743a' },
+  eisen:   { name: 'Eisen',   v: 30,  w: 18, col: '#b8b8c0' },
+  gold:    { name: 'Golderz', v: 75,  w: 10, col: '#ffcc1a' },
+  diamant: { name: 'Diamant', v: 250, w: 3,  col: '#5ff0ff' },
+};
+const MI = { x: -1150, y: 1700 }, ERZ = { x: 1320, y: 620 };
+const NODE_POS = [[-200, 560], [60, 720], [260, 540], [420, 800], [860, 560], [1000, 760], [-300, 790], [1450, 820], [700, 830], [140, 600]];
+const MW = [{ x: 0, y: 0, ni: 0, t: 0, sw: 0 }, { x: 0, y: 0, ni: 3, t: 0, sw: 0 }, { x: 0, y: 0, ni: 6, t: 0, sw: 0 }];
+const MW_CARDS = [];
+function orePick() { const E = Object.entries(ORES), tot = E.reduce((a, [k, o]) => a + o.w, 0); let r = Math.random() * tot; for (const [k, o] of E) { if (r < o.w) return k; r -= o.w; } return 'kohle'; }
+function mineNodes() { garden.mineNodes = garden.mineNodes || NODE_POS.map(([x, y]) => ({ x, y, k: orePick(), hp: 3, back: 0 })); return garden.mineNodes.filter(n => n.hp > 0); }
+function nearOre() { if (cur !== 'mine' || fade.dir || build.on) return null; let best = null, bd = 1e9; for (const n of mineNodes()) { const d = Math.hypot(bob.x - n.x, (bob.y - n.y) * 1.5); if (d < 140 && d < bd) { bd = d; best = n; } } return best; }
+function nearErz() { return cur === 'mine' && !fade.dir && !build.on && Math.abs(bob.x - ERZ.x) < 200 && Math.abs(bob.y - ERZ.y) < 140; }
+function oreGive(k) { garden.ore = garden.ore || {}; garden.ore[k] = (garden.ore[k] || 0) + 1; saveGarden(); }
+const minePops = [];
+function mineHit(n) { n.hp--; n.shake = 0.25; for (let i = 0; i < 8; i++) minePops.push({ x: n.x, y: n.y - 50, vx: (Math.random() - 0.5) * 300, vy: -200 - Math.random() * 200, l: 0.6, c: ORES[n.k].col }); if (n.hp <= 0) { oreGive(n.k); n.back = gt.T + 90; minePops.push({ txt: '+1 ' + ORES[n.k].name, x: n.x, y: n.y - 120, l: 1.4 }); } saveGarden(); }
+function mineTick(dt) {
+  if (!lief.mine) return; mineNodes();
+  for (const n of garden.mineNodes) if (n.hp <= 0 && gt.T >= n.back) { n.hp = 3; n.k = orePick(); }
+  for (const p of minePops) { p.l -= dt; if (!p.txt) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; } else p.y -= 30 * dt; }
+  for (let i = minePops.length - 1; i >= 0; i--) if (minePops[i].l <= 0) minePops.splice(i, 1);
+  for (let i = MW_CARDS.length - 1; i >= 0; i--) if (performance.now() - MW_CARDS[i].t > 5000) MW_CARDS.splice(i, 1);
+  // Minenarbeiter: jeder baut alle 20 Spielminuten ein Erz ab
+  if (mwT === null) { mwT = gt.T; return; } const d = gt.T - mwT; if (d < 1) return; mwT = gt.T;
+  MW.forEach((w, i) => { if (!lief['mw' + (i + 1)]) return; w.acc = (w.acc || 0) + d; while (w.acc >= 20) { w.acc -= 20; const k = orePick(); oreGive(k); if (cur === 'mine') minePops.push({ txt: '+1 ' + ORES[k].name, x: w.x, y: w.y - 300, l: 1.4 }); } });
+}
+let mwT = null;
+function oreSell(k) { garden.ore = garden.ore || {}; let v = 0; for (const o of k === 'alle' ? Object.keys(ORES) : [k]) { v += (garden.ore[o] || 0) * ORES[o].v; garden.ore[o] = 0; } if (v > 0) { earn(v); saveGarden(); ERZ.say = '+' + money(v) + ' – gutes Zeug!'; ERZ.sayT = 2.5; } }
+function erzMenu() {
+  garden.ore = garden.ore || {}; menu.kind = 'erz'; menu.title = 'Erzhändler – ich kaufe deine Erze (Bargeld)';
+  const tot = Object.keys(ORES).reduce((a, k) => a + (garden.ore[k] || 0) * ORES[k].v, 0);
+  menu.items = [{ label: 'Alle verkaufen', oreSell: 'alle', tag: money(tot), tagCol: tot ? '#0a8a1f' : '#777', disabled: !tot }];
+  for (const [k, o] of Object.entries(ORES)) { const n = garden.ore[k] || 0; if (n) menu.items.push({ label: o.name + ' × ' + n + ' (je ' + money(o.v) + ')', oreSell: k, tag: money(n * o.v), tagCol: '#0a8a1f' }); }
+  menu.items.push({ label: 'Tschüss' });
+  MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now(); menu.open = true; menu.sel = 0; keys.clear();
+}
+function drawMineEingang() {
+  const x = MI.x, y = MI.y; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  if (!lief.mine) { g.fillStyle = '#8a8070'; g.beginPath(); g.moveTo(x - 300, y); g.quadraticCurveTo(x - 220, y - 240, x, y - 260); g.quadraticCurveTo(x + 220, y - 240, x + 300, y); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(x - 120, y - 120, 240, 50, 10); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Mine im bobnet öffnen', x, y - 95); g.restore(); return; }
+  g.fillStyle = '#7a7060'; g.beginPath(); g.moveTo(x - 300, y); g.quadraticCurveTo(x - 220, y - 260, x, y - 280); g.quadraticCurveTo(x + 220, y - 260, x + 300, y); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.12)'; for (const [a, b, r] of [[-180, -80, 30], [140, -120, 24], [-60, -200, 20], [200, -40, 26]]) { g.beginPath(); g.arc(x + a, y + b, r, 0, 7); g.fill(); }
+  g.fillStyle = '#120c08'; g.beginPath(); g.moveTo(x - 70, y); g.lineTo(x - 70, y - 130); g.quadraticCurveTo(x, y - 175, x + 70, y - 130); g.lineTo(x + 70, y); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#8a5a30'; g.fillRect(x - 86, y - 160, 20, 160); g.strokeRect(x - 86, y - 160, 20, 160); g.fillRect(x + 66, y - 160, 20, 160); g.strokeRect(x + 66, y - 160, 20, 160); g.fillRect(x - 96, y - 178, 192, 22); g.strokeRect(x - 96, y - 178, 192, 22);
+  g.strokeStyle = '#6a6a6a'; g.lineWidth = 4; for (const d of [-26, 26]) { g.beginPath(); g.moveTo(x + d, y); g.lineTo(x + d * 0.6, y - 90); g.stroke(); }
+  g.fillStyle = '#e8d28a'; g.strokeStyle = LINE; g.beginPath(); g.roundRect(x - 60, y - 214, 120, 34, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('⛏ MINE', x, y - 196);
+  g.restore();
+}
+function drawMineRoom(R) {
+  const t = performance.now() / 1000;
+  g.fillStyle = '#2a2018'; g.fillRect(XL, 0, VW, H);
+  g.fillStyle = '#3a2e22'; for (let i = 0; i < 40; i++) { const x = XL + ((i * 331) % VW), y = (i * 97) % FLOOR; g.beginPath(); g.ellipse(x, y, 50 + (i % 4) * 20, 30 + (i % 3) * 12, 0, 0, 7); g.fill(); }
+  // Stützbalken
+  g.lineWidth = 5; g.strokeStyle = LINE; for (let x = Math.floor(XL / 400) * 400 + 200; x < XR; x += 400) { if (Math.abs(x - 600) < 150) continue; g.fillStyle = '#6a4220'; g.fillRect(x - 12, 60, 24, FLOOR - 60); g.strokeRect(x - 12, 60, 24, FLOOR - 60); g.fillRect(x - 70, 50, 140, 20); g.strokeRect(x - 70, 50, 140, 20);
+    g.strokeStyle = '#333'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, 70); g.lineTo(x, 110); g.stroke(); g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = `rgba(255,200,90,${0.85 + Math.sin(t * 6 + x) * 0.1})`; g.beginPath(); g.arc(x, 118, 10, 0, 7); g.fill(); g.stroke();
+    const lg = g.createRadialGradient(x, 120, 5, x, 120, 220); lg.addColorStop(0, 'rgba(255,190,80,.25)'); lg.addColorStop(1, 'rgba(255,190,80,0)'); g.fillStyle = lg; g.fillRect(x - 220, 0, 440, 400); }
+  // Ausgang
+  g.fillStyle = '#5fb8ff'; g.beginPath(); g.moveTo(510, FLOOR); g.lineTo(510, FLOOR - 170); g.quadraticCurveTo(600, FLOOR - 240, 690, FLOOR - 170); g.lineTo(690, FLOOR); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(530, FLOOR - 290, 140, 36, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Garten', 600, FLOOR - 272);
+  // Boden mit Schienen
+  g.fillStyle = '#4a3a2a'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.fillStyle = 'rgba(0,0,0,.2)'; for (let i = 0; i < 30; i++) { g.beginPath(); g.ellipse(XL + ((i * 211) % VW), FLOOR + 30 + ((i * 137) % (H - FLOOR - 40)), 20, 8, 0, 0, 7); g.fill(); }
+  g.fillStyle = '#6a4220'; for (let x = Math.floor(XL / 60) * 60; x < XR; x += 60) g.fillRect(x, 655, 30, 50); g.fillStyle = '#9a9aa2'; g.fillRect(XL, 665, VW, 6); g.fillRect(XL, 690, VW, 6);
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  for (const p of minePops) { g.globalAlpha = Math.min(1, p.l * 2); if (p.txt) { g.font = '900 22px system-ui'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.strokeStyle = '#111'; g.lineWidth = 4; g.strokeText(p.txt, p.x, p.y); g.fillText(p.txt, p.x, p.y); } else { g.fillStyle = p.c; g.fillRect(p.x - 4, p.y - 4, 8, 8); } } g.globalAlpha = 1;
+}
+function drawOreNode(n) {
+  const o = ORES[n.k], sh = n.shake > 0 ? (n.shake -= 1 / 60, Math.sin(performance.now() / 20) * 5) : 0, x = n.x + sh, y = n.y;
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(x, y + 4, 70, 14, 0, 0, 7); g.fill();
+  g.fillStyle = '#6a6458'; g.beginPath(); g.moveTo(x - 66, y); g.lineTo(x - 50, y - 70); g.lineTo(x - 10, y - 96); g.lineTo(x + 40, y - 80); g.lineTo(x + 66, y - 30); g.lineTo(x + 60, y); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#8a8478'; g.beginPath(); g.moveTo(x - 50, y - 70); g.lineTo(x - 10, y - 96); g.lineTo(x + 10, y - 60); g.lineTo(x - 30, y - 40); g.closePath(); g.fill();
+  g.fillStyle = o.col; g.lineWidth = 2; for (const [a, b, r] of [[-28, -50, 9], [10, -72, 7], [30, -36, 10], [-6, -24, 6], [-40, -20, 6]]) { g.beginPath(); g.moveTo(x + a, y + b - r); g.lineTo(x + a + r, y + b); g.lineTo(x + a, y + b + r); g.lineTo(x + a - r, y + b); g.closePath(); g.fill(); g.stroke(); }
+  if (n.k === 'diamant' || n.k === 'gold') { g.fillStyle = `rgba(255,255,255,${0.5 + 0.5 * Math.sin(performance.now() / 200 + x)})`; g.beginPath(); g.arc(x + 10, y - 76, 3, 0, 7); g.fill(); }
+  g.restore();
+}
+function drawErzhaendler() {
+  const x = ERZ.x, y = ERZ.y, t = performance.now() / 1000;
+  drawBobFig(x - 10, y - 40, BASE_W / BODY.w * scaleAt(y) * 0.9, -0.4, Math.sin(t * 2) * 1.5, 1, 'minenarbeiter', false);
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE; cube(x - 150, y - 90, 300, 90, 50, mkPal('#6a4220', '#8a5a30'), true, -0.3);
+  g.fillStyle = '#f4efe2'; g.beginPath(); g.roundRect(x - 100, y - 70, 200, 32, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('⛏ ERZHÄNDLER', x, y - 53);
+  for (const [k, dx] of [['gold', 80], ['diamant', 110], ['eisen', -110]]) { g.fillStyle = ORES[k].col; g.beginPath(); g.moveTo(x + dx, y - 110); g.lineTo(x + dx + 12, y - 96); g.lineTo(x + dx, y - 86); g.lineTo(x + dx - 12, y - 96); g.closePath(); g.fill(); g.lineWidth = 2; g.stroke(); }
+  g.restore();
+  if (ERZ.sayT > 0) { ERZ.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(ERZ.say).width + 28, bx = x - tw / 2, by = y - 440; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#0a8a1f'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ERZ.say, x, by + 20); }
+}
+function drawMinenarbeiter(w, i) {
+  const n = garden.mineNodes && garden.mineNodes[(w.ni + Math.floor(gt.T / 60)) % garden.mineNodes.length], tx = n ? n.x + (i % 2 ? -90 : 90) : 200 + i * 300, ty = n ? n.y + 10 : 700;
+  w.x += (tx - w.x) * 0.02; w.y += (ty - w.y) * 0.02; if (!w.x) { w.x = tx; w.y = ty; }
+  const t = performance.now() / 1000, s = scaleAt(w.y), dir = n && n.x < w.x ? -1 : 1;
+  drawBobFig(w.x, w.y, BASE_W / BODY.w * s * 0.88, dir, Math.sin(t * 2 + i) * 1.5, 1, 'minenarbeiter', true);
+  const a = -1.2 + Math.abs(Math.sin(t * 4 + i * 1.3)) * 1.6; g.save(); g.translate(w.x + dir * 80 * s, w.y - 160 * s); g.scale(dir, 1); g.rotate(a); g.lineWidth = 3; g.strokeStyle = LINE; g.fillStyle = '#8a5a30'; g.fillRect(-4, -60 * s, 8, 70 * s); g.strokeRect(-4, -60 * s, 8, 70 * s); g.fillStyle = '#9a9aa2'; g.beginPath(); g.moveTo(-34 * s, -56 * s); g.quadraticCurveTo(0, -76 * s, 34 * s, -56 * s); g.lineTo(0, -62 * s); g.closePath(); g.fill(); g.stroke(); g.restore();
+}
 // ---------- Mitbewohner: Miete jeden Montag selbst abholen ----------
 const MB = { x: 820, y: 660, say: '', sayT: 0 };
+ERZ.say = ''; ERZ.sayT = 0;
 function mbLevel() { const c = lief.mbCount || 0; return Math.floor((Math.sqrt(8 * c + 1) - 1) / 2); }
 function mbRent() { return 60 + mbLevel() * 15; }
 function mbNext() { const L = mbLevel(), need = (L + 1) * (L + 2) / 2; return need - (lief.mbCount || 0); }
@@ -6312,7 +6433,7 @@ function drawKlo() {
   g.restore();
 }
 function gartenSetup() {
-  ROOMS.garten.tall = lief.gartengross ? 620 : 0; ROOMS.garten.maxY = H - 30 + ROOMS.garten.tall;
+  ROOMS.garten.tall = lief.gartenxl ? 1300 : lief.gartengross ? 620 : 0; ROOMS.garten.maxY = H - 30 + ROOMS.garten.tall; ROOMS.garten.wide = lief.gartenxl ? [-1600, 2800] : [-450, 1650];
   if (lief.botanik) { furn.botanik = furn.botanik || []; if (!furn.botanik.some(f => f.gtopf)) { for (const [x, y] of BOT_SLOTS) furn.botanik.push({ t: 'topf', x, y, r: 0, feld: true, gtopf: true }); saveFurn(); } }
   ROOMS.tierhaus.arches = ROOMS.tierhaus.arches.filter(a => a.to !== 'tierhaus2'); if (lief.tierhaus2) ROOMS.tierhaus.arches.push({ x: -120, to: 'tierhaus2', ax: -120, label: 'Oben' });
   if (!gartenOwned()) return;
@@ -7871,6 +7992,7 @@ function drawSeasonAir(dt) {
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
   ['1.68', 'Angeln', 'Angel für den Teich im großen Garten – der Fischer daneben kauft deine Fische'],
+  ['1.73', 'Riesen-Garten & Mine', 'Der Garten wird riesig – unten links gibt es eine Mine mit Erzen, Erzhändler und 3 Minenarbeitern'],
   ['1.72', 'Mieten-Angestellter', 'Holt jeden Montag die Miete ab – mit Kartengerät direkt aufs Konto'],
   ['1.71', 'Mitbewohner', 'Ein Mitbewohner im orangen Raum zahlt jeden Montag Miete – die steigt langsam, je öfter du sie abholst'],
   ['1.70', 'Eisen-Angel & Fischglück', 'Eisen-Angel zieht Geldsäcke aus dem Teich, Fischglück 1–3 für bessere Fische'],
@@ -8513,6 +8635,7 @@ function inventoryLines() {
   for (const k in SEEDS) if (garden.seeds[k]) L.push([SEEDS[k].name + '-Samen', garden.seeds[k], SEEDS[k].col]);
   for (const k in SEEDS) if (garden.plants[k]) L.push([SEEDS[k].name, garden.plants[k], '#2fb84f']);
   for (const k in FISHES) if (garden.fish && garden.fish[k]) L.push([FISHES[k].name, garden.fish[k], '#2f8fd8']);
+  for (const k in ORES) if (garden.ore && garden.ore[k]) L.push([ORES[k].name, garden.ore[k], ORES[k].col]);
   return L;
 }
 function drawInventarApp(s) {
@@ -9296,12 +9419,13 @@ function frame(t) {
   if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
   for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, a.ay || FLOOR + 70]); doorLock = true; }
+  if (cur === 'garten' && lief.mine && lief.gartenxl && !doorLock && !fade.dir && vy < -0.3 && Math.abs(bob.x - MI.x) < 70 && bob.y > MI.y - 10 && bob.y <= MI.y + 22) { go('mine', [600, FLOOR + 70]); doorLock = true; }
   if (cur === 'garten' && lief.botanik && ROOMS.garten.tall && !doorLock && !fade.dir && vy < -0.3 && Math.abs(bob.x - BH.x) < 75 && bob.y > BH.y - 10 && bob.y <= BH.y + 22) { go('botanik', [600, FLOOR + 70]); doorLock = true; }
   if (cur === 'garten' && lief.tierhaus && !doorLock && !fade.dir && vy < -0.3 && bob.y < H && Math.abs(bob.x - TH.x) < 75 && bob.y <= TH.y + 22) { go('tierhaus', [600, FLOOR + 70]); doorLock = true; }
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); fishTick(dt); mbAutoTick(); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); fishTick(dt); mbAutoTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -9323,6 +9447,8 @@ function frame(t) {
   if (cur === 'garten' && lief.tierhaus) list.push({ y: TH.y, f: drawTierhausAussen });
   if (cur === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ y: BH.y, f: drawBotanikAussen });
   if (cur === 'orange' && lief.mitbewohner) list.push({ y: MB.y, f: drawMitbewohner });
+  if (cur === 'garten' && lief.gartenxl) list.push({ y: MI.y, f: drawMineEingang });
+  if (cur === 'mine') { for (const n of mineNodes()) list.push({ y: n.y, f: () => drawOreNode(n) }); list.push({ y: ERZ.y, f: drawErzhaendler }); MW.forEach((w, i) => { if (lief['mw' + (i + 1)]) list.push({ y: w.y, f: () => drawMinenarbeiter(w, i) }); }); }
   if (cur === 'garten' && lief.fischer && ROOMS.garten.tall) list.push({ y: FI.y, f: drawFischer });
   if (cur === 'garten' && fish.on) list.push({ y: 99990, f: drawFishing });
   if (cur === 'garten' && lief.sprinkler) for (const [sx, sy] of SPRINK()) list.push({ y: sy, f: () => drawSprinkler(sx, sy) });
