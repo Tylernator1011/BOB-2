@@ -137,7 +137,7 @@ const ROOMS = {
             ladder: { x: 800, to: 'haltestelle', at: [420, 672] }, arches: [{ x: 400, to: 'kanal2', ax: 1700 }, { x: 1500, to: 'kanal4', ax: 1000 }] },
   kanal6: { name: 'Kanalisation', kind: 'kanal', seed: 6, exits: {}, wide: [-500, 1500], maxY: 650,
             arches: [{ x: -200, to: 'kanal3', ax: 1300 }], objs: [{ type: 'schatz', x: 1250, base: 560 }] },
-  bankplatz: { name: 'Bank', outside: true, kind: 'street', facade: 'bank', exits: { r: 'draussen' }, maxY: H - 175, wide: [-750, 1950],
+  bankplatz: { name: 'Bank', outside: true, kind: 'street', facade: 'bank', exits: { l: 'wuestenweg', r: 'draussen' }, maxY: H - 175, wide: [-750, 1950],
               door: { x: 500, w: 200, to: 'bank_innen', at: [600, FLOOR + 70], bank: true } },
   bank_innen: { name: 'In der Bank', wall: ['#e9dfc6', '#f7f0dd'], floorStyle: 'fliesen', exits: {}, wide: [-850, 2050],
               door: { x: 510, w: 180, to: 'bankplatz', at: [600, FLOOR + 80] },
@@ -196,10 +196,10 @@ const ROOMS = {
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
               door: { x: 510, w: 180, to: 'laborplatz', at: [600, FLOOR + 70] },
               objs: [{ type: 'npc', outfit: 'forscher', x: 1100, base: 720, w: 120, depth: 30, t: -1 }, { type: 'npc', outfit: 'forscher', x: -150, base: 640, w: 120, depth: 30, t: 1 }] },
-  gerichtsplatz: { name: 'Gericht', outside: true, kind: 'street', facade: 'gericht', exits: { l: 'laborplatz', r: 'wuestenweg' }, maxY: H - 175, wide: [-600, 1800],
+  gerichtsplatz: { name: 'Gericht', outside: true, kind: 'street', facade: 'gericht', exits: { l: 'laborplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'gerichtssaal', at: [600, FLOOR + 80], bank: true } },
-  wuestenweg: { name: 'Wüstenstraße', outside: true, kind: 'wuestenweg', exits: { l: 'gerichtsplatz', r: 'wueste' }, maxY: H - 30, wide: [-600, 1800] },
-  wueste: { name: 'Wüste', outside: true, desert: true, flat: true, kind: 'wueste', exits: { l: 'wuestenweg' }, wide: [-2200, 3400], openTop: true, top: -900, vtop: -1250, tall: 900, maxY: H + 870 },
+  wuestenweg: { name: 'Wüstenstraße', outside: true, kind: 'wuestenweg', exits: { l: 'wueste', r: 'bankplatz' }, maxY: H - 30, wide: [-600, 1800] },
+  wueste: { name: 'Wüste', outside: true, desert: true, flat: true, kind: 'wueste', exits: { r: 'wuestenweg' }, wide: [-2200, 3400], openTop: true, top: -900, vtop: -1250, tall: 900, maxY: H + 870 },
   gerichtssaal: { name: 'Gerichtssaal', wall: ['#e4d3b0', '#f3e8cf'], exits: {}, wide: [-450, 1700],
               door: { x: 510, w: 180, to: 'gerichtsplatz', at: [600, FLOOR + 70] },
               objs: [
@@ -5124,7 +5124,7 @@ const ADMIN = {
     ['Gefängnis', '#ff7a1a', tpTo('zellen', [600, 600])],
     ['Labor', '#2a8a6a', tpTo('laborplatz', [600, 650])],
     ['Gericht', '#8a6a3a', tpTo('gerichtsplatz', [600, 650])],
-    ['Wüste', '#e6bf78', tpTo('wueste', [-1800, 700])],
+    ['Wüste', '#e6bf78', tpTo('wueste', [3000, 700])],
     ['Aus der Haft entlassen', '#13b84a', () => { jail.until = gt.T; saveJail(); }],
   ],
 };
@@ -5876,7 +5876,7 @@ function drawBotanikRoom(R) {
   for (let i = 0; i < 4; i++) { const bx = 200 + i * 330 + Math.sin(t * 0.7 + i) * 120, by = 220 + Math.sin(t * 1.3 + i * 2) * 60, f = Math.abs(Math.sin(t * 12 + i)); g.fillStyle = ['#ff8ac8', '#ffd23a', '#7ac8ff', '#c48aff'][i]; g.beginPath(); g.ellipse(bx - 8 * f, by, 9 * f + 2, 7, 0, 0, 7); g.ellipse(bx + 8 * f, by, 9 * f + 2, 7, 0, 0, 7); g.fill(); g.fillStyle = '#222'; g.fillRect(bx - 1.5, by - 6, 3, 12); }
 }
 function drawWuestenweg(R) {
-  const t = performance.now() / 1000;
+  const t = performance.now() / 1000; g.save(); g.translate(1200, 0); g.scale(-1, 1);
   const sky = g.createLinearGradient(0, 0, 0, FLOOR); sky.addColorStop(0, '#5fb8ff'); sky.addColorStop(1, '#ffe8b8'); g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
   g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(1500 - camX * 0.3, 110, 60, 0, 7); g.fill();
   // Hügel links grün, rechts Dünen
@@ -5894,10 +5894,11 @@ function drawWuestenweg(R) {
   // Grasbüschel links, Steine rechts
   g.strokeStyle = '#2a8a2a'; g.lineWidth = 4; for (let x = Math.max(XL, -560); x < 500; x += 110) for (const y of [520, 830]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x - 8, y - 22); g.moveTo(x, y); g.lineTo(x, y - 26); g.moveTo(x, y); g.lineTo(x + 8, y - 22); g.stroke(); }
   g.fillStyle = '#b59a6a'; g.strokeStyle = LINE; for (const [x, y] of [[900, 540], [1300, 840], [1650, 560]]) { g.beginPath(); g.ellipse(x, y, 28, 16, 0, 0, 7); g.fill(); g.stroke(); }
-  // Schild
-  g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = '#8a5a30'; g.fillRect(1196, 470, 10, 140); g.strokeRect(1196, 470, 10, 140);
-  g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(1120, 450); g.lineTo(1290, 450); g.lineTo(1320, 480); g.lineTo(1290, 510); g.lineTo(1120, 510); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = '#3a2814'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('WÜSTE →', 1215, 481);
+  g.restore();
+  // Schild (Wüste liegt links)
+  g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = '#8a5a30'; g.fillRect(-6, 470, 10, 140); g.strokeRect(-6, 470, 10, 140);
+  g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(85, 450); g.lineTo(-85, 450); g.lineTo(-115, 480); g.lineTo(-85, 510); g.lineTo(85, 510); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#3a2814'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('← WÜSTE', -10, 481);
 }
 const WU_DECO = (() => { const L = []; let sd = 7; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647; for (let i = 0; i < 70; i++) L.push({ k: ['kaktus', 'kaktus', 'stein', 'stein', 'busch', 'schaedel'][Math.floor(r() * 6)], x: -2150 + r() * 5500, y: -860 + r() * 1700, s: 0.7 + r() * 0.6 }); return L; })();
 function drawWueste(R) {
@@ -7699,7 +7700,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
-  ['1.62', 'Die Wüste', 'Hinter dem Gericht geht es über die Wüstenstraße in eine riesige Wüste – mit neuen Samen: Kaktus, Wüstenrose, Dattelpalme'],
+  ['1.62', 'Die Wüste', 'Links hinter der Bank geht es über die Wüstenstraße in eine riesige Wüste – mit neuen Samen: Kaktus, Wüstenrose, Dattelpalme'],
   ['1.61', 'Klick-Konto', 'Klick-Geld geht direkt aufs Konto statt bar'],
   ['1.60', 'Garten-Gärtner & Lieferant', 'Gärtner und Meister-Gärtner für draußen, Pflanzen-Lieferant kauft täglich alles gegen Bargeld'],
   ['1.59', 'Meister-Botaniker', 'Erntet im Botanik-Haus, ohne die Pflanze auszureißen – sie wächst ab 25 % weiter'],
