@@ -91,7 +91,7 @@ addEventListener('keydown', e => {
 }, true);
 addEventListener('keyup', e => { if (kb.open) return; kbFix(e); }, true);
 const W = 1200, H = 880, FLOOR = 440;
-let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0, camZ = 1, camZv = 1, camLeft = 0, camRoom = null; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
+let XL = 0, XR = W, VW = W, SXL = 0, SXR = W, SVW = W, camX = 0, camZ = 1, camZv = 1, camLeft = 0, camRoom = null, camTop = 0; // sichtbarer Bereich (breiter bei breiten Bildschirmen)
 const LINE = '#111';
 
 // Wandstreifen wie im alten Spawn (helle und dunkle Bahnen)
@@ -185,6 +185,8 @@ const ROOMS = {
                      { type: 'loot', k: 'auto', x: -300, base: 620 }, { type: 'loot', k: 'auto', x: 650, base: 720 }, { type: 'loot', k: 'auto', x: 1650, base: 660 }, { type: 'loot', k: 'kiste', x: 950, base: 580 }, { type: 'loot', k: 'tonne', x: 400, base: 560 }, { type: 'loot', k: 'kiste', x: 1850, base: 760 }] },
   tierhaus: { name: 'Tierhaus', kind: 'tierhaus', exits: {}, wide: [-300, 1550], maxY: H - 30,
               arches: [{ x: 600, to: 'garten', ax: 1320, ay: 640, label: 'Garten' }] },
+  botanik: { name: 'Botanik-Haus', kind: 'botanik', exits: {}, wide: [-350, 1550], maxY: H - 30,
+              arches: [{ x: 600, to: 'garten', ax: 300, ay: 1300, label: 'Garten' }] },
   tierhaus2: { name: 'Tierhaus oben', kind: 'tierhaus2', exits: {}, wide: [-300, 1550], maxY: H - 30,
               arches: [{ x: -120, to: 'tierhaus', ax: -120, label: 'Runter' }] },
   garten: { name: 'Garten', outside: true, kind: 'garten', exits: {}, wide: [-450, 1650], maxY: H - 30,
@@ -2503,6 +2505,7 @@ function room() {
   else if (R.kind === 'garten') drawGarten(R);
   else if (R.kind === 'tierhaus') drawTierhausRoom(R);
   else if (R.kind === 'tierhaus2') drawTierhaus2Room(R);
+  else if (R.kind === 'botanik') drawBotanikRoom(R);
   else if (R.kind === 'street') drawStreet(R);
   else if (R.openTop) {
     // Laden geht nach oben einfach weiter: nur Boden
@@ -2577,7 +2580,7 @@ function drawOverlay(dt) {
 const bob = { x: W / 2, y: 700, dir: 'down', phase: 0, moving: false, face: 1, turn: 1 };
 const BASE_W = 160, SPEED = 260;
 
-function scaleAt(y) { const t = (ROOMS[cur] && ROOMS[cur].top) || FLOOR; return 0.78 + (y - t) / (H - t) * 0.4; }
+function scaleAt(y) { const t = (ROOMS[cur] && ROOMS[cur].top) || FLOOR; return 0.78 + (Math.min(y, H + 40) - t) / (H - t) * 0.4; }
 
 // Gesicht und Schrift: genau aus der alten Zeichnung übernommen
 const face = new Image(); face.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANoAAACXCAYAAABz20VpAAADWElEQVR4Xu3cUU7jMBCAYeAGvf8hewRWeYjEAi1JOmN77O97DqvG4z8OFdq3NwAAAAAAAAAAAAAAAAAAAAAAAAAAgEG9D/q5Drndbp/fL7zf76XviZ9mmHPJTfnbwgtuPjPN+aPaeI4s/ubodYzp6PyOXtdbqdDOLurZ6xnD2bmdvb6HUqFBVUKDBsqEdvX14OrPUcvocy4T2lW+7mcEZUITDM+Mvj/KhAaVCQ0aKBXa2deDs9czhrNzO3t9D6VC2xxd1KPXMaaj8zt6XW8l/9ZxN8Mfm/I3cwYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWM575Tu+3W6fjz7//X4vfW+8TTXfspvxWWQ7sdV0ZLabSvMtGdrRQQiunlln+1FtFGcHQQ3bXK/M9srP9FAutCuqDGNVK8xnidA2KwyzolXmskxoYhtPVGRR/06mpUIT2zgqxBFpudDE1l90ZBW+5l8yNLH1Ex1ZFeVCi3x6rTr0XjLWO3I/ZCoXWrSM4fPT6utcMrTop9jqmyBb1vpG74NMJf8Eaxc9wEqDqyB6PruKcyodWsaXGhWHOKKMyCrPpuSr41fRi5+xQVaTsYbRc26tfGib6CFkbJRVZKxd9Hx7mCI0sY1BZI9NE5rY+hLZc+W/DPlN9NBneHXJEr3Wu9nWfMrQNhkbYLbhvypjjTPeTEYw1avjVxlRZG2sirLWImNuI5j2RNvZELGy1nPWk2w37YmW/a6fueFGlXnPs55ku+lPtOyTbfYnsfWLsUxom8wncvYJ2kv2ms1+ki13orV4Mn9XfROJLM5SJ1qP2KqedJmRVX8AXbFkaK1eIx8ZeaNlBrbK77O/WTa03rGNeNKJLM/SoY0S2wjRiSzX8qH1/L3tmVavlwJrQ2hfZG+6q7Kiy77frM9dkdC+yd58r3p187a6v1c/52yE9kCrDRnhr03d8l7++iyrEtoTLTfoDET2mNAOEt1jAvub0E4S3P9EdozQLhJc/P8+NjOhBVgtOqfYeUILNnt0IrtGaIlmik5grxFaQ1XDE9nrhNZBleAEFkdonY0anchiCW0gI0QnsBxCG1Tr6ASWS2hFZIUnsDaEVtiV+ITVxz/N9W3uXcXT7wAAAABJRU5ErkJggg==';
@@ -3078,6 +3081,9 @@ Object.assign(OUTFITS, {
       g.fillStyle = 'rgba(140,200,255,.35)'; g.fillRect(hx + 16, hy + 28, HEAD.w - 32, 52); g.lineWidth = 5; g.strokeRect(hx + 16, hy + 28, HEAD.w - 32, 52);
       g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(hx + 26, hy + 34, 40, 10);
     } },
+  botaniker: { name: 'Botaniker', bp: mkPal('#2f8a3a', '#38a046'), noText: true,
+    bodyFront: (x, y, w, h) => { g.strokeStyle = '#111'; g.lineWidth = 4; g.fillStyle = '#c9a66b'; g.beginPath(); g.roundRect(x + 30, y + 10, w - 60, h - 10, 8); g.fill(); g.stroke(); g.fillStyle = '#a8864f'; g.fillRect(x + w / 2 - 30, y + 60, 60, 40); g.strokeRect(x + w / 2 - 30, y + 60, 60, 40); g.lineWidth = 3; g.beginPath(); g.moveTo(x + 30, y + 10); g.lineTo(x + 6, y); g.moveTo(x + w - 30, y + 10); g.lineTo(x + w - 6, y); g.stroke(); g.fillStyle = '#2fa84f'; g.beginPath(); g.ellipse(x + w / 2 + 14, y + 52, 8, 14, 0.5, 0, 7); g.fill(); g.stroke(); },
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#e8c870', '#f2d88a'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 34 + 6 * t, hy - 4, HEAD.w + 68, 14, DEPTH + 30, HP, true, t); cube(hx + 30 + 6 * t, hy - 56, HEAD.w - 60, 52, DEPTH, HP, true, t); g.fillStyle = '#2f8a3a'; g.fillRect(hx + 30 + 6 * t, hy - 18, HEAD.w - 60, 12); } },
   investor: { name: 'Investor', bp: mkPal('#1f4a36', '#285a44'), noText: true,
     bodyFront: (x, y, w, h) => { g.strokeStyle = '#111'; g.lineWidth = 4; g.fillStyle = '#f4f4f4'; g.beginPath(); g.moveTo(x + 70, y); g.lineTo(x + w / 2, y + 110); g.lineTo(x + w - 70, y); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = '#c9a23a'; for (const by of [y + 70, y + 96, y + 122]) { g.beginPath(); g.arc(x + w / 2, by, 5, 0, 7); g.fill(); g.lineWidth = 2; g.stroke(); }
@@ -3667,7 +3673,7 @@ function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse');
 const JOB_SPOTS = { polizei: ['wache', 'theke'], anwalt: ['gerichtssaal', 'gtisch'], richter: ['gerichtssaal', 'richterbank'] };
 function nearRevier() { if (!(job && JOB_SPOTS[job.id] && onShift() && !fade.dir)) return null; const [rm, ty] = JOB_SPOTS[job.id]; if (cur !== rm) return null; const o = (ROOMS[rm].objs || []).find(o => o.type === ty && (ty !== 'gtisch' || o.vert)); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender()); }
+function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3906,6 +3912,7 @@ function openMenu() {
     menu.open = true; menu.sel = Math.max(0, menu.items.findIndex(i => !i.disabled)); keys.clear(); return;
   }
   if (nearMuell()) { wuehlen(); return; }
+  if (nearBotaniker()) { botMenu(); return; }
   { const hh = nearHundehaus(); if (hh) {
     menu.kind = 'hundehaus'; menu.title = lief.tierhaus ? 'Tierbett' : 'Haustier-Haus'; menu.hhNapf = hh;
     const pet = petOk(activePet) ? activePet : null, pet2 = petOk(activePet2) && activePet2 !== activePet ? activePet2 : null;
@@ -3968,6 +3975,7 @@ function openMenu() {
 function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
+  if (it.botSeed) { garden.botAllow[it.botSeed] = !garden.botAllow[it.botSeed]; saveGarden(); const sel = menu.items.indexOf(it); botMenu(); menu.sel = sel; return; }
   if (it.hh === 'tier2') { if (owned.length < 2) { toast = { text: 'Du brauchst ein zweites Haustier – kauf eins im Tierladen.', t: 3 }; return; } openWardrobe('pet'); wr.slot = 2; wr.pi = Math.max(0, owned.indexOf(activePet2 || owned.find(k => k !== activePet))); return; }
   if (it.hh === 'tier') { if (!owned.length) { toast = { text: 'Du hast noch kein Haustier – kauf eins im Tierladen.', t: 3 }; return; } openWardrobe('pet'); return; }
   if (it.hh === 'napf') { napfMenu(menu.hhNapf); return; }
@@ -4026,6 +4034,7 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
+  if (nearBotaniker()) return { x: BT.x, y: BT.y - 360 * scaleAt(BT.y), label: 'Botaniker' };
   { const hh = nearHundehaus(); if (hh) return { x: HH.x, y: HH.y - (lief.tierhaus ? 180 : 330), label: lief.tierhaus ? 'Tierbett' : 'Haustier-Haus' }; }
   if (nearKalender()) return { x: KAL.x, y: KAL.y - 30, label: 'Kalender' };
   { const pk = nearPkg(); if (pk) return { x: pk.x, y: pk.y - 170, label: 'Bestellung aufheben' }; }
@@ -4055,7 +4064,7 @@ function interactTarget() {
   const nap = nearFurn('napf');
   if (nap) return { x: nap.x, y: furnBox(nap).top - 30, label: nap.food ? 'Napf: ' + FOODS[nap.food].name : 'Napf füllen' };
   const tp = nearFurn('topf');
-  if (tp) return { x: tp.x, y: tp.feld ? tp.y - 170 * scaleAt(tp.y) : furnBox(tp).top - 110 * scaleAt(tp.y), label: topfLabel(tp) };
+  if (tp) return { x: tp.x, y: tp.feld ? tp.y - (tp.gtopf ? 260 : 170) * scaleAt(tp.y) : furnBox(tp).top - 110 * scaleAt(tp.y), label: topfLabel(tp) };
   const hd = nearFurn('herd');
   if (hd) return { x: hd.x, y: furnBox(hd).top - 16, label: 'Kochen' };
   const bt = nearBett();
@@ -4236,7 +4245,7 @@ function updateBus(dt) {
 
 // Touch-/Maus-Joystick
 const joy = { on: false, ox: 0, oy: 0, dx: 0, dy: 0 };
-function toWorld(x, y) { return [(x - SXL) / camZv + camLeft, (y - H * (1 - camZv)) / camZv]; }
+function toWorld(x, y) { return [(x - SXL) / camZv + camLeft, (y - H * (1 - camZv)) / camZv + camTop]; }
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * VW + XL, (e.clientY - r.top) / r.height * H]; }
 const petClicks = [];
 let lastPetClick = 0;
@@ -4599,6 +4608,8 @@ function solids(room) {
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall) list.push(furnBox(f));
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'tierhaus2' && lief.investor) list.push({ x: TR2.x - 220, w: 440, base: TR2.y, depth: 70 });
+  if (room === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ x: BH.x - 260 - 54, w: 520 + 54, base: BH.y, depth: 90 });
+  if (room === 'garten' && ROOMS.garten.tall) list.push({ x: 940, w: 480, base: 1200, depth: 80 });
   if (room === 'garten' && lief.tierhaus) list.push({ x: TH.x - 220 - 54, w: 440 + 54, base: TH.y, depth: 90 });
   return list;
 }
@@ -5034,6 +5045,9 @@ const ADMIN = {
     ['Gold-Rezept Lv1', '#5a3ac0', () => { lief.lv3gold = true; lief.lv2gold = true; lief.lv1gold = true; saveLief(); }],
     ['Gold-Meisterrezept', '#c9a23a', () => { lief.lv3gold = true; lief.lv2gold = true; lief.lv1gold = true; lief.goldvoll = true; saveLief(); }],
     ['Goldenes Klo', '#e6b422', () => { lief.garten = true; lief.hundehaus = true; lief.klo = true; saveLief(); gartenSetup(); }],
+    ['Sprinkler + Botaniker', '#3a8a5a', () => { lief.garten = true; lief.tierhaus = true; lief.hundehaus = true; lief.toepfe = true; lief.gartengross = true; lief.botanik = true; lief.sprinkler = true; lief.botaniker = true; saveLief(); gartenSetup(); }],
+    ['Großer Garten + Botanik', '#2fa84f', () => { lief.garten = true; lief.gartengross = true; lief.botanik = true; saveLief(); gartenSetup(); }],
+    ['Große Pflanztöpfe', '#c4663a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.toepfe = true; saveLief(); gartenSetup(); }],
     ['Gemüsefeld', '#7a4a24', () => { lief.garten = true; lief.feld = true; saveLief(); gartenSetup(); }],
     ['Maid + Goldkacke', '#1a1a1f', () => { lief.garten = true; lief.hundehaus = true; lief.maid = true; lief.maid2 = true; saveLief(); gartenSetup(); }],
     ['Haustier-Haus', '#c0392b', () => { lief.garten = true; lief.hundehaus = true; saveLief(); gartenSetup(); }],
@@ -5493,6 +5507,11 @@ const WEB_ITEMS = [
   { id: 'maidb', cat: 'haus', name: 'Zweite Maid', price: 35000, desc: ['Zwei Maids teilen sich', 'Napf und Goldkacke'], once: true, needs: 'maid2' },
   { id: 'pet2', cat: 'haus', name: 'Zweites Tier', price: 100000, desc: ['Rüste ein zweites', 'Haustier gleichzeitig aus'], once: true, needs: 'tierhaus' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
+  { id: 'toepfe', cat: 'haus', name: 'Große Pflanztöpfe', price: 25000, desc: ['6 große Töpfe vorne', 'am Tierhaus zum Pflanzen'], once: true, needs: 'tierhaus' },
+  { id: 'gartengross', cat: 'haus', name: 'Großer Garten', price: 40000, desc: ['Der Garten wird nach unten', 'viel größer – mit Teich'], once: true, needs: 'garten' },
+  { id: 'botanik', cat: 'haus', name: 'Botanik-Haus', price: 80000, desc: ['Gewächshaus unten im Garten', 'mit 16 großen Töpfen'], once: true, needs: 'gartengross' },
+  { id: 'sprinkler', cat: 'haus', name: 'Sprinkler', price: 30000, desc: ['Gießen Feld und Töpfe am', 'Tierhaus: doppelt so schnell'], once: true, needs: 'toepfe' },
+  { id: 'botaniker', cat: 'haus', name: 'Botaniker', price: 65000, desc: ['Pflanzt erlaubte Samen im', 'Botanik-Haus und gießt sie'], once: true, needs: 'botanik' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
@@ -5513,7 +5532,7 @@ function webOrder(it) {
     for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5567,6 +5586,11 @@ function webPic(id, cx, cy, sz) {
   if (id.startsWith('acc_')) { g.restore(); g.save(); drawBobFig(cx, cy + 50, sz / 640, 0.6, 0, 1, 'gruen', false, [id.slice(4)]); g.restore(); return; }
   if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
+  if (id === 'sprinkler') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 30, 100, 14); g.fillStyle = '#8a8f99'; g.fillRect(-6, -6, 12, 38); g.strokeRect(-6, -6, 12, 38); g.fillStyle = '#ffcc1a'; g.beginPath(); g.ellipse(0, -8, 14, 6, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#4fb3ff'; for (let k = 0; k < 7; k++) { const q = k / 6; for (const d of [-1, 1]) { g.beginPath(); g.arc(d * q * 44, -14 - Math.sin(q * Math.PI) * 30, 3 + q * 2, 0, 7); g.fill(); } } g.restore(); return; }
+  if (id === 'botaniker') { g.restore(); g.save(); drawBobFig(cx, cy + sz * 0.45, sz / 600, 0.4, 0, 1, 'botaniker', false); g.restore(); return; }
+  if (id === 'gartengross') { g.fillStyle = '#45c43a'; g.fillRect(-46, -40, 92, 84); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(-46, -40, 92, 84); g.fillStyle = '#2f8fd8'; g.beginPath(); g.ellipse(14, 18, 22, 8, 0, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(-20, -30); g.lineTo(-20, 26); g.moveTo(-32, 12); g.lineTo(-20, 28); g.lineTo(-8, 12); g.stroke(); g.restore(); return; }
+  if (id === 'botanik') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 30, 100, 14); g.fillStyle = 'rgba(160,220,250,.8)'; g.fillRect(-40, -6, 80, 38); g.strokeRect(-40, -6, 80, 38); g.beginPath(); g.moveTo(-40, -6); g.quadraticCurveTo(0, -50, 40, -6); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#2fa84f'; for (const px of [-24, 0, 24]) { g.beginPath(); g.ellipse(px, 14, 8, 14, 0, 0, 7); g.fill(); } g.restore(); return; }
+  if (id === 'toepfe') { g.lineWidth = 3; g.strokeStyle = '#111'; for (const px of [-34, 0, 34]) { g.fillStyle = '#c4663a'; g.fillRect(px - 16, 4, 32, 36); g.strokeRect(px - 16, 4, 32, 36); g.fillStyle = '#4a2a14'; g.fillRect(px - 13, 4, 26, 6); g.fillStyle = '#2fa84f'; g.beginPath(); g.ellipse(px - 6, -6, 7, 12, -0.4, 0, 7); g.ellipse(px + 6, -8, 7, 12, 0.4, 0, 7); g.fill(); g.stroke(); } g.restore(); return; }
   if (id === 'auto5') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#3cffe0'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1s', 0, 2); g.restore(); return; }
   if (id === 'klick5') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#c0392b'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×5', 0, 3); g.restore(); return; }
   if (id === 'auto4') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2s', 0, 2); g.restore(); return; }
@@ -5673,6 +5697,110 @@ addEventListener('keydown', e => {
 function gartenOwned() { return !!lief.garten; }
 function petRoom() { return lief.tierhaus ? 'tierhaus' : 'garten'; }
 const TH = { x: 1320, y: 560 };
+const BH = { x: 300, y: 1230 };
+const BOT_SLOTS = [[-220, 600], [-167, 600], [-114, 600], [-61, 600], [1080, 600], [1133, 600], [1186, 600], [1239, 600], [150, 790], [203, 790], [256, 790], [309, 790], [850, 790], [903, 790], [956, 790], [1009, 790]];
+function drawGartenUnten(R, t) {
+  const GB = H + R.tall; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  // Steinweg vom Haus nach unten zum Botanik-Haus
+  for (let i = 0; i < 15; i++) { const v = i < 10, q = v ? i / 9 : (i - 9) / 5, x = v ? 640 : 640 + (BH.x + 70 - 640) * q, y = v ? H - 60 + (BH.y + 44 - (H - 60)) * q : BH.y + 44; g.fillStyle = '#b8b2a4'; g.beginPath(); g.ellipse(x, y, 44, 16, 0, 0, 7); g.fill(); g.lineWidth = 3; g.stroke(); }
+  // Teich
+  g.fillStyle = '#2f8fd8'; g.beginPath(); g.ellipse(1180, 1160, 240, 72, 0, 0, 7); g.fill(); g.lineWidth = 6; g.strokeStyle = '#6a6458'; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(1120 + Math.sin(t) * 20, 1145, 80, 10, 0, 0, 7); g.fill();
+  g.lineWidth = 3; g.strokeStyle = LINE; for (const [lx, ly] of [[1090, 1170], [1260, 1150], [1200, 1190]]) { g.fillStyle = '#2fa84f'; g.beginPath(); g.ellipse(lx, ly, 26, 9, 0, 0.3, Math.PI * 2); g.lineTo(lx, ly); g.closePath(); g.fill(); g.stroke(); }
+  g.fillStyle = '#ff8ac8'; g.beginPath(); g.arc(1262, 1146, 7, 0, 7); g.fill();
+  // Büsche
+  for (const [bx, by, r] of [[-360, 1000, 60], [-300, 1350, 70], [1520, 1020, 64], [1560, 1380, 70], [820, 1420, 54]]) { g.fillStyle = '#2a9a38'; g.strokeStyle = LINE; g.lineWidth = 5; g.beginPath(); g.arc(bx, by - r * 0.6, r, 0, 7); g.arc(bx + r * 0.8, by - r * 0.4, r * 0.7, 0, 7); g.arc(bx - r * 0.8, by - r * 0.4, r * 0.7, 0, 7); g.fill(); g.stroke(); }
+  // Zaun unten
+  g.fillStyle = '#f4efe2'; g.strokeStyle = LINE; g.lineWidth = 4; g.fillRect(XL, GB - 46, VW, 10); g.strokeRect(XL, GB - 46, VW, 10);
+  for (let x = Math.floor(XL / 60) * 60; x < XR; x += 60) { g.beginPath(); g.moveTo(x, GB); g.lineTo(x, GB - 70); g.lineTo(x + 14, GB - 84); g.lineTo(x + 28, GB - 70); g.lineTo(x + 28, GB); g.closePath(); g.fill(); g.stroke(); }
+  g.restore();
+}
+const SPRINK = () => [[-200, 700], [TH.x - 250, TH.y + 70], [TH.x + 250, TH.y + 70]];
+function drawSprinkler(x, y) {
+  const s = scaleAt(y), t = performance.now() / 1000; g.save(); g.lineWidth = 3; g.strokeStyle = LINE;
+  cube(x - 7 * s, y - 34 * s, 14 * s, 34 * s, 8 * s, mkPal('#8a8f99', '#a0a6b0'), true, 0.4);
+  g.fillStyle = '#ffcc1a'; g.beginPath(); g.ellipse(x, y - 36 * s, 14 * s, 6 * s, 0, 0, 7); g.fill(); g.stroke();
+  const a0 = (t * 1.6) % (Math.PI * 2);
+  for (let j = 0; j < 2; j++) { const a = a0 + j * Math.PI, dir = Math.cos(a);
+    for (let k = 0; k < 9; k++) { const q = k / 8, dx = dir * q * 150 * s, dy = -Math.sin(q * Math.PI) * 70 * s + Math.sin(a) * q * 30 * s; g.globalAlpha = 0.8 - q * 0.5; g.fillStyle = '#7fd0ff'; g.beginPath(); g.arc(x + dx, y - 36 * s + dy, (3 + q * 2) * s, 0, 7); g.fill(); } }
+  g.restore();
+}
+function drawBotanikAussen() {
+  const x = BH.x, y = BH.y, w = 520, h = 260, dx = -54, dy = -66, L = x - w / 2, R = x + w / 2, t = performance.now() / 1000;
+  g.save(); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x - 10, y + 6, w / 2 + 50, 26, 0, 0, 7); g.fill();
+  // Sockel
+  g.fillStyle = '#9a9a9a'; g.fillRect(L, y - 30, w, 30); g.strokeRect(L, y - 30, w, 30);
+  g.fillStyle = '#7a7a7a'; g.beginPath(); g.moveTo(L, y - 30); g.lineTo(L + dx, y - 30 + dy); g.lineTo(L + dx, y + dy); g.lineTo(L, y); g.closePath(); g.fill(); g.stroke();
+  // Pflanzen hinter Glas
+  for (let i = 0; i < 9; i++) { const px = L + 30 + i * 58, ph = 70 + (i * 37) % 90; g.fillStyle = i % 3 ? '#2fa84f' : '#3cc25a'; g.beginPath(); g.ellipse(px, y - 30 - ph / 2, 26, ph / 2, Math.sin(t + i) * 0.08, 0, 7); g.fill(); if (i % 2) { g.fillStyle = ['#ff4d8a', '#ffd23a', '#9b5de5'][i % 3]; g.beginPath(); g.arc(px + 6, y - 30 - ph + 12, 8, 0, 7); g.fill(); } }
+  // Glas (Seite + Front)
+  const glass = 'rgba(190,235,255,.45)';
+  g.fillStyle = 'rgba(160,215,245,.55)'; g.beginPath(); g.moveTo(L, y - 30); g.lineTo(L, y - 30 - h); g.lineTo(L + dx, y - 30 - h + dy); g.lineTo(L + dx, y - 30 + dy); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = glass; g.fillRect(L, y - 30 - h, w, h); g.strokeRect(L, y - 30 - h, w, h);
+  g.strokeStyle = '#f4f4f4'; g.lineWidth = 5; for (let k = 1; k < 6; k++) { g.beginPath(); g.moveTo(L + k * w / 6, y - 30 - h); g.lineTo(L + k * w / 6, y - 30); g.stroke(); } g.beginPath(); g.moveTo(L, y - 30 - h / 2); g.lineTo(R, y - 30 - h / 2); g.stroke();
+  // Bogendach
+  const top = y - 30 - h; g.strokeStyle = LINE; g.lineWidth = 5;
+  g.fillStyle = 'rgba(170,225,250,.6)'; g.beginPath(); g.moveTo(L, top); g.lineTo(L + dx, top + dy); g.quadraticCurveTo(x + dx, top + dy - 190, R + dx, top + dy); g.lineTo(R, top); g.quadraticCurveTo(x, top - 190, L, top); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = glass; g.beginPath(); g.moveTo(L, top); g.quadraticCurveTo(x, top - 190, R, top); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = '#f4f4f4'; g.lineWidth = 4; for (let k = 1; k < 6; k++) { const q = k / 6, px = L + w * q, py = top - 190 * 2 * q * (1 - q); g.beginPath(); g.moveTo(px, top); g.lineTo(px, py); g.stroke(); g.beginPath(); g.moveTo(px, py); g.lineTo(px + dx, py + dy); g.stroke(); }
+  g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.moveTo(L + 30, top - 10); g.quadraticCurveTo(x - 60, top - 140, x + 20, top - 92); g.lineTo(x + 6, top - 80); g.quadraticCurveTo(x - 70, top - 120, L + 46, top - 6); g.closePath(); g.fill();
+  // Tür
+  g.strokeStyle = LINE; g.lineWidth = 5; g.fillStyle = 'rgba(200,240,255,.7)'; g.fillRect(x - 60, y - 30 - 170, 120, 170); g.strokeRect(x - 60, y - 30 - 170, 120, 170); g.beginPath(); g.moveTo(x, y - 200); g.lineTo(x, y - 30); g.stroke();
+  g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(x - 12, y - 110, 6, 0, 7); g.arc(x + 12, y - 110, 6, 0, 7); g.fill();
+  g.fillStyle = '#e8f6d8'; g.beginPath(); g.roundRect(x - 90, y - 30 - h - 4, 180, 38, 10); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#1f5a2a'; g.font = '800 19px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Botanik-Haus', x, y - 30 - h + 15);
+  g.restore();
+}
+const BT = { x: 600, y: 660, st: 'idle', t: 2, dir: 1, say: '', sayT: 0, f: null };
+function botSeed() { garden.botAllow = garden.botAllow || {}; let best = null; for (const k of Object.keys(SEEDS)) if (garden.botAllow[k] && (garden.seeds[k] || 0) > 0 && (!best || garden.seeds[k] > garden.seeds[best])) best = k; return best; }
+function botJob(f) { if (!f.plant) return botSeed() ? 'plant' : null; if (plantProgress(f) < 1 && !(f.plant.wet > gt.T + 20)) return 'water'; return null; }
+function botDo(f, job) {
+  if (job === 'plant') { const k = botSeed(); if (!k) return ''; garden.seeds[k]--; f.plant = { type: k, t0: gt.T, wet: gt.T + 240 }; saveFurn(); saveGarden(); return SEEDS[k].name + ' gepflanzt!'; }
+  if (job === 'water' && f.plant) { f.plant.wet = gt.T + 240; saveFurn(); return 'Gegossen!'; }
+  return '';
+}
+function botanikerTick(dt) {
+  if (!lief.botaniker || !lief.botanik) return; const pots = (furn.botanik || []).filter(f => f.gtopf);
+  if (BT.sayT > 0) BT.sayT -= dt;
+  if (cur !== 'botanik') { for (const f of pots) { const j = botJob(f); if (j) botDo(f, j); } BT.st = 'idle'; return; }
+  const sp = 200 * dt, mv = (tx, ty) => { const dx = tx - BT.x, dy = ty - BT.y, d = Math.hypot(dx, dy); if (d < sp) { BT.x = tx; BT.y = ty; return true; } BT.x += dx / d * sp; BT.y += dy / d * sp * 0.8; BT.dir = dx < 0 ? -1 : 1; return false; };
+  if (BT.st === 'idle') { BT.t -= dt; if (BT.t <= 0) { BT.t = 1.5; const f = pots.find(f => botJob(f)); if (f) { BT.f = f; BT.job = botJob(f); BT.st = 'go'; } else if (Math.random() < 0.3) { BT.say = ['Alles grün hier!', 'Die Pflanzen wachsen prächtig.', 'Gib mir Samen, dann pflanze ich!'][Math.floor(Math.random() * 3)]; BT.sayT = 2.2; } } }
+  else if (BT.st === 'go') { if (mv(BT.f.x + 70, BT.f.y + 30)) { BT.st = 'work'; BT.t = 1; BT.dir = -1; } }
+  else if (BT.st === 'work') { BT.t -= dt; if (BT.t <= 0) { const msg = botDo(BT.f, botJob(BT.f) || BT.job); if (msg) { BT.say = msg; BT.sayT = 1.6; } BT.st = 'idle'; BT.t = 0.6; } }
+}
+function nearBotaniker() { return cur === 'botanik' && lief.botaniker && !fade.dir && !build.on && Math.abs(bob.x - BT.x) < 140 && Math.abs(bob.y - BT.y) < 110; }
+function botMenu() {
+  garden.botAllow = garden.botAllow || {};
+  menu.kind = 'botaniker'; menu.title = 'Botaniker – welche Samen darf er pflanzen?';
+  menu.items = Object.keys(SEEDS).map(k => ({ label: SEEDS[k].name + ' (' + (garden.seeds[k] || 0) + ' Samen)', botSeed: k, tag: garden.botAllow[k] ? 'erlaubt' : 'nicht erlaubt', tagCol: garden.botAllow[k] ? '#13a36b' : '#c0392b' }));
+  menu.items.push({ label: 'Fertig' });
+  MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now(); menu.open = true; menu.sel = 0; keys.clear();
+}
+function drawBotaniker() {
+  const s = scaleAt(BT.y), k = BASE_W / BODY.w * s * 0.9, t = performance.now() / 1000, walk = BT.st === 'go';
+  drawBobFig(BT.x, BT.y, k, BT.dir, walk ? Math.abs(Math.sin(t * 9)) * 8 : Math.sin(t * 2) * 1.5, 1, 'botaniker', true);
+  if (BT.st === 'work') { g.save(); g.translate(BT.x - 70 * s, BT.y - 150 * s); g.rotate(-0.5 + Math.sin(t * 6) * 0.1); g.lineWidth = 3; g.strokeStyle = LINE; g.fillStyle = '#2f8a3a'; g.fillRect(-22 * s, -16 * s, 44 * s, 32 * s); g.strokeRect(-22 * s, -16 * s, 44 * s, 32 * s); g.beginPath(); g.moveTo(-22 * s, -6 * s); g.lineTo(-52 * s, -20 * s); g.stroke(); g.restore();
+    g.fillStyle = '#4fb3ff'; for (let i = 0; i < 4; i++) { const q = ((t * 2 + i / 4) % 1); g.beginPath(); g.arc(BT.x - 120 * s - q * 10, BT.y - 165 * s + q * 70 * s, 3 * s, 0, 7); g.fill(); } }
+  if (BT.sayT > 0) { g.font = '700 18px system-ui'; const tw = g.measureText(BT.say).width + 28, bx = BT.x - tw / 2, by = BT.y - 330 * s - 40; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#1f5a2a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BT.say, BT.x, by + 20); }
+}
+function drawBotanikRoom(R) {
+  const t = performance.now() / 1000;
+  const sky = g.createLinearGradient(0, 0, 0, FLOOR); sky.addColorStop(0, '#8fd0ff'); sky.addColorStop(1, '#d8f2ff'); g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
+  g.fillStyle = 'rgba(80,180,90,.5)'; for (let x = Math.floor(XL / 140) * 140; x < XR; x += 140) { g.beginPath(); g.arc(x + 70, FLOOR - 20, 80, Math.PI, 0); g.fill(); }
+  g.strokeStyle = '#f4f4f4'; g.lineWidth = 8; for (let x = Math.floor(XL / 150) * 150; x < XR; x += 150) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, FLOOR); g.stroke(); } g.beginPath(); g.moveTo(XL, 150); g.lineTo(XR, 150); g.moveTo(XL, 300); g.lineTo(XR, 300); g.stroke();
+  // Hängepflanzen
+  g.lineWidth = 3; for (let x = Math.floor(XL / 300) * 300 + 150; x < XR; x += 300) { g.strokeStyle = '#555'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 60); g.stroke(); g.fillStyle = '#c4663a'; g.strokeStyle = LINE; g.beginPath(); g.moveTo(x - 30, 60); g.lineTo(x + 30, 60); g.lineTo(x + 22, 96); g.lineTo(x - 22, 96); g.closePath(); g.fill(); g.stroke(); g.strokeStyle = '#2fa84f'; g.lineWidth = 5; for (const k of [-18, -4, 10, 22]) { g.beginPath(); g.moveTo(x + k, 64); g.quadraticCurveTo(x + k + Math.sin(t + k) * 10, 120, x + k * 1.4, 150 + Math.abs(k) * 2); g.stroke(); } g.lineWidth = 3; }
+  // Tür zum Garten
+  g.fillStyle = 'rgba(200,240,255,.8)'; g.lineWidth = 6; g.strokeStyle = LINE; g.fillRect(510, FLOOR - 230, 180, 230); g.strokeRect(510, FLOOR - 230, 180, 230); g.beginPath(); g.moveTo(600, FLOOR - 230); g.lineTo(600, FLOOR); g.stroke();
+  g.fillStyle = '#e8f6d8'; g.beginPath(); g.roundRect(530, FLOOR - 280, 140, 36, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#1f5a2a'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Garten', 600, FLOOR - 262);
+  // Terrakotta-Boden
+  g.fillStyle = '#d08a5a'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.strokeStyle = 'rgba(90,40,10,.25)'; g.lineWidth = 3;
+  for (let y = FLOOR + 50; y < H; y += 56) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); }
+  for (let x = Math.floor(XL / 110) * 110; x < XR; x += 110) { g.beginPath(); g.moveTo(x, FLOOR); g.lineTo(x + (x - 600) * 0.5, H); g.stroke(); }
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  // Schmetterlinge
+  for (let i = 0; i < 4; i++) { const bx = 200 + i * 330 + Math.sin(t * 0.7 + i) * 120, by = 220 + Math.sin(t * 1.3 + i * 2) * 60, f = Math.abs(Math.sin(t * 12 + i)); g.fillStyle = ['#ff8ac8', '#ffd23a', '#7ac8ff', '#c48aff'][i]; g.beginPath(); g.ellipse(bx - 8 * f, by, 9 * f + 2, 7, 0, 0, 7); g.ellipse(bx + 8 * f, by, 9 * f + 2, 7, 0, 0, 7); g.fill(); g.fillStyle = '#222'; g.fillRect(bx - 1.5, by - 6, 3, 12); }
+}
 function drawTierhausAussen() {
   const x = TH.x, y = TH.y, w = 440, h = lief.tierhaus2 ? 560 : 300, t = 0.45, d = 120, dx = -d * t, dy = -d * 0.55;
   g.save(); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
@@ -5894,9 +6022,12 @@ function drawKlo() {
   g.restore();
 }
 function gartenSetup() {
+  ROOMS.garten.tall = lief.gartengross ? 620 : 0; ROOMS.garten.maxY = H - 30 + ROOMS.garten.tall;
+  if (lief.botanik) { furn.botanik = furn.botanik || []; if (!furn.botanik.some(f => f.gtopf)) { for (const [x, y] of BOT_SLOTS) furn.botanik.push({ t: 'topf', x, y, r: 0, feld: true, gtopf: true }); saveFurn(); } }
   ROOMS.tierhaus.arches = ROOMS.tierhaus.arches.filter(a => a.to !== 'tierhaus2'); if (lief.tierhaus2) ROOMS.tierhaus.arches.push({ x: -120, to: 'tierhaus2', ax: -120, label: 'Oben' });
   if (!gartenOwned()) return;
   ROOMS.pink.exits.d = 'garten';
+  if (lief.toepfe && lief.tierhaus) { furn.garten = furn.garten || []; if (!furn.garten.some(f => f.gtopf)) { for (const x of [TH.x - 193, TH.x - 140, TH.x - 87, TH.x + 87, TH.x + 140, TH.x + 193]) furn.garten.push({ t: 'topf', x, y: TH.y + 46, r: 0, feld: true, gtopf: true }); saveFurn(); } }
   if (lief.feld) { furn.garten = furn.garten || []; if (!furn.garten.some(f => f.feld)) { for (const [x, y] of FELD.slots) furn.garten.push({ t: 'topf', x, y, r: 0, feld: true }); saveFurn(); } }
   if (lief.tierhaus) {
     Object.assign(HH, { x: 1000, y: 640 }); Object.assign(KLO, { x: 1380, y: 620 }); Object.assign(KAL, { x: 150, y: 250 }); [MD.x, MD.y] = maidHome(MD); [MD2.x, MD2.y] = maidHome(MD2);
@@ -5932,8 +6063,9 @@ function drawGarten(R) {
   g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(660, FLOOR - 110, 10, 0, 7); g.fill(); g.stroke();
   g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(530, FLOOR - 270, 140, 36, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ins Haus', 600, FLOOR - 251);
   // Rasen mit Mähstreifen
-  const gr = g.createLinearGradient(0, FLOOR, 0, H); gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f'); g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, H - FLOOR);
-  g.fillStyle = 'rgba(255,255,255,.07)'; for (let x = Math.floor(XL / 160) * 160; x < XR; x += 160) g.fillRect(x, FLOOR, 80, H - FLOOR);
+  const GB = H + (R.tall || 0), gr = g.createLinearGradient(0, FLOOR, 0, GB); gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f'); g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, GB - FLOOR + 60);
+  g.fillStyle = 'rgba(255,255,255,.07)'; for (let x = Math.floor(XL / 160) * 160; x < XR; x += 160) g.fillRect(x, FLOOR, 80, GB - FLOOR + 60);
+  if (R.tall) drawGartenUnten(R, t);
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   if (lief.feld) drawFeld();
   if (lief.kalender && !lief.tierhaus) drawKalWall();
@@ -7401,13 +7533,13 @@ function drawSeasonGround() {
   const s = season().id, t = performance.now() / 1000;
   if (s === 'winter') {
     g.fillStyle = 'rgba(200,215,235,.18)'; g.fillRect(XL, 0, VW, FLOOR);
-    g.fillStyle = 'rgba(245,250,255,.62)'; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+    g.fillStyle = 'rgba(245,250,255,.62)'; g.fillRect(XL, FLOOR, VW, (H + (ROOMS[cur].tall || 0)) - FLOOR);
     g.fillStyle = '#fbfdff'; for (let x = Math.floor(XL / 220) * 220; x < XR; x += 220) { g.beginPath(); g.ellipse(x + 60, FLOOR + 8, 70, 12, 0, Math.PI, 0); g.fill(); }
   } else if (s === 'herbst') {
-    g.fillStyle = 'rgba(230,140,40,.22)'; g.fillRect(XL, FLOOR, VW, H - FLOOR);
-    for (let i = 0; i < 40; i++) { const x = (Math.floor(XL / 2000) * 2000) + ((i * 523) % 2000), y = FLOOR + 30 + ((i * 197) % (H - FLOOR - 40)); if (x < XL - 20 || x > XR + 20) continue; g.fillStyle = ['#d9661a', '#c0392b', '#e0a10f'][i % 3]; g.beginPath(); g.ellipse(x, y, 9, 5, i, 0, 7); g.fill(); }
+    g.fillStyle = 'rgba(230,140,40,.22)'; g.fillRect(XL, FLOOR, VW, (H + (ROOMS[cur].tall || 0)) - FLOOR);
+    for (let i = 0; i < 40; i++) { const x = (Math.floor(XL / 2000) * 2000) + ((i * 523) % 2000), y = FLOOR + 30 + ((i * 197) % ((H + (ROOMS[cur].tall || 0)) - FLOOR - 40)); if (x < XL - 20 || x > XR + 20) continue; g.fillStyle = ['#d9661a', '#c0392b', '#e0a10f'][i % 3]; g.beginPath(); g.ellipse(x, y, 9, 5, i, 0, 7); g.fill(); }
   } else if (s === 'fruehling') {
-    for (let i = 0; i < 60; i++) { const x = (Math.floor(XL / 2400) * 2400) + ((i * 389) % 2400), y = FLOOR + 30 + ((i * 151) % (H - FLOOR - 40)); if (x < XL - 20 || x > XR + 20) continue; g.fillStyle = ['#ff8fc8', '#ffffff', '#ffd23a', '#c7a0ff'][i % 4]; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x + Math.cos(k * 1.256) * 4, y + Math.sin(k * 1.256) * 4, 3.2, 0, 7); g.fill(); } g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); }
+    for (let i = 0; i < 60; i++) { const x = (Math.floor(XL / 2400) * 2400) + ((i * 389) % 2400), y = FLOOR + 30 + ((i * 151) % ((H + (ROOMS[cur].tall || 0)) - FLOOR - 40)); if (x < XL - 20 || x > XR + 20) continue; g.fillStyle = ['#ff8fc8', '#ffffff', '#ffd23a', '#c7a0ff'][i % 4]; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x + Math.cos(k * 1.256) * 4, y + Math.sin(k * 1.256) * 4, 3.2, 0, 7); g.fill(); } g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); }
   }
 }
 function drawSeasonAir(dt) {
@@ -7427,6 +7559,9 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.57', 'Sprinkler & Botaniker', 'Gegossene Pflanzen wachsen doppelt so schnell – Sprinkler im Garten und ein Botaniker im Botanik-Haus'],
+  ['1.56', 'Großer Garten & Botanik-Haus', 'Der Garten wird nach unten größer (mit Teich) – unten steht ein Gewächshaus mit 16 Töpfen'],
+  ['1.55', 'Große Pflanztöpfe', '6 große Töpfe vorne am Tierhaus zum Anpflanzen'],
   ['1.54', 'Klicker-Upgrades 2', 'Autoklicker 5 (jede Sekunde) und Fünffach-Klick (5 € pro Klick)'],
   ['1.53', 'Zweites Tier & zweite Maid', 'Für 100.000 € ein zweites Haustier ausrüsten – und eine zweite Maid, die mithilft'],
   ['1.52', 'Klicker-Upgrades', 'Dreifach-Klick (3 € pro Klick) und Autoklicker 4 (alle 2 Sekunden)'],
@@ -7960,14 +8095,22 @@ function goldTick(id, d) {
   if (s.goldUntil <= gt.T) { s.goldAcc = 0; toast = { text: 'Der Goldmodus von ' + PETS[id].name + ' ist vorbei.', t: 3 }; s.goldUntil = 0; }
 }
 // Pflanzen im Topf
-function plantProgress(f) { return f.plant ? Math.min(1, (gt.T - f.plant.t0) / GROW_MIN) : 0; }
+function plantProgress(f) { return f.plant ? Math.min(1, (gt.T - f.plant.t0 + (f.plant.bonus || 0)) / GROW_MIN) : 0; }
+// Gegossene Pflanzen wachsen doppelt so schnell
+let waterT = null;
+function waterTick() {
+  if (waterT === null) { waterT = gt.T; return; } const d = gt.T - waterT; waterT = gt.T; if (d <= 0) return;
+  if (lief.sprinkler) for (const f of furn.garten || []) if (f.plant && (f.feld || f.gtopf)) f.plant.wet = gt.T + 30;
+  for (const room in furn) for (const f of furn[room] || []) if (f.plant && f.plant.wet && plantProgress(f) < 1) { const w = Math.min(d, Math.max(0, f.plant.wet - (gt.T - d))); if (w > 0) f.plant.bonus = (f.plant.bonus || 0) + w; }
+}
 function nearFurn(type) { if (build.on || fade.dir) return null; let best = null, bd = 1e9; for (const f of furn[cur] || []) { if (f.t !== type) continue; const rx = f.feld ? 70 : 170, ry = f.feld ? 70 : 130; if (Math.abs(bob.x - f.x) < rx && Math.abs(bob.y - f.y) < ry) { const d = Math.hypot(bob.x - f.x, bob.y - f.y); if (d < bd) { bd = d; best = f; } } } return best; }
-function topfLabel(f) { if (!f.plant) return 'Pflanzen'; const p = plantProgress(f); return p >= 1 ? 'Ernten' : SEEDS[f.plant.type].name + ' ' + Math.floor(p * 100) + ' %'; }
+function topfLabel(f) { if (!f.plant) return 'Pflanzen'; const p = plantProgress(f); return p >= 1 ? 'Ernten' : SEEDS[f.plant.type].name + ' ' + Math.floor(p * 100) + ' %' + (f.plant.wet > gt.T ? ' 💧' : ''); }
 function drawPlant(f) {
   if (!f.plant) return;
   const m = model('topf', f.r || 0), s = scaleAt(f.y), zc = m.ext.d / 2;
-  const bx = f.feld ? f.x : f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - m.L * zc * KX * s, by = f.feld ? f.y - 6 * s : f.y - (56 + zc * KY) * s;
+  const bx = f.feld ? f.x : f.x + (m.ext.fx0 + m.ext.fx1) / 2 * s - m.L * zc * KX * s, by = f.gtopf ? f.y - 88 * s : f.feld ? f.y - 6 * s : f.y - (56 + zc * KY) * s;
   const p = plantProgress(f), st = p >= 1 ? 3 : Math.floor(p * 3), type = f.plant.type, h = [24, 50, 80, 100][st];
+  if (f.plant.wet > gt.T && p < 1) { const tt = performance.now() / 1000; g.save(); g.fillStyle = 'rgba(30,110,200,.35)'; g.beginPath(); g.ellipse(bx, by + 2 * s, 22 * s, 6 * s, 0, 0, 7); g.fill(); g.fillStyle = '#4fb3ff'; for (let k = 0; k < 2; k++) { const dy = ((tt * 0.8 + k * 0.5) % 1); g.globalAlpha = 1 - dy; g.beginPath(); g.ellipse(bx + (k ? 14 : -14) * s, by - 30 * s + dy * 24 * s, 3.5 * s, 5 * s, 0, 0, 7); g.fill(); } g.restore(); }
   const t = performance.now() / 1000;
   g.save(); g.translate(bx, by); g.scale(s, s); g.rotate(Math.sin(t * 1.5 + f.x) * 0.04);
   g.strokeStyle = '#2a8a2a'; g.lineWidth = 6; g.lineCap = 'round';
@@ -7989,6 +8132,7 @@ function drawPlant(f) {
   g.restore();
 }
 function drawFurnItem(f) {
+  if (f.gtopf) { const s = scaleAt(f.y), w = 53 * s + 1, ph = 84 * s; g.lineWidth = 4; g.strokeStyle = LINE; cube(f.x - w / 2, f.y - ph, w, ph, 38 * s, mkPal('#b0552e', '#c4663a'), true, 0.45); g.fillStyle = '#4a2a14'; g.fillRect(f.x - w / 2 + 3, f.y - ph - 2, w - 6, 9 * s); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(f.x - w / 2, f.y - ph + 14 * s, w, 7 * s); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(f.x - w / 2, f.y - 14 * s, w, 14 * s); drawPlant(f); return; }
   if (f.feld) { drawPlant(f); return; }
   drawFurn(f.t, f.x, f.y, scaleAt(f.y), 1, f.r, f.t === 'trophaeenregal' ? regalExtra(f) : null); if (f.t === 'topf') drawPlant(f);
   if (f.t === 'napf' && f.food) {
@@ -8503,7 +8647,7 @@ function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   // große Räume: Kamera folgt Bob
   { const RW = ROOMS[cur].wide; XL = SXL; XR = SXR; VW = SVW; camX = 0;
-    const zt = cur === 'garten' && lief.tierhaus2 && !build.on && Math.abs(bob.x - TH.x) < 650 ? 0.68 : 1;
+    const zt = cur === 'garten' && lief.tierhaus2 && !build.on && Math.abs(bob.x - TH.x) < 650 && bob.y < H ? 0.68 : 1;
     if (camRoom !== cur) { camRoom = cur; camZ = zt; }
     camZ += (zt - camZ) * Math.min(1, dt * 2.5); if (Math.abs(camZ - zt) < 0.002) camZ = zt;
     let z = 1;
@@ -8513,8 +8657,8 @@ function frame(t) {
       camLeft = RW[1] - RW[0] <= vw ? (RW[0] + RW[1]) / 2 - vw / 2 : Math.max(RW[0], Math.min(RW[1] - vw, bob.x - vw / 2));
       camX = camLeft - SXL; XL = RW[0]; XR = RW[1]; VW = XR - XL;
     } else camLeft = SXL;
-    camZv = z; }
-  g.setTransform(camZv, 0, 0, camZv, -camZv * camLeft, H * (1 - camZv));
+    camZv = z; const tall = ROOMS[cur].tall || 0; camTop = tall ? Math.max(0, Math.min(tall, bob.y - H * 0.62)) : 0; }
+  g.setTransform(camZv, 0, 0, camZv, -camZv * camLeft, H * (1 - camZv) - camZv * camTop);
   let vx = (keys.has('r') ? 1 : 0) - (keys.has('l') ? 1 : 0);
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
@@ -8555,11 +8699,12 @@ function frame(t) {
   if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
   for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, a.ay || FLOOR + 70]); doorLock = true; }
-  if (cur === 'garten' && lief.tierhaus && !doorLock && !fade.dir && vy < -0.3 && Math.abs(bob.x - TH.x) < 75 && bob.y <= TH.y + 22) { go('tierhaus', [600, FLOOR + 70]); doorLock = true; }
+  if (cur === 'garten' && lief.botanik && ROOMS.garten.tall && !doorLock && !fade.dir && vy < -0.3 && Math.abs(bob.x - BH.x) < 75 && bob.y > BH.y - 10 && bob.y <= BH.y + 22) { go('botanik', [600, FLOOR + 70]); doorLock = true; }
+  if (cur === 'garten' && lief.tierhaus && !doorLock && !fade.dir && vy < -0.3 && bob.y < H && Math.abs(bob.x - TH.x) < 75 && bob.y <= TH.y + 22) { go('tierhaus', [600, FLOOR + 70]); doorLock = true; }
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); waterTick(); botanikerTick(dt); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -8578,6 +8723,9 @@ function frame(t) {
   if (cur === 'tierhaus2' && lief.haendler) list.push({ y: TR.y, f: drawTrader });
   if (cur === 'tierhaus2' && lief.investor) list.push({ y: TR2.y, f: drawInvestor });
   if (cur === 'garten' && lief.tierhaus) list.push({ y: TH.y, f: drawTierhausAussen });
+  if (cur === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ y: BH.y, f: drawBotanikAussen });
+  if (cur === 'garten' && lief.sprinkler) for (const [sx, sy] of SPRINK()) list.push({ y: sy, f: () => drawSprinkler(sx, sy) });
+  if (cur === 'botanik' && lief.botaniker) list.push({ y: BT.y, f: drawBotaniker });
   if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+' + clickVal() + ' €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+' + clickVal() + ' €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
   if (cur === petRoom() && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === petRoom() && lief.maid && lief.maidb && lief.hundehaus) list.push({ y: MD2.y, f: drawMaid2 });
