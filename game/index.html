@@ -2966,6 +2966,19 @@ Object.assign(OUTFITS, {
       g.fillStyle = 'rgba(140,200,255,.35)'; g.fillRect(hx + 16, hy + 28, HEAD.w - 32, 52); g.lineWidth = 5; g.strokeRect(hx + 16, hy + 28, HEAD.w - 32, 52);
       g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(hx + 26, hy + 34, 40, 10);
     } },
+  broker: { name: 'Händler', bp: mkPal('#1f2a44', '#2a3858'), noText: true,
+    bodyFront: (x, y, w, h) => {
+      g.strokeStyle = '#111'; g.lineWidth = 4;
+      g.fillStyle = '#f4f4f4'; g.beginPath(); g.moveTo(x + 80, y); g.lineTo(x + w / 2, y + 96); g.lineTo(x + w - 80, y); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#f0b90b'; g.beginPath(); g.moveTo(x + w / 2 - 10, y + 6); g.lineTo(x + w / 2 + 10, y + 6); g.lineTo(x + w / 2 + 14, y + 74); g.lineTo(x + w / 2, y + 90); g.lineTo(x + w / 2 - 14, y + 74); g.closePath(); g.fill(); g.lineWidth = 3; g.stroke();
+      g.fillStyle = '#16c784'; g.fillRect(x + 40, y + 30, 26, 6); g.fillStyle = '#fff'; g.fillRect(x + 42, y + 22, 8, 8);
+      g.fillStyle = '#c9a23a'; for (const by of [y + 104, y + 128]) { g.beginPath(); g.arc(x + w / 2, by, 5, 0, 7); g.fill(); g.lineWidth = 2; g.stroke(); }
+    },
+    front: (bx, by, hx, hy, t) => {
+      const HP = mkPal('#2a1c12', '#3a281a'); g.lineWidth = 4.5; g.strokeStyle = '#111';
+      cube(hx - 4 + 6 * t, hy - 22, HEAD.w + 8, 26, DEPTH + 6, HP, true, t);
+      cube(hx + HEAD.w * 0.45 + 6 * t, hy - 34, HEAD.w * 0.5, 14, DEPTH, HP, true, t);
+    } },
   kommissar: { name: 'Kommissar', bp: mkPal('#4a4f57', '#5a6069'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -4084,7 +4097,7 @@ let autoAcc = 0;
 function autoClickTick(dt) {
   if (!lief.auto || !lief.klick || apo.on) return;
   const id = activeList()[0]; if (!id) return;
-  const iv = lief.auto2 ? 4 : 5; autoAcc += dt; if (autoAcc < iv) return; autoAcc -= iv;
+  const iv = lief.auto3 ? 3 : lief.auto2 ? 4 : 5; autoAcc += dt; if (autoAcc < iv) return; autoAcc -= iv;
   earn(clickVal()); const p = petFor(id); if (p.room === cur) petClicks.push({ x: p.x, y: p.y - PETS[id].w * scaleAt(p.y) * 0.9, t: 0.9, auto: true });
 }
 cv.addEventListener('contextmenu', e => { if (!lief.klick) return; e.preventDefault(); const [x, y] = toCanvas(e); const pt = petAt(x, y); if (pt && !menu.open && !phone.open) openPetPanel(pt.id); });
@@ -4436,6 +4449,7 @@ function furnBox(f) {
 function solids(room) {
   const list = (ROOMS[room].objs || []).filter(o => !o.jailDoor || jailed()).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o.type === 'npc' ? { x: o.x - o.w / 2, w: o.w, base: o.base, depth: o.depth } : o);
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall) list.push(furnBox(f));
+  if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'garten' && lief.tierhaus) list.push({ x: TH.x - 220 - 54, w: 440 + 54, base: TH.y, depth: 90 });
   return list;
 }
@@ -4854,6 +4868,7 @@ const ADMIN = {
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
     ['Tierhaus', '#e8a25a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; saveLief(); gartenSetup(); }],
+    ['Krypto-Händler', '#1f2a44', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; lief.kralarm = true; lief.haendler = true; saveLief(); gartenSetup(); }],
     ['Tierhaus 2. Stock', '#c97a3a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; saveLief(); gartenSetup(); }],
     ['Autoklicker 2 + ×2', '#ffcc1a', () => { lief.klick = true; lief.auto = true; lief.auto2 = true; lief.klick2 = true; saveLief(); }],
     ['Alle Accessoires', '#9b5de5', () => { wear.accOwned = Object.keys(ACC); saveWear(); }],
@@ -5305,9 +5320,11 @@ const WEB_ITEMS = [
   { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
   { id: 'auto2', cat: 'haus', name: 'Autoklicker 2', price: 8000, desc: ['Klickt jetzt alle 4 statt', '5 Sekunden'], once: true, needs: 'auto' },
   { id: 'klick2', cat: 'haus', name: 'Doppel-Klick', price: 12000, desc: ['Jeder Klick aufs Tier', 'bringt 2 € statt 1 €'], once: true, needs: 'auto2' },
+  { id: 'auto3', cat: 'haus', name: 'Autoklicker 3', price: 18000, desc: ['Klickt jetzt alle 3 statt', '4 Sekunden'], once: true, needs: 'klick2' },
   { id: 'tierhaus', cat: 'haus', name: 'Tierhaus', price: 15000, desc: ['Neues Haus im Garten: Tierbett,', 'Napf, Klo, Maid & Kalender'], once: true, needs: 'hundehaus' },
   { id: 'kralarm', cat: 'haus', name: 'Profit-Alarm', price: 20000, desc: ['Krypto: Ziel-Plus', 'wird direkt angezeigt'], once: true },
   { id: 'tierhaus2', cat: 'haus', name: 'Tierhaus 2. Stock', price: 30000, desc: ['Das Tierhaus wird', 'zweistöckig'], once: true, needs: 'tierhaus' },
+  { id: 'haendler', cat: 'haus', name: 'Krypto-Händler', price: 40000, desc: ['Verkauft deine Krypto', 'beim Profit-Ziel'], once: true, needs: 'tierhaus2', needs2: 'kralarm' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
@@ -5326,10 +5343,10 @@ function webOrder(it) {
   if (it.acc) { wear.accOwned = wear.accOwned || []; if (wear.accOwned.includes(it.acc)) return; if (webHave(it) < it.price) { web.msg = 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; } webPay(it); wear.accOwned.push(it.acc); saveWear(); web.msg = it.name + ' gekauft! Anziehen im Kleiderschrank unter „Accessoires“.'; web.msgT = 4; return; }
   if (it.once) {
     if (lief[it.id]) return;
-    if (it.needs && !lief[it.needs]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === it.needs).name; web.msgT = 2.5; return; }
+    for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5383,6 +5400,8 @@ function webPic(id, cx, cy, sz) {
   if (id.startsWith('acc_')) { g.restore(); g.save(); drawBobFig(cx, cy + 50, sz / 640, 0.6, 0, 1, 'gruen', false, [id.slice(4)]); g.restore(); return; }
   if (id === 'kalender') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#fff'; g.fillRect(-36, -38, 72, 80); g.strokeRect(-36, -38, 72, 80); g.fillStyle = '#e0262b'; g.fillRect(-36, -38, 72, 22); g.strokeRect(-36, -38, 72, 22); g.fillStyle = '#555'; g.beginPath(); g.arc(-18, -38, 5, 0, 7); g.arc(18, -38, 5, 0, 7); g.fill(); g.fillStyle = '#111'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('17', 0, 12); g.restore(); return; }
   if (id === 'paesse') { g.fillStyle = '#272727'; g.fillRect(-46, -40, 92, 80); const gr = g.createLinearGradient(-46, -40, 30, 30); gr.addColorStop(0, 'rgba(255,225,74,.9)'); gr.addColorStop(1, 'rgba(255,225,74,0)'); g.fillStyle = gr; g.fillRect(-46, -40, 92, 80); g.lineWidth = 3; g.strokeStyle = '#fff'; g.strokeRect(-14, -14, 28, 28); g.strokeStyle = '#111'; g.strokeRect(-40, -10, 20, 20); g.strokeRect(20, -10, 20, 20); g.fillStyle = '#ffe14a'; g.fillRect(-30, -34, 60, 8); g.font = '900 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffe14a'; g.fillText('BOB-PASS', 0, 30); g.restore(); return; }
+  if (id === 'auto3') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#5fd36a'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('3s', 0, 2); g.restore(); return; }
+  if (id === 'haendler') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'broker', false, ['kopfhoerer']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#16c784'; g.beginPath(); g.moveTo(18, 14); g.lineTo(28, 4); g.lineTo(36, 9); g.lineTo(50, -4); g.stroke(); g.restore(); return; }
   if (id === 'tierhaus2') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 36, 100, 14); g.fillStyle = '#e8a25a'; g.fillRect(-30, -24, 60, 62); g.strokeRect(-30, -24, 60, 62); g.beginPath(); g.moveTo(-30, 8); g.lineTo(30, 8); g.stroke(); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-40, -22); g.lineTo(0, -50); g.lineTo(40, -22); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#c8ecff'; for (const [a, b] of [[-22, -16], [8, -16], [-22, 14], [8, 14]]) { g.fillRect(a, b, 14, 14); g.strokeRect(a, b, 14, 14); } g.fillStyle = '#ffd23a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2', 34, -40); g.restore(); return; }
   if (id === 'kralarm') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#f0b90b'; g.beginPath(); g.moveTo(-30, 20); g.quadraticCurveTo(-26, -34, 0, -36); g.quadraticCurveTo(26, -34, 30, 20); g.lineTo(38, 28); g.lineTo(-38, 28); g.closePath(); g.fill(); g.stroke(); circ(0, 36, 8, '#f0b90b'); g.stroke(); circ(0, -40, 6, '#f0b90b'); g.stroke(); g.fillStyle = '#16c784'; g.beginPath(); g.arc(30, -26, 18, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('+', 30, -25); g.restore(); return; }
   if (id === 'tierhaus') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 30, 100, 20); g.fillStyle = '#e8a25a'; g.fillRect(-36, -8, 72, 44); g.strokeRect(-36, -8, 72, 44); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-46, -6); g.lineTo(0, -46); g.lineTo(46, -6); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#5a2e14'; g.fillRect(-10, 10, 20, 26); g.fillStyle = '#c8ecff'; g.fillRect(-30, 0, 14, 14); g.fillRect(16, 0, 14, 14); g.restore(); return; }
@@ -5440,7 +5459,7 @@ function drawWeb(dt) {
   its.forEach((it, i) => {
     const r = Math.floor(i / L.cols) - web.scroll, c = i % L.cols, x = P.x + 25 + c * (L.cw + L.gap), y = L.gy + r * (L.ch + 14);
     if (y > P.y + P.h || y + L.ch < L.gy) return;
-    const own = it.acc ? (wear.accOwned || []).includes(it.acc) : it.once && lief[it.id], lock = it.needs && !lief[it.needs], ok = !own && !lock && webHave(it) >= it.price, hov = web.hover === it.id;
+    const own = it.acc ? (wear.accOwned || []).includes(it.acc) : it.once && lief[it.id], lock = (it.needs && !lief[it.needs]) || (it.needs2 && !lief[it.needs2]), ok = !own && !lock && webHave(it) >= it.price, hov = web.hover === it.id;
     g.fillStyle = '#fff'; g.fillRect(x, y, L.cw, 132); webPic(it.id, x + L.cw / 2, y + 66, 110);
     outl(it.name, x + L.cw / 2, y + 160, '800 25px "Trebuchet MS", system-ui', '#fff', 5);
     outl('Preis: ' + it.price + ' €' + (webCur(it) === 'bar' ? ' bar' : ''), x + L.cw / 2, y + 194, '800 24px "Trebuchet MS", system-ui', webCur(it) === 'bar' ? '#ffd23a' : '#5aff3a', 5);
@@ -5766,21 +5785,60 @@ addEventListener('keydown', e => {
   else return;
   e.preventDefault(); e.stopImmediatePropagation();
 }, true);
+// Upgrade: Krypto-Händler verkauft automatisch beim Profit-Ziel
+const TR = { x: 980, y: 560, sold: [], sayT: 0, say: '' };
+function traderTick() {
+  if (!lief.haendler || !lief.kralarm) return;
+  for (const k of Object.keys(COINS)) {
+    const t = kr.al[k] || 0; if (t <= 0 || !((kr.hold[k] || 0) > 0)) continue;
+    const pl = krPL(k); if (pl < t) continue;
+    const net = krNet(k), keep = toast; krSell(k, 1); toast = keep;
+    TR.sold.push({ k, net, pl, t: performance.now() }); TR.say = COINS[k].sym + ' verkauft: +' + money(pl); TR.sayT = 5;
+  }
+  TR.sold = TR.sold.filter(o => performance.now() - o.t < 6000);
+}
+function drawTrader() {
+  const s = scaleAt(TR.y), k = BASE_W / BODY.w * s, t = performance.now() / 1000, x = TR.x, y = TR.y, fx = x - 70 * s;
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
+  // Bürostuhl (hinter Bob)
+  cube(fx - 100 * s, y - 300 * s, 200 * s, 200 * s, 30 * s, mkPal('#2a2d33', '#3a3e46'), true, 0.3);
+  g.restore();
+  drawBobFig(fx, y - 105 * s, k, 0.35 + Math.sin(t * 0.7) * 0.2, Math.sin(t * 2) * 1.5, 1, 'broker', false, ['kopfhoerer']);
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
+  // Schreibtisch vor ihm
+  const dw = 420 * s, dh = 26 * s, dx = x - dw / 2, dy = y - 95 * s, WOOD = mkPal('#8a5a30', '#a06a3a');
+  cube(dx, dy, dw, dh, 60 * s, WOOD, true, 0.3);
+  cube(dx + 14 * s, dy + dh, 24 * s, 95 * s - dh, 20 * s, WOOD, false, 0.3); cube(dx + dw - 38 * s, dy + dh, 24 * s, 95 * s - dh, 20 * s, WOOD, false, 0.3);
+  cube(dx + 50 * s, dy + dh, dw - 100 * s, 50 * s, 16 * s, WOOD, false, 0.3);
+  // PC-Bildschirm (zum Spieler gedreht) mit Kurs
+  const mw = 150 * s, mh = 100 * s, mx = x + 50 * s, my = dy - mh - 30 * s;
+  cube(mx + mw / 2 - 8 * s, my + mh, 16 * s, 30 * s, 10 * s, mkPal('#2a2d33'), false, 0.3);
+  cube(mx, my, mw, mh, 12 * s, mkPal('#2a2d33', '#3a3e46'), true, 0.3);
+  g.fillStyle = '#0b0e14'; g.fillRect(mx + 7 * s, my + 7 * s, mw - 14 * s, mh - 14 * s);
+  const keys = Object.keys(COINS), ck = keys[Math.floor(t / 4) % keys.length], hist = kr.h[ck] || [];
+  if (hist.length > 2) { const d = hist.slice(-40), mn = Math.min(...d), mxv = Math.max(...d), up = d[d.length - 1] >= d[0]; g.strokeStyle = up ? '#16c784' : '#ea3943'; g.lineWidth = 2.5; g.beginPath(); d.forEach((v, i) => { const px = mx + 12 * s + i / (d.length - 1) * (mw - 24 * s), py = my + mh - 14 * s - (mxv > mn ? (v - mn) / (mxv - mn) : 0.5) * (mh - 40 * s); i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke(); }
+  g.fillStyle = '#cfd6e4'; g.font = `800 ${Math.round(13 * s)}px system-ui`; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(COINS[ck].sym, mx + 12 * s, my + 18 * s);
+  // Tastatur + Tasse
+  cube(fx - 50 * s, dy - 8 * s, 110 * s, 8 * s, 30 * s, mkPal('#3a3e46', '#4a4f58'), true, 0.3);
+  cube(dx + 30 * s, dy - 34 * s, 26 * s, 34 * s, 16 * s, mkPal('#ffffff', '#f0f0f0'), true, 0.3);
+  if (TR.sayT > 0) { TR.sayT -= 1 / 60; g.font = '800 18px system-ui'; const tw = g.measureText(TR.say).width + 28, bx = x - tw / 2, by = y - 380 * s; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 12); g.fill(); g.stroke(); g.fillStyle = '#13a36b'; g.textAlign = 'center'; g.fillText(TR.say, x, by + 20); }
+  g.restore();
+}
 // Alarm-Anzeige außerhalb vom Handy
 const krHit = {};
 function krAlarms() { if (!lief.kralarm) return []; const L = []; for (const k of Object.keys(COINS)) { const t = kr.al[k] || 0; if (t > 0 && (kr.hold[k] || 0) > 0) { const pl = krPL(k); if (pl >= t) { if (!krHit[k]) krHit[k] = performance.now(); L.push({ k, pl, t }); continue; } } krHit[k] = 0; } return L; }
 function drawKrAlarm() {
-  const L = krAlarms(); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
+  const L = krAlarms().concat(TR.sold.map(o => ({ k: o.k, pl: o.pl, sold: o }))); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
   const now = performance.now();
   L.forEach((a, i) => {
-    const c = COINS[a.k], w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - krHit[a.k]) / 1000;
+    const c = COINS[a.k], w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - (a.sold ? a.sold.t : krHit[a.k])) / 1000;
     const slide = Math.min(1, age * 4), xx = x + (1 - slide) * (w + 40);
     g.save();
     g.fillStyle = 'rgba(12,16,26,.88)'; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.fill();
     g.strokeStyle = '#16c784'; g.lineWidth = 3; g.globalAlpha = age < 4 ? 0.5 + 0.5 * Math.abs(Math.sin(age * 6)) : 0.8; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.stroke(); g.globalAlpha = 1;
     krCoinIcon(a.k, xx + 30, y + h / 2, 17);
-    g.fillStyle = '#8a93a6'; g.font = '700 12px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(c.sym + ' · Ziel +' + money(a.t) + ' erreicht', xx + 58, y + 18);
-    g.fillStyle = '#16c784'; g.font = '900 19px system-ui'; g.fillText('+' + money(a.pl) + ' beim Verkauf', xx + 58, y + 38);
+    g.fillStyle = '#8a93a6'; g.font = '700 12px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(a.sold ? c.sym + ' · vom Händler verkauft' : c.sym + ' · Ziel +' + money(a.t) + ' erreicht', xx + 58, y + 18);
+    g.fillStyle = '#16c784'; g.font = '900 19px system-ui'; g.fillText('+' + money(a.pl) + (a.sold ? ' aufs Konto' : ' beim Verkauf'), xx + 58, y + 38);
     g.restore();
   });
 }
@@ -6923,6 +6981,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.46', 'Krypto-Händler', 'Autoklicker 3 (alle 3 s) und ein Händler oben im Tierhaus, der deine Krypto beim Profit-Ziel verkauft'],
   ['1.45', 'Tierhaus 2. Stock', 'Das Tierhaus wird zweistöckig – in der Nähe zoomt die Kamera raus'],
   ['1.44', 'Profit-Alarm', 'Krypto: Ziel-Plus pro Währung einstellen – erreicht, wird es direkt auf dem Bildschirm angezeigt'],
   ['1.43', 'Fähigkeiten & Tasten', 'Outfits und Accessoires können Fähigkeiten haben (oben links) – Bobi reitet auf einer Welle. Alle Tasten frei belegbar'],
@@ -8046,7 +8105,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); abilTick(dt); kryptoTick(dt); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); abilTick(dt); kryptoTick(dt); traderTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -8062,6 +8121,7 @@ function frame(t) {
   list.push({ y: -1e9, f: drawSeasonGround });
   if (cur === petRoom() && lief.hundehaus) list.push({ y: HH.y, f: lief.tierhaus ? drawTierbett : drawHundehaus });
   if (cur === petRoom() && lief.klo) list.push({ y: KLO.y, f: drawKlo });
+  if (cur === 'tierhaus2' && lief.haendler) list.push({ y: TR.y, f: drawTrader });
   if (cur === 'garten' && lief.tierhaus) list.push({ y: TH.y, f: drawTierhausAussen });
   if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+' + clickVal() + ' €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+' + clickVal() + ' €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
   if (cur === petRoom() && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
