@@ -974,6 +974,7 @@ function openMarkt(o) {
     for (const [k, p] of Object.entries(MARKT_KLEIDER)) { const have = wear.owned.includes(k); it.push({ label: OUTFITS[k].name, mk: k, price: p, tag: have ? 'hast du' : money(p), tagCol: have ? '#777' : c >= p ? '#0a8a1f' : '#c0392b', disabled: have || c < p }); }
   } else if (o.shop === 'ware') {
     menu.title = 'Ware – nur Bargeld: ' + money(c);
+    if (!lief.lieferant) it.push({ label: 'Lieferant: holt deine Geldpflanzen ab', mw: 'lieferant', price: 2500, tag: money(2500), tagCol: c >= 2500 ? '#0a8a1f' : '#c0392b', disabled: c < 2500 });
     if (!dw.access) it.push({ label: 'Darkweb-Zugang fürs Handy', mw: 'darkweb', price: 300, tag: money(300), tagCol: c >= 300 ? '#0a8a1f' : '#c0392b', disabled: c < 300 });
     for (const [label, key, p] of [['Goldfutter Lv4', 'food4', 90], ['Geldsamen', 'geld', 120], ['Mystery-Box', 'box', 50]]) it.push({ label, mw: key, price: p, tag: money(p), tagCol: c >= p ? '#0a8a1f' : '#c0392b', disabled: c < p });
   } else {
@@ -990,6 +991,7 @@ function marktBuy(it) {
   bank.cash -= it.price; saveBank();
   if (it.mk) { wear.owned.push(it.mk); saveWear(); toast = { text: OUTFITS[it.mk].name + ' gekauft! Im Kleiderschrank anziehen.', t: 3.5 }; }
   else if (it.mw === 'darkweb') { dw.access = true; saveDw(); if (!APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); toast = { text: 'Darkweb-Zugang gekauft! Neue App auf deinem Handy.', t: 4 }; }
+  else if (it.mw === 'lieferant') { lief.lieferant = true; saveLief(); toast = { text: 'Abgemacht. Mein Lieferant holt ab jetzt deine Geldpflanzen ab – 200 € Bares pro Stück.', t: 5 }; }
   else if (it.mw === 'food4') { garden.food[4] = (garden.food[4] || 0) + 1; saveGarden(); toast = { text: 'Goldfutter Lv4 gekauft – psst!', t: 3 }; }
   else if (it.mw === 'geld') { garden.seeds.geld = (garden.seeds.geld || 0) + 1; saveGarden(); toast = { text: 'Geldsamen gekauft!', t: 3 }; }
   else if (it.mw === 'box') {
@@ -6155,13 +6157,24 @@ function drawDesk(T, outfit, accs) {
   if (T.sayT > 0) { T.sayT -= 1 / 60; g.font = '800 18px system-ui'; const tw = g.measureText(T.say).width + 28, bx = x - tw / 2, by = y - 380 * s; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 12); g.fill(); g.stroke(); g.fillStyle = T === TR2 ? '#2f6fe0' : '#13a36b'; g.textAlign = 'center'; g.fillText(T.say, x, by + 20); }
   g.restore();
 }
+// Schwarzmarkt-Lieferant: holt alle 2 Spielstunden die Geldpflanzen ab und zahlt bar
+const LF_PREIS = 200; let lfLast = null; const LF_CARDS = [];
+function lieferantTick() {
+  for (let i = LF_CARDS.length - 1; i >= 0; i--) if (performance.now() - LF_CARDS[i].t > 6000) LF_CARDS.splice(i, 1);
+  if (!lief.lieferant) return; if (lfLast === null) lfLast = gt.T;
+  if (gt.T - lfLast < 120) return; lfLast = gt.T;
+  const n = garden.plants.geld || 0; if (n <= 0) return;
+  garden.plants.geld = 0; saveGarden(); const v = n * LF_PREIS; earn(v);
+  LF_CARDS.push({ n, v, t: performance.now() });
+}
 // Alarm-Anzeige außerhalb vom Handy
 const krHit = {};
 function krAlarms() { if (!lief.kralarm) return []; const L = []; for (const k of Object.keys(COINS)) { const t = kr.al[k] || 0; if (t > 0 && (kr.hold[k] || 0) > 0) { const pl = krPL(k); if (pl >= t) { if (!krHit[k]) krHit[k] = performance.now(); L.push({ k, pl, t }); continue; } } krHit[k] = 0; } return L; }
 function drawKrAlarm() {
-  const L = krAlarms().concat(TR.sold.map(o => ({ k: o.k, pl: o.pl, sold: o })), TR2.bought.map(o => ({ k: o.k, eur: o.eur, buy: o, sold: o }))); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
+  const L = krAlarms().concat(TR.sold.map(o => ({ k: o.k, pl: o.pl, sold: o })), TR2.bought.map(o => ({ k: o.k, eur: o.eur, buy: o, sold: o })), LF_CARDS.map(o => ({ lf: o, sold: o }))); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
   const now = performance.now();
   L.forEach((a, i) => {
+    if (a.lf) { const w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - a.lf.t) / 1000, xx = x + (1 - Math.min(1, age * 4)) * (w + 40); g.save(); g.fillStyle = 'rgba(12,16,26,.88)'; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.fill(); g.strokeStyle = '#c9a23a'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#ffc400'; g.beginPath(); g.arc(xx + 30, y + h / 2, 17, 0, 7); g.fill(); g.fillStyle = '#7a5a00'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', xx + 30, y + h / 2 + 1); g.fillStyle = '#8a93a6'; g.font = '700 12px system-ui'; g.textAlign = 'left'; g.fillText('Lieferant · ' + a.lf.n + ' Geldpflanze' + (a.lf.n > 1 ? 'n' : '') + ' abgeholt', xx + 58, y + 18); g.fillStyle = '#ffc400'; g.font = '900 19px system-ui'; g.fillText('+' + money(a.lf.v) + ' Bargeld', xx + 58, y + 38); g.restore(); return; }
     const c = COINS[a.k], w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - (a.sold ? a.sold.t : krHit[a.k])) / 1000;
     const slide = Math.min(1, age * 4), xx = x + (1 - slide) * (w + 40);
     g.save();
@@ -7557,6 +7570,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.58', 'Schwarzmarkt-Lieferant', 'Am Schwarzmarkt kaufbar: holt deine Geldpflanzen ab und zahlt 200 € bar pro Stück'],
   ['1.57', 'Sprinkler & Botaniker', 'Gegossene Pflanzen wachsen doppelt so schnell – Sprinkler im Garten und ein Botaniker im Botanik-Haus'],
   ['1.56', 'Großer Garten & Botanik-Haus', 'Der Garten wird nach unten größer (mit Teich) – unten steht ein Gewächshaus mit 16 Töpfen'],
   ['1.55', 'Große Pflanztöpfe', '6 große Töpfe vorne am Tierhaus zum Anpflanzen'],
@@ -8714,7 +8728,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); waterTick(); botanikerTick(dt); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); waterTick(); lieferantTick(); botanikerTick(dt); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
