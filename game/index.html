@@ -5196,6 +5196,7 @@ function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if 
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
   if (id === 'krypto') kr.tab = null;
+  if (id === 'clipz') cz.tab = null;
   if (id === 'bauen') {
     if (BUILD_ROOMS.includes(cur)) { togglePhone(false); toggleBuild(true); }
     else phone.app = 'bauen';
@@ -5207,12 +5208,12 @@ function phoneClick(x, y) {
   // Home-Leiste unten
   if (y > s.y + s.h - 40 && !phone.locked) { phone.app = null; return; }
   if (phone.locked) { lockClick(x, y); return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { if (phone.app === 'krypto' && kr.tab) kr.tab = null; else phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge' || phone.app === 'darkweb' || phone.app === 'krypto' || phone.app === 'clipz') jobsClick(x, y); return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { if (phone.app === 'krypto' && kr.tab) kr.tab = null; else if (phone.app === 'clipz' && cz.tab) cz.tab = null; else phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge' || phone.app === 'darkweb' || phone.app === 'krypto' || phone.app === 'clipz') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
   if (e.code === 'KeyH' && (phone.open || canPhone())) { togglePhone(); e.preventDefault(); }
-  else if (phone.open && e.code === 'Escape') { if (phone.app === 'krypto' && kr.tab) kr.tab = null; else if (phone.app) phone.app = null; else togglePhone(false); }
+  else if (phone.open && e.code === 'Escape') { if (phone.app === 'krypto' && kr.tab) kr.tab = null; else if (phone.app === 'clipz' && cz.tab) cz.tab = null; else if (phone.app) phone.app = null; else togglePhone(false); }
   else if (phone.open && !phone.locked && /^Digit[1-9]$/.test(e.code) && !phone.app) { const ap = APPS[+e.code.slice(5) - 1]; if (ap) openApp(ap.id); }
 });
 
