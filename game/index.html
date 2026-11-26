@@ -3078,7 +3078,9 @@ Object.assign(OUTFITS, {
     bodyFront: (x, y, w, h) => { g.strokeStyle = '#111'; g.lineWidth = 4; g.fillStyle = '#f4f4f4'; g.beginPath(); g.moveTo(x + 70, y); g.lineTo(x + w / 2, y + 110); g.lineTo(x + w - 70, y); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = '#c9a23a'; for (const by of [y + 70, y + 96, y + 122]) { g.beginPath(); g.arc(x + w / 2, by, 5, 0, 7); g.fill(); g.lineWidth = 2; g.stroke(); }
       g.strokeStyle = '#c9a23a'; g.lineWidth = 3; g.beginPath(); g.moveTo(x + 30, y + 60); g.quadraticCurveTo(x + 50, y + 80, x + 74, y + 66); g.stroke(); },
-    front: (bx, by, hx, hy, t) => { const HP = mkPal('#b8b8b8', '#d0d0d0'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 4 + 6 * t, hy - 18, HEAD.w + 8, 22, DEPTH + 6, HP, true, t); cube(hx - 4 + 6 * t, hy - 18, 30, 70, DEPTH + 6, HP, false, t); cube(hx + HEAD.w - 26 + 6 * t, hy - 18, 30, 70, DEPTH + 6, HP, false, t);
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#b8b8b8', '#d0d0d0'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 8 + 6 * t, hy + 4, 26, 52, DEPTH + 8, HP, false, t); cube(hx + HEAD.w - 18 + 6 * t, hy + 4, 26, 52, DEPTH + 8, HP, false, t);
+      cube(hx - 8 + 6 * t, hy - 26, HEAD.w + 16, 36, DEPTH + 8, HP, true, t);
+      g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let k = 0; k < 5; k++) { g.beginPath(); g.moveTo(hx + 20 + k * 44 + 6 * t, hy - 20); g.quadraticCurveTo(hx + 40 + k * 44 + 6 * t, hy - 6, hx + 56 + k * 44 + 6 * t, hy - 18); g.stroke(); } g.strokeStyle = '#111';
       g.lineWidth = 4; g.beginPath(); g.arc(hx + 76 + 6 * t, hy + 66, 22, 0, 7); g.stroke(); } },
   broker: { name: 'Händler', bp: mkPal('#1f2a44', '#2a3858'), noText: true,
     bodyFront: (x, y, w, h) => {
