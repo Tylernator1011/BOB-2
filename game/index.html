@@ -666,11 +666,12 @@ function drawPetCube(id, x, y, w, t, hop) {
 // Wem gehört was (bleibt im Browser gespeichert)
 let owned = [];
 try { owned = JSON.parse(localStorage.getItem('bob-tiere') || '[]').filter(k => PETS[k]); } catch (e) {}
-let activePet = null;
-try { activePet = localStorage.getItem('bob-tier-aktiv'); } catch (e) {}
+let activePet = null, activePet2 = null;
+try { activePet = localStorage.getItem('bob-tier-aktiv'); activePet2 = localStorage.getItem('bob-tier-aktiv2') || null; } catch (e) {}
 if (!owned.includes(activePet)) activePet = owned[0] || null;
-function saveOwned() { try { localStorage.setItem('bob-tiere', JSON.stringify(owned)); localStorage.setItem('bob-tier-aktiv', activePet || ''); } catch (e) {} }
-function activeList() { return !apo.on && activePet && owned.includes(activePet) && activePet !== labor.pet && activePet !== apo.pet ? [activePet] : []; }
+function saveOwned() { try { localStorage.setItem('bob-tiere', JSON.stringify(owned)); localStorage.setItem('bob-tier-aktiv', activePet || ''); localStorage.setItem('bob-tier-aktiv2', activePet2 || ''); } catch (e) {} }
+function petOk(id) { return id && owned.includes(id) && id !== labor.pet && id !== apo.pet; }
+function activeList() { if (apo.on) return []; const L = []; if (petOk(activePet)) L.push(activePet); if (lief.pet2 && petOk(activePet2) && activePet2 !== activePet) L.push(activePet2); return L; }
 // Kleidung pro Tier (bis jetzt nur „Normal“)
 const PET_OUTFITS = { normal: { name: 'Normal' } };
 let petWear = {};
@@ -705,13 +706,14 @@ function fullNapf(room) { return (furn[room] || []).find(f => f.t === 'napf' && 
 function updatePets(dt) {
   if (muellShake > 0) muellShake = Math.max(0, muellShake - dt);
   tickPetStats(dt);
-  for (const id of activeList()) {
-    const p = petFor(id); p.mode = p.mode || 'home';
+  const AL = activeList();
+  for (let pi = 0; pi < AL.length; pi++) {
+    const id = AL[pi], p = petFor(id); p.mode = p.mode || 'home';
     if (p.mode === 'gassi' || p.mode === 'tragen') {
       p.room = cur;
       if (p.mode === 'tragen') { p.x = bob.x; p.y = bob.y; p.moving = bob.moving; p.face = bob.face; }
       else {
-        const tx = bob.x - bob.face * 160 * scaleAt(bob.y), ty = bob.y + 8, ddx = tx - p.x, ddy = ty - p.y, m = Math.hypot(ddx, ddy);
+        const tx = bob.x - bob.face * (160 + pi * 140) * scaleAt(bob.y), ty = bob.y + 8 + pi * 30, ddx = tx - p.x, ddy = ty - p.y, m = Math.hypot(ddx, ddy);
         if (m > 500) { p.x = tx; p.y = ty; }
         else if (m > 24) { const sp = Math.min(m * 3, 460); p.x += ddx / m * sp * dt; p.y += ddy / m * sp * dt; p.moving = true; if (ddx < -3) p.face = -1; else if (ddx > 3) p.face = 1; }
         else p.moving = false;
@@ -1311,7 +1313,8 @@ function laborTick() {
 }
 function labIn(id) {
   labor = { pet: id, since: gt.T, paid: 0, baseLvl: statsOf(id).lvl || 1 }; saveLabor();
-  if (activePet === id) { activePet = owned.find(k => k !== id) || null; saveOwned(); }
+  if (activePet === id) { activePet = owned.find(k => k !== id && k !== activePet2) || null; saveOwned(); }
+  if (activePet2 === id) { activePet2 = null; saveOwned(); }
   toast = { text: PETS[id].name + ' ist jetzt im Labor. Pro Woche gibt es 1.000 €. Hol ihn vor Tag ' + LAB_DAYS + ' zurück!', t: 5 };
 }
 function labOut() { const id = labor.pet; labor = { pet: null, since: 0, paid: 0, baseLvl: 1 }; saveLabor(); activePet = id; saveOwned(); const p = petFor(id); p.room = cur; p.x = bob.x + 140; p.y = bob.y; p.mode = 'home'; toast = { text: PETS[id].name + ' ist wieder bei dir – jetzt Level ' + statsOf(id).lvl + '!', t: 4 }; }
@@ -1377,7 +1380,8 @@ function apoNight() { const p = (apo.t % APO_DAY) / APO_DAY; return p > 0.62 ? M
 function apoFresh(id) { return { on: true, pet: id, t: 0, hp: 100, food: 100, water: 100, boss: false, intro: 8, ammo: 12, bag: { dose: 1, wasser: 1, medi: 0 }, looted: {} }; }
 function startApo(id) {
   labor = { pet: null, since: 0, paid: 0, baseLvl: 1 }; saveLabor();
-  if (activePet === id) { activePet = owned.find(k => k !== id) || null; saveOwned(); }
+  if (activePet === id) { activePet = owned.find(k => k !== id && k !== activePet2) || null; saveOwned(); }
+  if (activePet2 === id) { activePet2 = null; saveOwned(); }
   apo = apoFresh(id); saveApo(); if (!wear.owned.includes('apo_bob')) wear.owned.push('apo_bob'); wear.on = 'apo_bob'; saveWear(); AP.en = []; AP.bul = []; AP.room = null; AP.bossE = null;
   togglePhone(false); menu.open = false; go('apo_lager', [600, 640]);
 }
@@ -3678,14 +3682,16 @@ function wrItems() {
 function wrOn() { if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
 function wrMaxScroll() { return Math.max(0, Math.ceil(wrItems().length / WR.cols) - WR.rows); }
 function openWardrobe(mode) {
-  wr.mode = mode || 'bob'; wr.open = true; wr.msg = ''; wr.pi = Math.max(0, owned.indexOf(activePet));
+  wr.mode = mode || 'bob'; wr.open = true; wr.msg = ''; wr.slot = 1; wr.pi = Math.max(0, owned.indexOf(activePet));
   wr.sel = Math.max(0, wrItems().indexOf(wrOn())); wr.scroll = 0; keys.clear(); joy.on = false;
 }
 function wrSwitchPet(d) {
   if (!owned.length) return;
   wr.pi = (wr.pi + d + owned.length) % owned.length; wr.scroll = 0; wr.sel = Math.max(0, wrItems().indexOf(wrOn()));
 }
-function wrPickPet() { const p = wrPet(); if (p && (p === labor.pet || p === apo.pet)) { toast = { text: PETS[p].name + ' ist gerade nicht da!', t: 2.5 }; return; } if (p && p !== activePet) { activePet = p; saveOwned(); const ps = petFor(p); if (cur === petRoom() && lief.hundehaus) { ps.room = petRoom(); ps.mode = 'home'; ps.x = HH.x + 200; ps.y = HH.y + 70; } else if (ps.room === cur) [ps.x, ps.y] = freeSpot(ps.x, ps.y, 60); } else if (p && cur === petRoom() && lief.hundehaus) { const ps = petFor(p); if (ps.room !== petRoom()) { ps.room = petRoom(); ps.mode = 'home'; ps.x = HH.x + 200; ps.y = HH.y + 70; } } }
+function wrPickPet() { const p = wrPet();
+  if (wr.slot === 2 && p) { if (p === labor.pet || p === apo.pet) { toast = { text: PETS[p].name + ' ist gerade nicht da!', t: 2.5 }; return; } if (p === activePet) activePet = activePet2 || owned.find(k => k !== p) || null; activePet2 = p; saveOwned(); const ps = petFor(p); if (cur === petRoom() && lief.hundehaus) { ps.room = petRoom(); ps.mode = 'home'; ps.x = HH.x + 320; ps.y = HH.y + 90; } else if (ps.room === cur) [ps.x, ps.y] = freeSpot(ps.x, ps.y, 60); return; }
+  if (p && p === activePet2) activePet2 = activePet; if (p && (p === labor.pet || p === apo.pet)) { toast = { text: PETS[p].name + ' ist gerade nicht da!', t: 2.5 }; return; } if (p && p !== activePet) { activePet = p; saveOwned(); const ps = petFor(p); if (cur === petRoom() && lief.hundehaus) { ps.room = petRoom(); ps.mode = 'home'; ps.x = HH.x + 200; ps.y = HH.y + 70; } else if (ps.room === cur) [ps.x, ps.y] = freeSpot(ps.x, ps.y, 60); } else if (p && cur === petRoom() && lief.hundehaus) { const ps = petFor(p); if (ps.room !== petRoom()) { ps.room = petRoom(); ps.mode = 'home'; ps.x = HH.x + 200; ps.y = HH.y + 70; } } }
 function wrCell(i) { const r = Math.floor(i / WR.cols) - wr.scroll, c = i % WR.cols; return { x: WR.gx + c * (WR.cw + WR.gap), y: WR.gy + r * (WR.ch + WR.gap), vis: r >= 0 && r < WR.rows }; }
 const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CLOSE = { x: W - 70, y: 70, r: 40 };
 function wrEquip(i) {
@@ -3830,7 +3836,7 @@ function drawWardrobe() {
       g.globalAlpha = 1;
     }
     marker(PETS[p].name, px, 682, PETS[p].name.length > 10 ? 32 : 40, '#fff');
-    const on = p === activePet;
+    const on = p === activePet || (lief.pet2 && p === activePet2);
     g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = on ? '#13f000' : '#fff';
     g.beginPath(); g.roundRect(u.btn.x, u.btn.y, u.btn.w, u.btn.h, 18); g.fill(); g.stroke();
     marker(on ? 'Ist dabei ✓' : 'Auswählen', px, u.btn.y + u.btn.h / 2 + 2, 32, '#111');
@@ -3902,8 +3908,8 @@ function openMenu() {
   if (nearMuell()) { wuehlen(); return; }
   { const hh = nearHundehaus(); if (hh) {
     menu.kind = 'hundehaus'; menu.title = lief.tierhaus ? 'Tierbett' : 'Haustier-Haus'; menu.hhNapf = hh;
-    const pet = activeList()[0];
-    menu.items = [{ label: 'Tier wählen', hh: 'tier', tag: pet ? PETS[pet].name : 'keins' }, { label: 'Napf füllen', hh: 'napf', tag: hh.food ? FOODS[hh.food].name : 'leer' }, { label: 'Abbrechen' }];
+    const pet = petOk(activePet) ? activePet : null, pet2 = petOk(activePet2) && activePet2 !== activePet ? activePet2 : null;
+    menu.items = [{ label: lief.pet2 ? 'Tier 1 wählen' : 'Tier wählen', hh: 'tier', tag: pet ? PETS[pet].name : 'keins' }, ...(lief.pet2 ? [{ label: 'Tier 2 wählen', hh: 'tier2', tag: pet2 ? PETS[pet2].name : 'keins' }] : []), { label: 'Napf füllen', hh: 'napf', tag: hh.food ? FOODS[hh.food].name : 'leer' }, { label: 'Abbrechen' }];
     MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now();
     menu.open = true; menu.sel = 0; keys.clear(); return;
   } }
@@ -3962,6 +3968,7 @@ function openMenu() {
 function choose(i) {
   const it = menu.items[i]; if (!it || it.disabled) return;
   menu.open = false;
+  if (it.hh === 'tier2') { if (owned.length < 2) { toast = { text: 'Du brauchst ein zweites Haustier – kauf eins im Tierladen.', t: 3 }; return; } openWardrobe('pet'); wr.slot = 2; wr.pi = Math.max(0, owned.indexOf(activePet2 || owned.find(k => k !== activePet))); return; }
   if (it.hh === 'tier') { if (!owned.length) { toast = { text: 'Du hast noch kein Haustier – kauf eins im Tierladen.', t: 3 }; return; } openWardrobe('pet'); return; }
   if (it.hh === 'napf') { napfMenu(menu.hhNapf); return; }
   if (it.dest) bump('bus');
@@ -5010,6 +5017,7 @@ const ADMIN = {
     ['Garten freischalten', '#45c43a', () => { lief.garten = true; saveLief(); gartenSetup(); }],
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
     ['Tierhaus', '#e8a25a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; saveLief(); gartenSetup(); }],
+    ['Zweites Tier + 2. Maid', '#ff8ac8', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.maid = true; lief.maid2 = true; lief.maidb = true; lief.pet2 = true; saveLief(); gartenSetup(); }],
     ['Krypto-Investor', '#1f4a36', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; lief.kralarm = true; lief.haendler = true; lief.investor = true; saveLief(); gartenSetup(); }],
     ['Krypto-Händler', '#1f2a44', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; lief.kralarm = true; lief.haendler = true; saveLief(); gartenSetup(); }],
     ['Tierhaus 2. Stock', '#c97a3a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; saveLief(); gartenSetup(); }],
@@ -5479,6 +5487,8 @@ const WEB_ITEMS = [
   { id: 'tierhaus2', cat: 'haus', name: 'Tierhaus 2. Stock', price: 30000, desc: ['Das Tierhaus wird', 'zweistöckig'], once: true, needs: 'tierhaus' },
   { id: 'haendler', cat: 'haus', name: 'Krypto-Händler', price: 40000, desc: ['Verkauft deine Krypto', 'beim Profit-Ziel'], once: true, needs: 'tierhaus2', needs2: 'kralarm' },
   { id: 'investor', cat: 'haus', name: 'Krypto-Investor', price: 50000, desc: ['Kauft ausgewählte Krypto', 'günstig nach einem Absturz'], once: true, needs: 'haendler' },
+  { id: 'maidb', cat: 'haus', name: 'Zweite Maid', price: 35000, desc: ['Zwei Maids teilen sich', 'Napf und Goldkacke'], once: true, needs: 'maid2' },
+  { id: 'pet2', cat: 'haus', name: 'Zweites Tier', price: 100000, desc: ['Rüste ein zweites', 'Haustier gleichzeitig aus'], once: true, needs: 'tierhaus' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
@@ -5500,7 +5510,7 @@ function webOrder(it) {
     for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5557,6 +5567,8 @@ function webPic(id, cx, cy, sz) {
   if (id === 'auto4') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#3cff5a'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2s', 0, 2); g.restore(); return; }
   if (id === 'klick3') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#7a5a00'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×3', 0, 3); g.restore(); return; }
   if (id === 'auto3') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#5fd36a'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('3s', 0, 2); g.restore(); return; }
+  if (id === 'maidb') { g.restore(); g.save(); drawBobFig(cx - sz * 0.22, cy + sz * 0.45, sz / 700, 0.4, 0, 1, 'maid', false); drawBobFig(cx + sz * 0.22, cy + sz * 0.45, sz / 700, -0.4, 0, 1, 'maid', false); g.restore(); return; }
+  if (id === 'pet2') { g.fillStyle = '#ffd0e8'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, 30, 52, 16, 0, 0, 7); g.fill(); g.stroke(); for (const [px, c] of [[-22, '#c98a4a'], [22, '#8a8a8a']]) { g.fillStyle = c; g.beginPath(); g.ellipse(px, 6, 20, 16, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.arc(px + (px < 0 ? -12 : 12), -14, 12, 0, 7); g.fill(); g.stroke(); } g.fillStyle = '#ffd23a'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×2', 0, -38); g.restore(); return; }
   if (id === 'investor') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'investor', false, ['fliege']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#4f8bff'; g.beginPath(); g.moveTo(18, -4); g.lineTo(28, 10); g.lineTo(36, 4); g.lineTo(50, 14); g.stroke(); g.fillStyle = '#4f8bff'; g.beginPath(); g.arc(28, 10, 4, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'haendler') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'broker', false, ['kopfhoerer']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#16c784'; g.beginPath(); g.moveTo(18, 14); g.lineTo(28, 4); g.lineTo(36, 9); g.lineTo(50, -4); g.stroke(); g.restore(); return; }
   if (id === 'tierhaus2') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 36, 100, 14); g.fillStyle = '#e8a25a'; g.fillRect(-30, -24, 60, 62); g.strokeRect(-30, -24, 60, 62); g.beginPath(); g.moveTo(-30, 8); g.lineTo(30, 8); g.stroke(); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-40, -22); g.lineTo(0, -50); g.lineTo(40, -22); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#c8ecff'; for (const [a, b] of [[-22, -16], [8, -16], [-22, 14], [8, 14]]) { g.fillRect(a, b, 14, 14); g.strokeRect(a, b, 14, 14); } g.fillStyle = '#ffd23a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2', 34, -40); g.restore(); return; }
@@ -5797,43 +5809,48 @@ function drawHundehaus() {
 }
 // ---------- Haus-Maid: passt auf dein Tier auf und füllt den Napf im Haustier-Haus ----------
 const MD = { x: HH.x + 260, y: HH.y + 110, st: 'idle', t: 2, say: '', sayT: 0, dir: -1, warned: 0 };
-function maidHome() { return [HH.x + 260, HH.y + 110]; }
+const MD2 = { x: HH.x - 260, y: HH.y + 110, st: 'idle', t: 3, say: '', sayT: 0, dir: 1, warned: 0 };
+function maidHome(M) { return M === MD2 ? [HH.x - 260, HH.y + 110] : [HH.x + 260, HH.y + 110]; }
 function maidNapf() { return (furn[petRoom()] || []).find(f => f.t === 'napf' && f.hh); }
 function maidBest() { for (const l of [4, 3, 2, 1]) if ((garden.food[l] || 0) > 0) return l; return 0; }
 function maidFill() {
   const n = maidNapf(), l = maidBest(); if (!n || n.food || !l) return false;
   garden.food[l]--; n.food = l; saveFurn(); saveGarden(); return l;
 }
-function maidTick(dt) {
+function maidTickOne(M, dt) {
   if (!lief.maid || !lief.hundehaus) return;
   const n = maidNapf(); if (!n) return;
-  if (MD.sayT > 0) MD.sayT -= dt;
+  if (M.sayT > 0) M.sayT -= dt;
   if (cur !== petRoom()) { // nicht da: sie macht es einfach
-    MD.st = 'idle'; [MD.x, MD.y] = maidHome();
-    if (!n.food) { const l = maidFill(); if (!l && gt.T - MD.warned > 240) { MD.warned = gt.T; toast = { text: '🧹 Deine Maid: „Das Futter ist alle! Bitte neues kaufen.“', t: 4 }; } }
+    M.st = 'idle'; [M.x, M.y] = maidHome(M);
+    if (!n.food) { const l = maidFill(); if (!l && gt.T - M.warned > 240) { M.warned = gt.T; if (M === MD) toast = { text: '🧹 Deine Maid: „Das Futter ist alle! Bitte neues kaufen.“', t: 4 }; } }
     return;
   }
-  const sp = 220 * dt, mv = (tx, ty) => { const dx = tx - MD.x, dy = ty - MD.y, d = Math.hypot(dx, dy); if (d < sp) { MD.x = tx; MD.y = ty; return true; } MD.x += dx / d * sp; MD.y += dy / d * sp * 0.8; MD.dir = dx < 0 ? -1 : 1; return false; };
+  const sp = 220 * dt, mv = (tx, ty) => { const dx = tx - M.x, dy = ty - M.y, d = Math.hypot(dx, dy); if (d < sp) { M.x = tx; M.y = ty; return true; } M.x += dx / d * sp; M.y += dy / d * sp * 0.8; M.dir = dx < 0 ? -1 : 1; return false; };
   const gc = lief.maid2 && (garden.coins[petRoom()] || []);
-  if (MD.st === 'idle' && gc && gc.length) { MD.coin = gc[0]; MD.st = 'coin'; MD.say = 'Oh, Goldkacke!'; MD.sayT = 1.4; }
-  if (MD.st === 'coin') { const c = MD.coin; if (!gc.includes(c)) { MD.st = 'back'; } else if (mv(c.x, c.y)) { gc.splice(gc.indexOf(c), 1); saveGarden(); bank.money += c.v; bank.log.push({ t: 'Maid: Goldkacke', v: c.v }); saveBank(); MD.say = '+' + money(c.v) + ' aufs Konto!'; MD.sayT = 1.8; MD.st = gc.length ? 'idle' : 'back'; } return; }
-  if (MD.st === 'idle') {
-    MD.t -= dt;
-    if (MD.t <= 0) {
-      MD.t = 2 + Math.random() * 2;
-      if (!n.food) { if (maidBest()) { MD.st = 'go'; MD.say = 'Ich hole Futter!'; MD.sayT = 1.5; } else if (gt.T - MD.warned > 120) { MD.warned = gt.T; MD.say = 'Das Futter ist alle!'; MD.sayT = 3; } }
-      else if (Math.random() < 0.35) { const pet = activeList()[0]; MD.say = pet ? ['Braves Tier!', PETS[pet].name + ' geht es gut.', 'Alles sauber hier.', 'Der Napf ist voll!'][Math.floor(Math.random() * 4)] : 'Alles sauber hier.'; MD.sayT = 2.2; }
+  const O = M === MD ? MD2 : MD, oc = lief.maidb && O.st === 'coin' ? O.coin : null, free = gc && gc.find(c => c !== oc);
+  if (M.st === 'idle' && free) { M.coin = free; M.st = 'coin'; M.say = 'Oh, Goldkacke!'; M.sayT = 1.4; }
+  if (M.st === 'coin') { const c = M.coin; if (!gc.includes(c)) { M.st = 'back'; } else if (mv(c.x, c.y)) { gc.splice(gc.indexOf(c), 1); saveGarden(); bank.money += c.v; bank.log.push({ t: 'Maid: Goldkacke', v: c.v }); saveBank(); M.say = '+' + money(c.v) + ' aufs Konto!'; M.sayT = 1.8; M.st = gc.length ? 'idle' : 'back'; } return; }
+  if (M.st === 'idle') {
+    M.t -= dt;
+    if (M.t <= 0) {
+      M.t = 2 + Math.random() * 2;
+      if (!n.food) { if (lief.maidb && (O.st === 'go' || O.st === 'fill')) {} else if (maidBest()) { M.st = 'go'; M.say = 'Ich hole Futter!'; M.sayT = 1.5; } else if (gt.T - M.warned > 120) { M.warned = gt.T; M.say = 'Das Futter ist alle!'; M.sayT = 3; } }
+      else if (Math.random() < 0.35) { const pet = activeList()[0]; M.say = pet ? ['Braves Tier!', PETS[pet].name + ' geht es gut.', 'Alles sauber hier.', 'Der Napf ist voll!'][Math.floor(Math.random() * 4)] : 'Alles sauber hier.'; M.sayT = 2.2; }
     }
-  } else if (MD.st === 'go') { if (mv(HH.x + 90, HH.y + 40)) { MD.st = 'fill'; MD.t = 1; } }
-  else if (MD.st === 'fill') { MD.t -= dt; if (MD.t <= 0) { const l = maidFill(); MD.say = l ? FOODS[l].name + ' – bitte schön!' : 'Hm, nichts mehr da.'; MD.sayT = 2.2; MD.st = 'back'; } }
-  else if (MD.st === 'back') { const [hx, hy] = maidHome(); if (mv(hx, hy)) { MD.st = 'idle'; MD.dir = -1; MD.t = 3; } }
+  } else if (M.st === 'go') { if (mv(HH.x + (M === MD ? 90 : -90), HH.y + 40)) { M.st = 'fill'; M.t = 1; } }
+  else if (M.st === 'fill') { M.t -= dt; if (M.t <= 0) { const l = maidFill(); M.say = l ? FOODS[l].name + ' – bitte schön!' : 'Hm, nichts mehr da.'; M.sayT = 2.2; M.st = 'back'; } }
+  else if (M.st === 'back') { const [hx, hy] = maidHome(M); if (mv(hx, hy)) { M.st = 'idle'; M.dir = -1; M.t = 3; } }
 }
-function drawMaid() {
-  const s = scaleAt(MD.y), k = BASE_W / BODY.w * s * 0.9, t = performance.now() / 1000, walk = MD.st === 'go' || MD.st === 'back';
+function maidTick(dt) { maidTickOne(MD, dt); if (lief.maidb) maidTickOne(MD2, dt); }
+function drawMaid() { drawMaidOne(MD); }
+function drawMaid2() { drawMaidOne(MD2); }
+function drawMaidOne(M) {
+  const s = scaleAt(M.y), k = BASE_W / BODY.w * s * 0.9, t = performance.now() / 1000, walk = M.st === 'go' || M.st === 'back';
   const hop = walk ? Math.abs(Math.sin(t * 9)) * 8 : Math.sin(t * 2) * 1.5;
-  drawBobFig(MD.x, MD.y, k, MD.dir, hop, 1, 'maid', true);
-  if (MD.st === 'fill') { g.fillStyle = FOODS[maidBest() || 1].col; g.beginPath(); g.arc(MD.x + MD.dir * 60 * s, MD.y - 120 * s + Math.sin(t * 10) * 6, 10 * s, 0, 7); g.fill(); }
-  if (MD.sayT > 0) { g.font = '700 18px system-ui'; const tw = g.measureText(MD.say).width + 28, bx = MD.x - tw / 2, by = MD.y - 330 * s - 40; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(MD.say, MD.x, by + 20); }
+  drawBobFig(M.x, M.y, k, M.dir, hop, 1, 'maid', true);
+  if (M.st === 'fill') { g.fillStyle = FOODS[maidBest() || 1].col; g.beginPath(); g.arc(M.x + M.dir * 60 * s, M.y - 120 * s + Math.sin(t * 10) * 6, 10 * s, 0, 7); g.fill(); }
+  if (M.sayT > 0) { g.font = '700 18px system-ui'; const tw = g.measureText(M.say).width + 28, bx = M.x - tw / 2, by = M.y - 330 * s - 40; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(M.say, M.x, by + 20); }
 }
 // Upgrade: Maid sammelt die goldene Kacke ein und zahlt sie aufs Konto
 function maidCoinTick() {
@@ -5877,7 +5894,7 @@ function gartenSetup() {
   ROOMS.pink.exits.d = 'garten';
   if (lief.feld) { furn.garten = furn.garten || []; if (!furn.garten.some(f => f.feld)) { for (const [x, y] of FELD.slots) furn.garten.push({ t: 'topf', x, y, r: 0, feld: true }); saveFurn(); } }
   if (lief.tierhaus) {
-    Object.assign(HH, { x: 1000, y: 640 }); Object.assign(KLO, { x: 1380, y: 620 }); Object.assign(KAL, { x: 150, y: 250 }); [MD.x, MD.y] = maidHome();
+    Object.assign(HH, { x: 1000, y: 640 }); Object.assign(KLO, { x: 1380, y: 620 }); Object.assign(KAL, { x: 150, y: 250 }); [MD.x, MD.y] = maidHome(MD); [MD2.x, MD2.y] = maidHome(MD2);
     ROOMS.garten.arches = ROOMS.garten.arches.filter(a => a.to !== 'tierhaus'); ROOMS.garten.arches.push({ x: TH.x, to: 'tierhaus', ax: 600, label: 'Tierhaus' });
     // Napf, Tiere und alles ziehen aus dem Garten ins Tierhaus
     furn.tierhaus = furn.tierhaus || []; const moved = (furn.garten || []).filter(f => f.hh); if (moved.length) { furn.garten = furn.garten.filter(f => !f.hh); furn.tierhaus.push(...moved); }
@@ -7405,6 +7422,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.53', 'Zweites Tier & zweite Maid', 'Für 100.000 € ein zweites Haustier ausrüsten – und eine zweite Maid, die mithilft'],
   ['1.52', 'Klicker-Upgrades', 'Dreifach-Klick (3 € pro Klick) und Autoklicker 4 (alle 2 Sekunden)'],
   ['1.51', 'Krypto-Investor', 'Ein Investor oben im Tierhaus kauft ausgewählte Krypto günstig nach Abstürzen'],
   ['1.50', 'Gold-Meisterrezept', 'Alle Gold-Rezepte machen so lange Goldkacke wie Futter Lv4'],
@@ -8556,6 +8574,7 @@ function frame(t) {
   if (cur === 'garten' && lief.tierhaus) list.push({ y: TH.y, f: drawTierhausAussen });
   if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+' + clickVal() + ' €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+' + clickVal() + ' €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
   if (cur === petRoom() && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
+  if (cur === petRoom() && lief.maid && lief.maidb && lief.hundehaus) list.push({ y: MD2.y, f: drawMaid2 });
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else { if (wave.t > 0 || wave.parts.length) list.push({ y: bob.y + 0.005, f: drawWave }); list.push({ y: bob.y + 0.01, f: drawBob }); } }
