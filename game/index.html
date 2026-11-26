@@ -4279,6 +4279,7 @@ cv.addEventListener('contextmenu', e => { if (!lief.klick) return; e.preventDefa
 cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, y] = toCanvas(e);
   if (!device) { deviceClick(x, y); return; }
   if (kb.open) { kbClick(x, y); return; }
+  if (vs.open) { vsClick(x, y); return; }
   if (abilClick(x, y)) return;
   if (stz.on) { stzClick(x, y); return; }
   if (apoClick(x, y)) return;
@@ -4626,6 +4627,7 @@ function solids(room) {
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall && !f.gtopf) list.push(furnBox(f));
   if (room === 'garten' && lief.toepfe && lief.tierhaus) { list.push({ x: TH.x - 225, w: 95, base: TH.y + 46, depth: 40 }); list.push({ x: TH.x + 130, w: 95, base: TH.y + 46, depth: 40 }); }
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
+  if (room === 'tierhaus2') for (const o of SRV) if (lief[o.id]) list.push({ x: o.x - 55, w: 110, base: SRV_Y, depth: 50 });
   if (room === 'tierhaus2' && lief.investor) list.push({ x: TR2.x - 220, w: 440, base: TR2.y, depth: 70 });
   if (room === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ x: BH.x - 260 - 54, w: 520 + 54, base: BH.y, depth: 90 });
   if (room === 'garten' && ROOMS.garten.tall) list.push({ x: 940, w: 480, base: 1200, depth: 80 });
@@ -5048,6 +5050,7 @@ const ADMIN = {
     ['Autoklicker', '#555b66', () => { lief.klick = true; lief.auto = true; saveLief(); }],
     ['Tierhaus', '#e8a25a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; saveLief(); gartenSetup(); }],
     ['Zweites Tier + 2. Maid', '#ff8ac8', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.maid = true; lief.maid2 = true; lief.maidb = true; lief.pet2 = true; saveLief(); gartenSetup(); }],
+    ['3 Server', '#26c6ff', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; lief.server1 = true; lief.server2 = true; lief.server3 = true; saveLief(); gartenSetup(); }],
     ['Krypto-Investor', '#1f4a36', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; lief.kralarm = true; lief.haendler = true; lief.investor = true; saveLief(); gartenSetup(); }],
     ['Krypto-Händler', '#1f2a44', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; lief.kralarm = true; lief.haendler = true; saveLief(); gartenSetup(); }],
     ['Tierhaus 2. Stock', '#c97a3a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; saveLief(); gartenSetup(); }],
@@ -5184,10 +5187,11 @@ const APPS = [
   { id: 'jobs',  name: 'Jobs',  col: '#7a4ae0' },
   { id: 'erfolge', name: 'Erfolge', col: '#ffb21a' },
   { id: 'krypto', name: 'Krypto', col: '#141a26' },
+  { id: 'clipz', name: 'Clipz', col: '#111111' },
   { id: 'einst', name: 'Optionen', col: '#4b5563' },
 ];
 setTimeout(() => { if (dw.access && !APPS.some(a => a.id === 'darkweb')) APPS.push({ id: 'darkweb', name: 'Darkweb', col: '#0b0f0c' }); });
-function canPhone() { return !kb.open && !web.open && !kal.open && !tres.on && !chase.on && !stz.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
+function canPhone() { return !vs.open && !kb.open && !web.open && !kal.open && !tres.on && !chase.on && !stz.on && !build.on && !wr.open && !menu.open && !bus && !fade.dir && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open; }
 function togglePhone(on) { phone.open = on ?? !phone.open; phone.app = null; if (phone.open) resetLock(); keys.clear(); joy.on = false; }
 function appRect(i) { const s = phoneScreen(), cols = 3, cw = (s.w - 40) / cols; return { x: s.x + 20 + (i % cols) * cw + (cw - 92) / 2, y: s.y + 230 + Math.floor(i / cols) * 140, w: 92, h: 92 }; }
 function openApp(id) {
@@ -5203,7 +5207,7 @@ function phoneClick(x, y) {
   // Home-Leiste unten
   if (y > s.y + s.h - 40 && !phone.locked) { phone.app = null; return; }
   if (phone.locked) { lockClick(x, y); return; }
-  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { if (phone.app === 'krypto' && kr.tab) kr.tab = null; else phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge' || phone.app === 'darkweb' || phone.app === 'krypto') jobsClick(x, y); return; }
+  if (phone.app) { if (y < s.y + 90 && x < s.x + 90) { if (phone.app === 'krypto' && kr.tab) kr.tab = null; else phone.app = null; return; } if (phone.app === 'jobs' || phone.app === 'admin' || phone.app === 'einst' || phone.app === 'erfolge' || phone.app === 'darkweb' || phone.app === 'krypto' || phone.app === 'clipz') jobsClick(x, y); return; }
   APPS.forEach((ap, i) => { const r = appRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h + 30) openApp(ap.id); });
 }
 addEventListener('keydown', e => {
@@ -5231,6 +5235,10 @@ function appIcon(id, x, y, sz) {
     g.fillStyle = '#fff'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('B', 2, 2);
     g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(-4, -22); g.lineTo(-4, -16); g.moveTo(6, -22); g.lineTo(6, -16); g.moveTo(-4, 18); g.lineTo(-4, 24); g.moveTo(6, 18); g.lineTo(6, 24); g.stroke();
     g.strokeStyle = '#16c784'; g.lineWidth = 4; g.beginPath(); g.moveTo(-36, 30); g.lineTo(-20, 20); g.lineTo(-8, 26); g.lineTo(12, 8); g.stroke();
+  } else if (id === 'clipz') {
+    g.fillStyle = '#ff2d7a'; g.beginPath(); g.roundRect(-32, -26, 64, 52, 14); g.fill(); g.stroke();
+    g.fillStyle = '#26e0ff'; g.beginPath(); g.roundRect(-28, -22, 64, 52, 14); g.globalAlpha = 0.6; g.fill(); g.globalAlpha = 1;
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(-8, -14); g.lineTo(14, 0); g.lineTo(-8, 14); g.closePath(); g.fill(); g.stroke();
   } else if (id === 'darkweb') {
     g.strokeStyle = '#3cff5a'; g.lineWidth = 4; g.beginPath(); g.arc(0, -4, 26, 0, 7); g.stroke();
     g.beginPath(); g.ellipse(0, -4, 11, 26, 0, 0, 7); g.stroke(); g.beginPath(); g.moveTo(-26, -4); g.lineTo(26, -4); g.stroke();
@@ -5327,6 +5335,8 @@ function drawPhone(dt) {
     drawDarkwebApp(s);
   } else if (phone.app === 'krypto') {
     drawKryptoApp(s);
+  } else if (phone.app === 'clipz') {
+    drawClipzApp(s);
   } else if (phone.app === 'inventar') {
     drawInventarApp(s);
   } else if (phone.app === 'einst') {
@@ -5532,6 +5542,9 @@ const WEB_ITEMS = [
   { id: 'tierhaus2', cat: 'haus', name: 'Tierhaus 2. Stock', price: 30000, desc: ['Das Tierhaus wird', 'zweistöckig'], once: true, needs: 'tierhaus' },
   { id: 'haendler', cat: 'haus', name: 'Krypto-Händler', price: 40000, desc: ['Verkauft deine Krypto', 'beim Profit-Ziel'], once: true, needs: 'tierhaus2', needs2: 'kralarm' },
   { id: 'investor', cat: 'haus', name: 'Krypto-Investor', price: 50000, desc: ['Kauft ausgewählte Krypto', 'günstig nach einem Absturz'], once: true, needs: 'haendler' },
+  { id: 'server1', cat: 'haus', name: 'Server 1', price: 30000, desc: ['Mint BitBob und bottet', 'Clipz-Views & Follower'], once: true, needs: 'tierhaus2' },
+  { id: 'server2', cat: 'haus', name: 'Server 2', price: 55000, desc: ['Noch ein Server:', 'doppelt so viel'], once: true, needs: 'server1' },
+  { id: 'server3', cat: 'haus', name: 'Server 3', price: 90000, desc: ['Dritter Server:', 'dreifache Leistung'], once: true, needs: 'server2' },
   { id: 'maidb', cat: 'haus', name: 'Zweite Maid', price: 35000, desc: ['Zwei Maids teilen sich', 'Napf und Goldkacke'], once: true, needs: 'maid2' },
   { id: 'pet2', cat: 'haus', name: 'Zweites Tier', price: 100000, desc: ['Rüste ein zweites', 'Haustier gleichzeitig aus'], once: true, needs: 'tierhaus' },
   { id: 'feld', cat: 'haus', name: 'Gemüsefeld', price: 1800, desc: ['Feld im Garten mit 8 Beeten:', 'pflanzen wie im Topf'], once: true, needs: 'garten' },
@@ -5546,6 +5559,7 @@ const WEB_ITEMS = [
   { id: 'tagliefer', cat: 'haus', name: 'Pflanzen-Lieferant', price: 20000, desc: ['Kommt 1× am Tag und kauft', 'alle Pflanzen (Bargeld)'], once: true, needs: 'garten' },
   { id: 'paesse', cat: 'haus', name: 'Pässe-Tab', price: 1000, desc: ['Schaltet Pässe im Kalender frei', '+ Bob-Pass mit 100 Leveln gratis'], once: true, needs: 'kalender' },
 ];
+setTimeout(() => { for (const [id, name, desc, price, n1, n2] of CZ_UP) { if (WEB_ITEMS.some(w => w.id === 'cz_' + id)) continue; const words = desc.split(' '), half = Math.ceil(words.length / 2); WEB_ITEMS.push({ id: 'cz_' + id, cat: 'haus', name: 'Clipz: ' + name, price, desc: [words.slice(0, half).join(' '), words.slice(half).join(' ')], once: true, needs: n1 ? 'cz_' + n1 : undefined, needs2: n2 ? 'cz_' + n2 : undefined }); } });
 const WEB_FILTERS = [['alle', 'Standard', '#ffffff'], ['konto', 'Konto', '#3cff5a']];
 const web = { open: false, filter: 'alle', scroll: 0, ui: null, msg: '', msgT: 0, t0: 0 };
 let lief = { orders: [], pkgs: [], snacks: {} };
@@ -5564,7 +5578,7 @@ function webOrder(it) {
     for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'lohn5' ? 'Ab jetzt bekommst du bei jedem Job den 5-fachen Stundenlohn!' : it.id === 'gold5' ? 'Ab jetzt ist jede Goldkacke 5× so viel wert!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'abot' ? 'Dein Gärtner ist im Garten! Sprich ihn an und erlaube ihm Samen.' : it.id === 'abot2' ? 'Der Meister-Gärtner erntet jetzt im Garten – die Pflanzen wachsen ab 25 % weiter!' : it.id === 'tagliefer' ? 'Der Pflanzen-Lieferant kommt ab jetzt jeden Tag um 18 Uhr und kauft alle deine Pflanzen – bar auf die Hand!' : it.id === 'botaniker2' ? 'Der Meister-Botaniker erntet jetzt im Botanik-Haus – die Pflanzen wachsen ab 25 % einfach weiter!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'klickbank' ? 'Ab jetzt geht das Klick-Geld direkt aufs Konto!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'lohn5' ? 'Ab jetzt bekommst du bei jedem Job den 5-fachen Stundenlohn!' : it.id === 'gold5' ? 'Ab jetzt ist jede Goldkacke 5× so viel wert!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'abot' ? 'Dein Gärtner ist im Garten! Sprich ihn an und erlaube ihm Samen.' : it.id === 'abot2' ? 'Der Meister-Gärtner erntet jetzt im Garten – die Pflanzen wachsen ab 25 % weiter!' : it.id === 'tagliefer' ? 'Der Pflanzen-Lieferant kommt ab jetzt jeden Tag um 18 Uhr und kauft alle deine Pflanzen – bar auf die Hand!' : it.id === 'botaniker2' ? 'Der Meister-Botaniker erntet jetzt im Botanik-Haus – die Pflanzen wachsen ab 25 % einfach weiter!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'klickbank' ? 'Ab jetzt geht das Klick-Geld direkt aufs Konto!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id.startsWith('cz_') ? it.name + ' gehört jetzt zu deinem Clipz-Team!' : it.id.startsWith('server') ? 'Dein Server läuft oben im Tierhaus! Er mint BitBob und bottet deine Clipz-Videos.' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5634,6 +5648,8 @@ function webPic(id, cx, cy, sz) {
   if (id === 'auto3') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#5fd36a'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('3s', 0, 2); g.restore(); return; }
   if (id === 'maidb') { g.restore(); g.save(); drawBobFig(cx - sz * 0.22, cy + sz * 0.45, sz / 700, 0.4, 0, 1, 'maid', false); drawBobFig(cx + sz * 0.22, cy + sz * 0.45, sz / 700, -0.4, 0, 1, 'maid', false); g.restore(); return; }
   if (id === 'pet2') { g.fillStyle = '#ffd0e8'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, 30, 52, 16, 0, 0, 7); g.fill(); g.stroke(); for (const [px, c] of [[-22, '#c98a4a'], [22, '#8a8a8a']]) { g.fillStyle = c; g.beginPath(); g.ellipse(px, 6, 20, 16, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.arc(px + (px < 0 ? -12 : 12), -14, 12, 0, 7); g.fill(); g.stroke(); } g.fillStyle = '#ffd23a'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×2', 0, -38); g.restore(); return; }
+  if (id.startsWith('cz_')) { g.fillStyle = '#ff2d7a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 60, 14); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText({ kamera: '🎥', cut1: '✂', cut2: '✂', dar1: '🎭', dar2: '🎭', dar3: '🎭', equip1: '📷', equip2: '💡', green: '🟩', manager: '📋' }[id.slice(3)] || '▶', 0, 2); if (/\d$/.test(id)) { g.fillStyle = '#ffd23a'; g.font = '900 18px system-ui'; g.fillText(id.slice(-1), 30, -26); } g.restore(); return; }
+  if (id.startsWith('server')) { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(-24, -40, 48, 80); g.strokeRect(-24, -40, 48, 80); for (let r = 0; r < 5; r++) { g.fillStyle = '#2f333b'; g.fillRect(-18, -34 + r * 15, 36, 11); g.fillStyle = r % 2 ? '#3cff5a' : '#26c6ff'; g.fillRect(-14, -31 + r * 15, 4, 4); g.fillRect(-7, -31 + r * 15, 4, 4); } g.fillStyle = '#26c6ff'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id.slice(-1), 34, -30); g.restore(); return; }
   if (id === 'investor') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'investor', false, ['fliege']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#4f8bff'; g.beginPath(); g.moveTo(18, -4); g.lineTo(28, 10); g.lineTo(36, 4); g.lineTo(50, 14); g.stroke(); g.fillStyle = '#4f8bff'; g.beginPath(); g.arc(28, 10, 4, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'haendler') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'broker', false, ['kopfhoerer']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#16c784'; g.beginPath(); g.moveTo(18, 14); g.lineTo(28, 4); g.lineTo(36, 9); g.lineTo(50, -4); g.stroke(); g.restore(); return; }
   if (id === 'tierhaus2') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 36, 100, 14); g.fillStyle = '#e8a25a'; g.fillRect(-30, -24, 60, 62); g.strokeRect(-30, -24, 60, 62); g.beginPath(); g.moveTo(-30, 8); g.lineTo(30, 8); g.stroke(); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-40, -22); g.lineTo(0, -50); g.lineTo(40, -22); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#c8ecff'; for (const [a, b] of [[-22, -16], [8, -16], [-22, 14], [8, 14]]) { g.fillRect(a, b, 14, 14); g.strokeRect(a, b, 14, 14); } g.fillStyle = '#ffd23a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2', 34, -40); g.restore(); return; }
@@ -6307,9 +6323,10 @@ function tagesLieferTick() {
 const krHit = {};
 function krAlarms() { if (!lief.kralarm) return []; const L = []; for (const k of Object.keys(COINS)) { const t = kr.al[k] || 0; if (t > 0 && (kr.hold[k] || 0) > 0) { const pl = krPL(k); if (pl >= t) { if (!krHit[k]) krHit[k] = performance.now(); L.push({ k, pl, t }); continue; } } krHit[k] = 0; } return L; }
 function drawKrAlarm() {
-  const L = krAlarms().concat(TR.sold.map(o => ({ k: o.k, pl: o.pl, sold: o })), TR2.bought.map(o => ({ k: o.k, eur: o.eur, buy: o, sold: o })), LF_CARDS.map(o => ({ lf: o, sold: o }))); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
+  const L = krAlarms().concat(TR.sold.map(o => ({ k: o.k, pl: o.pl, sold: o })), TR2.bought.map(o => ({ k: o.k, eur: o.eur, buy: o, sold: o })), LF_CARDS.map(o => ({ lf: o, sold: o })), CZ_CARDS.map(o => ({ czc: o, sold: o }))); if (!L.length || phone.open || build.on || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open) return;
   const now = performance.now();
   L.forEach((a, i) => {
+    if (a.czc) { const w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - a.czc.t) / 1000, xx = x + (1 - Math.min(1, age * 4)) * (w + 40); g.save(); g.fillStyle = 'rgba(12,16,26,.88)'; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.fill(); g.strokeStyle = '#ff2d7a'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#ff2d7a'; g.beginPath(); g.roundRect(xx + 12, y + 10, 36, 36, 8); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(xx + 24, y + 18); g.lineTo(xx + 38, y + 28); g.lineTo(xx + 24, y + 38); g.closePath(); g.fill(); g.fillStyle = '#8a93a6'; g.font = '700 12px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText('Clipz · Manager hat hochgeladen', xx + 58, y + 18); g.fillStyle = '#ffd23a'; g.font = '900 17px system-ui'; g.fillText('★'.repeat(a.czc.r.stars) + '☆'.repeat(5 - a.czc.r.stars) + '  ~' + fmtK(a.czc.r.target) + ' Views', xx + 58, y + 38); g.restore(); return; }
     if (a.lf) { const w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - a.lf.t) / 1000, xx = x + (1 - Math.min(1, age * 4)) * (w + 40); g.save(); g.fillStyle = 'rgba(12,16,26,.88)'; g.beginPath(); g.roundRect(xx, y, w, h, 14); g.fill(); g.strokeStyle = '#c9a23a'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#ffc400'; g.beginPath(); g.arc(xx + 30, y + h / 2, 17, 0, 7); g.fill(); g.fillStyle = '#7a5a00'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€', xx + 30, y + h / 2 + 1); g.fillStyle = '#8a93a6'; g.font = '700 12px system-ui'; g.textAlign = 'left'; g.fillText(a.lf.day ? 'Tages-Lieferant · ' + a.lf.n + ' Pflanze' + (a.lf.n > 1 ? 'n' : '') + ' verkauft' : 'Lieferant · ' + a.lf.n + ' Geldpflanze' + (a.lf.n > 1 ? 'n' : '') + ' abgeholt', xx + 58, y + 18); g.fillStyle = '#ffc400'; g.font = '900 19px system-ui'; g.fillText('+' + money(a.lf.v) + ' Bargeld', xx + 58, y + 38); g.restore(); return; }
     const c = COINS[a.k], w = 330, h = 56, x = XR - w - 18, y = 72 + i * (h + 8), age = (now - (a.sold ? a.sold.t : krHit[a.k])) / 1000;
     const slide = Math.min(1, age * 4), xx = x + (1 - slide) * (w + 40);
@@ -7706,6 +7723,8 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.66', 'Server', '3 Server oben im Tierhaus: minen BitBob und botten Views & Follower für Clipz'],
+  ['1.65', 'Clipz', 'Neue Social-Media-App: Videos filmen, schneiden und hochladen – mit Team (Kameramann, Cutter, Darsteller, Manager) und Studio-Ausrüstung'],
   ['1.64', 'Lohn-Turbo', 'Stundenlohn bei allen Jobs ×5'],
   ['1.63', 'Gold-Veredelung', 'Jede Goldkacke ist 5× so viel wert'],
   ['1.62', 'Die Wüste', 'Links hinter der Bank geht es über die Wüstenstraße in eine riesige Wüste – mit neuen Samen: Kaktus, Wüstenrose, Dattelpalme'],
@@ -8667,7 +8686,7 @@ addEventListener('keydown', e => {
 function abilTick(dt) { for (const k in abCd) if (abCd[k] > 0) abCd[k] = Math.max(0, abCd[k] - dt); waveTick(dt); }
 const ABH = { w: 268, h: 50, gap: 8 };
 function abilRect(i) { const y0 = apo.on && !apo.won && ROOMS[cur] && ROOMS[cur].apo ? 312 : 18; return { x: XL + 18, y: y0 + i * (ABH.h + ABH.gap), w: ABH.w, h: ABH.h }; }
-function abilHudOn() { return !(build.on || phone.open || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open || pp.open || bag.open || !device); }
+function abilHudOn() { return !(vs.open || build.on || phone.open || wr.open || menu.open || shopCat.open || wk.on || web.open || kal.open || kb.open || pp.open || bag.open || !device); }
 function abilClick(x, y) { if (!abilHudOn()) return false; const L = activeAbils(); for (let i = 0; i < L.length; i++) { const r = abilRect(i); if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) { useAbil(i); return true; } } return false; }
 function abilIcon(id, x, y, sz, t) {
   g.save(); g.translate(x, y); const q = sz / 40;
@@ -8769,6 +8788,239 @@ function drawWave() {
   g.globalAlpha = 1;
 }
 
+// ---------- Clipz: Social-Media-App ----------
+let cz = { f: 0, vids: [], earned: 0, today: -1, nToday: 0, T: null, pend: 0 };
+try { const c = JSON.parse(localStorage.getItem('bob-clipz') || 'null'); if (c && c.vids) cz = Object.assign(cz, c); } catch (er) {}
+function saveCz() { try { localStorage.setItem('bob-clipz', JSON.stringify(cz)); } catch (er) {} }
+const CZ_TOPICS = [
+  { id: 'tanz', name: 'Tanz', col: '#ff2d7a', titles: ['Mein neuer Tanz', 'Dieser Move ist krass', 'UNMÖGLICHER TANZ?! 😱'] },
+  { id: 'kochen', name: 'Kochen', col: '#ff9a1a', titles: ['Ich koche Suppe', 'Das beste Rezept ever', 'NIEMALS SO KOCHEN!!! 🔥'] },
+  { id: 'tier', name: 'Haustier', col: '#2fa84f', titles: ['Mein Tier ist süß', 'Mein Tier kann DAS', 'MEIN TIER SPRICHT?! 😳'] },
+  { id: 'fitness', name: 'Fitness', col: '#2f6fe0', titles: ['Mein Training', 'So wirst du stark', '1000 LIEGESTÜTZE?! 💪'] },
+];
+const CZ_MAX = 3, CZ_SEG = 12;
+const CZ_UP = [
+  ['kamera', 'Kameramann', 'Filmt für dich – kein Filmen mehr', 15000],
+  ['cut1', 'Cutter', 'Schneidet automatisch – kein Schneiden mehr', 12000],
+  ['cut2', 'Profi-Cutter', '+8 % Qualität', 30000, 'cut1'],
+  ['dar1', 'Darsteller 1', '+6 % Qualität, +10 % Views', 8000],
+  ['dar2', 'Darsteller 2', '+6 % Qualität, +10 % Views', 20000, 'dar1'],
+  ['dar3', 'Darsteller 3', '+6 % Qualität, +10 % Views', 45000, 'dar2'],
+  ['equip1', 'HD-Kamera', '+8 % Qualität', 10000],
+  ['equip2', 'Licht & Mikro', '+8 % Qualität', 25000, 'equip1'],
+  ['green', 'Greenscreen', '+8 % Qualität, +15 % Views', 35000],
+  ['manager', 'Manager', 'Lädt 3 Videos am Tag automatisch hoch', 60000, 'kamera', 'cut1'],
+];
+function czHas(k) { return !!lief['cz_' + k] || !!(cz.up && cz.up[k]); }
+function czBonusQ() { return (czHas('cut2') ? 0.08 : 0) + ['dar1', 'dar2', 'dar3'].filter(czHas).length * 0.06 + (czHas('equip1') ? 0.08 : 0) + (czHas('equip2') ? 0.08 : 0) + (czHas('green') ? 0.08 : 0); }
+function czBonusV() { return 1 + ['dar1', 'dar2', 'dar3'].filter(czHas).length * 0.1 + (czHas('green') ? 0.15 : 0); }
+function czAutoSeg() { const base = 0.55 + (czHas('equip1') ? 0.12 : 0) + (czHas('equip2') ? 0.12 : 0); return Array.from({ length: CZ_SEG }, () => Math.max(0, Math.min(1, base + (Math.random() - 0.5) * 0.6))); }
+function czAutoKeep(seg) { const k = seg.map(v => v >= 0.45); while (k.filter(Boolean).length < 6) { let bi = -1, bv = -1; seg.forEach((v, i) => { if (!k[i] && v > bv) { bv = v; bi = i; } }); k[bi] = true; } return k; }
+function czMake(topic, title, seg, keep) {
+  const T = CZ_TOPICS.find(x => x.id === topic), film = seg.reduce((a, v) => a + v, 0) / seg.length;
+  const kept = seg.filter((v, i) => keep[i]), cut = kept.reduce((a, v) => a + v, 0) / kept.length * Math.min(1, kept.length / 6);
+  const q = Math.max(0.05, Math.min(1, cut * 0.8 + film * 0.2 - (title === 2 ? 0.1 : 0) + czBonusQ()));
+  const trend = topic === czTrend(), stars = Math.max(1, Math.min(5, Math.round(q * 5)));
+  const target = Math.floor((80 + cz.f * (0.6 + 1.6 * q)) * (0.4 + 1.6 * q * q) * (trend ? 1.6 : 1) * [1, 1.2, 1.5][title] * czBonusV() * (0.75 + Math.random() * 0.55));
+  const v = { title: T.titles[title], topic, q, stars, views: 0, likes: 0, target, t0: gt.T };
+  cz.vids.push(v); if (cz.vids.length > 60) cz.vids.shift(); if (cz.today !== gDay()) { cz.today = gDay(); cz.nToday = 0; } cz.nToday++; saveCz();
+  return { title: v.title, stars, q, film, cut, target, trend };
+}
+const CZ_CARDS = [];
+// Server oben im Tierhaus: minen BitBob und botten Clipz-Views/Follower (pro Spielstunde, je Server)
+const SRV = [{ id: 'server1', x: 700 }, { id: 'server2', x: 1290 }, { id: 'server3', x: 1430 }], SRV_Y = 485;
+let srvT = null;
+function srvCount() { return SRV.filter(v => lief[v.id]).length; }
+function serverTick() {
+  const n = srvCount(); if (!n) { srvT = gt.T; return; } if (srvT === null) { srvT = gt.T; return; }
+  const d = gt.T - srvT; if (d < 10) return; srvT = gt.T; const h = d / 60;
+  const eur = 40 * n * h; kr.hold.btb = (kr.hold.btb || 0) + eur / kr.p.btb;
+  cz.f += 15 * n * h; const v = cz.vids[cz.vids.length - 1]; if (v) { const add = 180 * n * h; v.views += add; v.target += add; cz.pend += add * 0.03; }
+  lief.srvMined = (lief.srvMined || 0) + eur;
+}
+function drawServer(o) {
+  const x = o.x, y = SRV_Y, t = performance.now() / 1000, w = 110, h = 250; g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
+  cube(x - w / 2, y - h, w, h, 50, mkPal('#1b1d22', '#2a2d33'), true, 0.3);
+  for (let r = 0; r < 8; r++) { const ry = y - h + 18 + r * 28; g.fillStyle = '#2f333b'; g.fillRect(x - w / 2 + 8, ry, w - 16, 22); g.strokeStyle = '#111'; g.lineWidth = 2; g.strokeRect(x - w / 2 + 8, ry, w - 16, 22);
+    for (let k = 0; k < 4; k++) { const on = Math.sin(t * (6 + k * 1.7) + r * 2.3 + x) > 0; g.fillStyle = on ? (k % 3 ? '#3cff5a' : '#26c6ff') : '#1a3a20'; g.fillRect(x - w / 2 + 16 + k * 10, ry + 8, 6, 6); }
+    g.fillStyle = '#111'; for (let k = 0; k < 4; k++) g.fillRect(x + 8 + k * 9, ry + 5, 5, 12); }
+  g.fillStyle = 'rgba(38,198,255,.15)'; g.beginPath(); g.ellipse(x, y + 4, 70, 12, 0, 0, 7); g.fill();
+  g.fillStyle = '#26c6ff'; g.font = '800 14px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SERVER ' + (SRV.indexOf(o) + 1), x, y - h - 22);
+  g.restore();
+}
+function czManagerTick() {
+  for (let i = CZ_CARDS.length - 1; i >= 0; i--) if (performance.now() - CZ_CARDS[i].t > 6000) CZ_CARDS.splice(i, 1);
+  if (!czHas('manager') || vs.open) return; if (cz.today !== gDay()) { cz.today = gDay(); cz.nToday = 0; }
+  const slot = [10 * 60, 14 * 60, 18 * 60].filter(m => gMin() >= m).length; if (cz.nToday >= Math.min(CZ_MAX, slot)) return;
+  const topic = czTrend(), seg = czAutoSeg(), r = czMake(topic, 1, seg, czAutoKeep(seg));
+  CZ_CARDS.push({ t: performance.now(), r });
+}
+function czTrend() { return CZ_TOPICS[gDay() % CZ_TOPICS.length].id; }
+function fmtK(v) { v = Math.floor(v); return v >= 1e6 ? (v / 1e6).toFixed(1).replace('.', ',') + ' Mio.' : v >= 1e4 ? Math.floor(v / 1e3) + 'K' : v >= 1e3 ? (v / 1e3).toFixed(1).replace('.', ',') + 'K' : String(v); }
+function czTick() {
+  if (cz.T === null) { cz.T = gt.T; return; } const d = gt.T - cz.T; if (d <= 0) return; cz.T = gt.T;
+  let nv = 0;
+  for (const v of cz.vids) { const add = (v.target - v.views) * (1 - Math.exp(-d / 600)); if (add > 0) { v.views += add; nv += add; v.likes = Math.floor(v.views * (0.04 + v.q * 0.1)); } }
+  const q = cz.vids.length ? cz.vids.slice(-5).reduce((a, v) => a + v.q, 0) / Math.min(5, cz.vids.length) : 0;
+  cz.f += nv * 0.012 * (0.4 + q);
+  cz.pend += nv * 0.03 + cz.f * 0.004 * d / 60;
+  if (cz.pend >= 1) { const v = Math.floor(cz.pend); cz.pend -= v; bank.money += v; cz.earned += v; const L = bank.log[bank.log.length - 1]; if (L && L.t === 'Clipz') L.v += v; else bank.log.push({ t: 'Clipz', v }); saveBank(); saveCz(); }
+}
+function drawClipzApp(s) {
+  g.fillStyle = '#0e0e12'; g.fillRect(s.x, s.y, s.w, s.h); backBtn(s);
+  const btns = []; phone.ui = { btns }; const L = s.x + 18, Wd = s.w - 36;
+  const txt = (t, x, y, f, c, a) => { g.font = f; g.fillStyle = c; g.textAlign = a || 'left'; g.textBaseline = 'middle'; g.fillText(t, x, y); };
+  if (cz.tab === 'team') {
+    btns.push({ b: { x: s.x, y: s.y + 30, w: 90, h: 60 }, act: () => { cz.tab = null; } });
+    txt('Team & Studio', s.x + s.w / 2, s.y + 62, '900 22px system-ui', '#fff', 'center');
+    txt('Kaufen kannst du alles im bobnet', s.x + s.w / 2, s.y + 90, '600 12px system-ui', '#8a8a9a', 'center');
+    CZ_UP.forEach(([id, name, desc, price, n1, n2], i) => {
+      const y = s.y + 106 + i * 52, has = czHas(id), lock = (n1 && !czHas(n1)) || (n2 && !czHas(n2)), can = !has && !lock && bank.money >= price;
+      g.fillStyle = '#1a1a22'; g.beginPath(); g.roundRect(L, y, Wd, 46, 10); g.fill();
+      txt(name, L + 10, y + 15, '800 14px system-ui', has ? '#3cff5a' : '#fff'); txt(desc, L + 10, y + 33, '500 11px system-ui', '#8a8a9a');
+      const b = { x: L + Wd - 96, y: y + 8, w: 88, h: 30 };
+      g.fillStyle = has ? '#1f4a2a' : '#2a2a34'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 8); g.fill();
+      txt(has ? 'Hast du' : 'bobnet', b.x + b.w / 2, b.y + 15, '800 12px system-ui', has ? '#3cff5a' : '#6a6a7a', 'center');
+      if (false) btns.push({ b, act: () => { bank.money -= price; bank.log.push({ t: 'Clipz: ' + name, v: -price }); saveBank(); cz.up = cz.up || {}; cz.up[id] = true; saveCz(); } });
+    });
+    return;
+  }
+  g.save(); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#26e0ff'; g.fillText('Clipz', s.x + s.w / 2 + 2, s.y + 64); g.fillStyle = '#ff2d7a'; g.fillText('Clipz', s.x + s.w / 2 - 2, s.y + 62); g.fillStyle = '#fff'; g.fillText('Clipz', s.x + s.w / 2, s.y + 63); g.restore();
+  g.fillStyle = '#1a1a22'; g.beginPath(); g.roundRect(L, s.y + 92, Wd, 92, 14); g.fill();
+  const tv = cz.vids.reduce((a, v) => a + v.views, 0), cols = [['Follower', fmtK(cz.f)], ['Views', fmtK(tv)], ['Verdient', money(Math.floor(cz.earned))]];
+  cols.forEach(([a, b], i) => { const cx = L + Wd / 6 + i * Wd / 3; txt(b, cx, s.y + 126, '900 20px system-ui', '#fff', 'center'); txt(a, cx, s.y + 154, '600 12px system-ui', '#8a8a9a', 'center'); });
+  const tr = CZ_TOPICS.find(t => t.id === czTrend());
+  txt('🔥 Trend heute: ' + tr.name, s.x + s.w / 2, s.y + 204, '800 15px system-ui', '#ffd23a', 'center');
+  if (cz.today !== gDay()) { cz.today = gDay(); cz.nToday = 0; }
+  const ok = cz.nToday < CZ_MAX, b = { x: L, y: s.y + 222, w: Wd, h: 52 };
+  g.fillStyle = ok ? '#ff2d7a' : '#2a2a34'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill();
+  txt(ok ? '＋ Neues Video drehen (' + cz.nToday + '/' + CZ_MAX + ' heute)' : 'Heute schon ' + CZ_MAX + ' Videos – morgen wieder!', b.x + b.w / 2, b.y + 26, '800 16px system-ui', ok ? '#fff' : '#8a8a9a', 'center');
+  if (ok) btns.push({ b, act: () => { togglePhone(false); vsOpen(); } });
+  { const tb = { x: L, y: s.y + 280, w: Wd, h: 40 }; g.fillStyle = '#26324a'; g.beginPath(); g.roundRect(tb.x, tb.y, tb.w, tb.h, 12); g.fill(); txt('👥 Team & Studio (' + CZ_UP.filter(u => czHas(u[0])).length + '/' + CZ_UP.length + ')', tb.x + tb.w / 2, tb.y + 20, '800 15px system-ui', '#fff', 'center'); btns.push({ b: tb, act: () => { cz.tab = 'team'; } }); }
+  txt('Deine Videos', L, s.y + 340, '800 15px system-ui', '#cfcfdc');
+  if (!cz.vids.length) txt('Noch keine Videos. Dreh dein erstes!', s.x + s.w / 2, s.y + 384, '500 14px system-ui', '#6a6a7a', 'center');
+  const list = cz.vids.slice().reverse().slice(0, 4);
+  list.forEach((v, i) => {
+    const y = s.y + 356 + i * 68, T = CZ_TOPICS.find(t => t.id === v.topic) || CZ_TOPICS[0];
+    g.fillStyle = '#1a1a22'; g.beginPath(); g.roundRect(L, y, Wd, 60, 12); g.fill();
+    g.fillStyle = T.col; g.beginPath(); g.roundRect(L + 8, y + 8, 44, 44, 8); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(L + 24, y + 20); g.lineTo(L + 40, y + 30); g.lineTo(L + 24, y + 40); g.closePath(); g.fill();
+    g.save(); g.beginPath(); g.rect(L + 60, y, Wd - 70, 60); g.clip(); txt(v.title, L + 62, y + 20, '700 14px system-ui', '#fff'); g.restore();
+    txt('★'.repeat(v.stars) + '☆'.repeat(5 - v.stars), L + 62, y + 42, '700 13px system-ui', '#ffd23a');
+    txt(fmtK(v.views) + ' Views', L + Wd - 10, y + 20, '700 13px system-ui', '#cfcfdc', 'right'); txt('♥ ' + fmtK(v.likes || 0), L + Wd - 10, y + 42, '700 13px system-ui', '#ff2d7a', 'right');
+  });
+  if (cz.vids.length > 4) txt('+ ' + (cz.vids.length - 4) + ' ältere Videos', s.x + s.w / 2, s.y + 356 + 4 * 68 + 8, '500 12px system-ui', '#6a6a7a', 'center');
+}
+// ---------- Video-Studio (Minispiel: filmen, schneiden, hochladen) ----------
+const vs = { open: false, ph: 'thema', topic: null, t: 0, fx: 600, fy: 440, seg: [], cur: 0, n: 0, keep: [], title: -1, up: 0, k: new Set(), res: null };
+function vsOpen() { Object.assign(vs, { open: true, ph: 'thema', topic: null, t: 0, fx: W / 2, fy: 430, seg: [], keep: [], title: -1, up: 0, res: null, btns: [] }); vs.k.clear(); keys.clear(); }
+function vsSubj(t) { const r = vs.rnd; return [W / 2 + Math.sin(t * 0.6 * r[0] + r[1]) * 330 + Math.sin(t * 1.4 * r[2]) * 70, 440 + Math.sin(t * 0.9 * r[3] + r[4]) * 140 + Math.cos(t * 1.8) * 30]; }
+const VF = { w: 320, h: 230 };
+addEventListener('keydown', e => { if (!vs.open) return; vs.k.add(e.code); if (e.code === 'Escape' && vs.ph !== 'upload') vs.open = false; e.preventDefault(); e.stopImmediatePropagation(); }, true);
+addEventListener('keyup', e => { if (vs.open) vs.k.delete(e.code); });
+cv.addEventListener('pointermove', e => { if (!vs.open || vs.ph !== 'film') return; const [x, y] = toCanvas(e); vs.fx = x; vs.fy = y; });
+function vsClick(x, y) { for (const b of vs.btns || []) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { b.act(); return; } if (vs.ph === 'film') { vs.fx = x; vs.fy = y; } }
+function vsBtn(b, label, col, act, on = true) {
+  g.save(); g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.roundRect(b.x, b.y + 5, b.w, b.h, 14); g.fill();
+  g.fillStyle = on ? col : '#3a3a44'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill(); g.lineWidth = 3; g.strokeStyle = LINE; g.stroke();
+  g.fillStyle = on ? '#fff' : '#8a8a9a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1); g.restore();
+  if (on) vs.btns.push(Object.assign({ act }, b));
+}
+function vsScene(t, T) {
+  const bg = g.createLinearGradient(0, 120, 0, 760); bg.addColorStop(0, T.col); bg.addColorStop(1, '#141420'); g.fillStyle = bg; g.fillRect(XL, 110, XR - XL, 660);
+  g.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 12; i++) { g.beginPath(); g.arc(XL + ((i * 397) % (XR - XL)), 160 + ((i * 211) % 560), 30 + (i % 4) * 16, 0, 7); g.fill(); }
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(XL, 640, XR - XL, 130);
+  const [sx, sy] = vsSubj(t), hop = Math.abs(Math.sin(t * (T.id === 'tanz' ? 8 : 4))) * 14;
+  drawBobFig(sx, sy + 70, 0.42, Math.sin(t * 2) * 0.6, hop, 1, wear.on, true, accWorn());
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
+  if (T.id === 'kochen') { g.fillStyle = '#8a8f99'; g.beginPath(); g.roundRect(sx + 50, sy + 20, 70, 44, 8); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(sx + 66 + i * 18, sy + 6 - ((t * 40 + i * 20) % 50), 8, 0, 7); g.fill(); } }
+  if (T.id === 'tier') { g.fillStyle = '#c98a4a'; g.beginPath(); g.ellipse(sx + 90, sy + 54, 32, 22, 0, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.arc(sx + 118, sy + 30 - hop * 0.5, 16, 0, 7); g.fill(); g.stroke(); }
+  if (T.id === 'fitness') { g.fillStyle = '#333'; g.fillRect(sx - 90, sy - 70 + hop, 180, 10); g.strokeRect(sx - 90, sy - 70 + hop, 180, 10); for (const d of [-1, 1]) { g.fillRect(sx + d * 90 - 12, sy - 90 + hop, 24, 50); g.strokeRect(sx + d * 90 - 12, sy - 90 + hop, 24, 50); } }
+  if (T.id === 'tanz') { for (let i = 0; i < 3; i++) { g.fillStyle = ['#ffd23a', '#26e0ff', '#fff'][i]; g.font = '900 30px system-ui'; g.fillText('♪', sx - 80 + i * 70, sy - 120 - ((t * 60 + i * 30) % 60)); } }
+  g.restore(); return [sx, sy];
+}
+function drawStudio(dt) {
+  if (!vs.open) return; vs.btns = [];
+  const t = performance.now() / 1000;
+  g.save(); g.fillStyle = '#0e0e12'; g.fillRect(XL, 0, XR - XL, H);
+  g.font = '900 30px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText('🎬 Clipz Studio', XL + 30, 50);
+  const steps = ['Thema', 'Filmen', 'Schneiden', 'Hochladen'], si = { thema: 0, film: 1, schnitt: 2, upload: 3, fertig: 3 }[vs.ph];
+  steps.forEach((st, i) => { const x = W / 2 - 300 + i * 200; g.fillStyle = i <= si ? '#ff2d7a' : '#2a2a34'; g.beginPath(); g.roundRect(x, 30, 180, 40, 20); g.fill(); g.fillStyle = '#fff'; g.font = '800 16px system-ui'; g.textAlign = 'center'; g.fillText((i + 1) + '. ' + st, x + 90, 51); });
+  if (vs.ph === 'thema') {
+    g.fillStyle = '#cfcfdc'; g.font = '700 24px system-ui'; g.textAlign = 'center'; g.fillText('Worüber drehst du ein Video?', W / 2, 160);
+    CZ_TOPICS.forEach((T, i) => { const b = { x: W / 2 - 520 + i * 265, y: 220, w: 240, h: 300 }, tr = T.id === czTrend();
+      g.fillStyle = T.col; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 22); g.fill(); g.lineWidth = tr ? 6 : 3; g.strokeStyle = tr ? '#ffd23a' : LINE; g.stroke();
+      drawBobFig(b.x + b.w / 2, b.y + 200, 0.36, 0.4, Math.abs(Math.sin(t * 4 + i)) * 8, 1, wear.on, false);
+      g.fillStyle = '#fff'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.fillText(T.name, b.x + b.w / 2, b.y + 250);
+      if (tr) { g.fillStyle = '#ffd23a'; g.font = '900 18px system-ui'; g.fillText('🔥 TREND ×1,6', b.x + b.w / 2, b.y + 280); }
+      vs.btns.push(Object.assign({ act: () => { vs.topic = T.id; vs.ph = 'film'; vs.t = 0; if (czHas('kamera')) { vs.seg = czAutoSeg(); if (czHas('cut1')) { vs.keep = czAutoKeep(vs.seg); vs.ph = 'upload'; vs.title = -1; vs.up = 0; } else { vs.ph = 'schnitt'; vs.keep = vs.seg.map(() => true); } return; } vs.seg = []; vs.acc = 0; vs.accN = 0; vs.rnd = [0.6 + Math.random() * 0.8, Math.random() * 6, 0.6 + Math.random() * 0.8, 0.6 + Math.random() * 0.8, Math.random() * 6]; vs.fx = W / 2; vs.fy = 440; } }, b)); });
+    g.fillStyle = '#6a6a7a'; g.font = '600 16px system-ui'; g.fillText('Esc = abbrechen', W / 2, 600);
+  } else if (vs.ph === 'film') {
+    const T = CZ_TOPICS.find(x => x.id === vs.topic);
+    if (vs.t < 2) { vsScene(0, T); g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(XL, 110, XR - XL, 660); g.fillStyle = '#fff'; g.font = '900 120px system-ui'; g.textAlign = 'center'; g.fillText(vs.t < 1 ? '2' : '1', W / 2, 420); g.font = '700 22px system-ui'; g.fillText('Halte Bob im Kamera-Rahmen! (Maus oder WASD)', W / 2, 520); vs.t += dt; g.restore(); return; }
+    const ft = vs.t - 2, sp = 520 * dt;
+    if (vs.k.has('KeyA') || vs.k.has('ArrowLeft')) vs.fx -= sp; if (vs.k.has('KeyD') || vs.k.has('ArrowRight')) vs.fx += sp; if (vs.k.has('KeyW') || vs.k.has('ArrowUp')) vs.fy -= sp; if (vs.k.has('KeyS') || vs.k.has('ArrowDown')) vs.fy += sp;
+    vs.fx = Math.max(XL + VF.w / 2, Math.min(XR - VF.w / 2, vs.fx)); vs.fy = Math.max(110 + VF.h / 2, Math.min(770 - VF.h / 2, vs.fy));
+    const [sx, sy] = vsScene(ft, T), cx = sx, cy = sy - 20;
+    const dx = Math.abs(cx - vs.fx) / (VF.w / 2), dy = Math.abs(cy - vs.fy) / (VF.h / 2), d = Math.max(dx, dy), qq = d < 0.55 ? 1 : d < 1 ? 1 - (d - 0.55) / 0.45 * 0.7 : 0;
+    vs.acc += qq * dt; vs.accN += dt; const segI = Math.floor(ft); if (segI > vs.seg.length && vs.seg.length < CZ_SEG) { vs.seg.push(vs.acc / Math.max(0.001, vs.accN)); vs.acc = 0; vs.accN = 0; }
+    // Sucher: außen abdunkeln
+    const fx0 = vs.fx - VF.w / 2, fy0 = vs.fy - VF.h / 2; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(XL, 110, XR - XL, fy0 - 110); g.fillRect(XL, fy0 + VF.h, XR - XL, 770 - fy0 - VF.h); g.fillRect(XL, fy0, fx0 - XL, VF.h); g.fillRect(fx0 + VF.w, fy0, XR - fx0 - VF.w, VF.h);
+    g.strokeStyle = qq > 0.8 ? '#3cff5a' : qq > 0.3 ? '#ffd23a' : '#ff3b3b'; g.lineWidth = 5; const c = 30;
+    for (const [ax, ay, sx2, sy2] of [[fx0, fy0, 1, 1], [fx0 + VF.w, fy0, -1, 1], [fx0, fy0 + VF.h, 1, -1], [fx0 + VF.w, fy0 + VF.h, -1, -1]]) { g.beginPath(); g.moveTo(ax + sx2 * c, ay); g.lineTo(ax, ay); g.lineTo(ax, ay + sy2 * c); g.stroke(); }
+    if (Math.floor(t * 2) % 2) { g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(fx0 + 22, fy0 + 22, 9, 0, 7); g.fill(); } g.fillStyle = '#fff'; g.font = '800 16px system-ui'; g.textAlign = 'left'; g.fillText('REC', fx0 + 38, fy0 + 23);
+    // Zeitleiste
+    g.fillStyle = '#2a2a34'; g.fillRect(W / 2 - 400, 800, 800, 20); vs.seg.forEach((q, i) => { g.fillStyle = q > 0.75 ? '#3cff5a' : q > 0.4 ? '#ffd23a' : '#ff3b3b'; g.fillRect(W / 2 - 400 + i * 800 / CZ_SEG + 1, 800, 800 / CZ_SEG - 2, 20); });
+    g.fillStyle = '#fff'; g.fillRect(W / 2 - 400 + Math.min(1, ft / CZ_SEG) * 800 - 2, 794, 4, 32);
+    vs.t += dt;
+    if (ft >= CZ_SEG) { while (vs.seg.length < CZ_SEG) vs.seg.push(vs.acc / Math.max(0.001, vs.accN)); if (czHas('cut1')) { vs.keep = czAutoKeep(vs.seg); vs.ph = 'upload'; vs.title = -1; vs.up = 0; } else { vs.ph = 'schnitt'; vs.keep = vs.seg.map(() => true); } }
+  } else if (vs.ph === 'schnitt') {
+    g.fillStyle = '#cfcfdc'; g.font = '700 24px system-ui'; g.textAlign = 'center'; g.fillText('Schneide die schlechten Stellen raus (draufklicken)', W / 2, 150);
+    g.font = '600 17px system-ui'; g.fillStyle = '#8a8a9a'; g.fillText('Grün = gut · Gelb = okay · Rot = Bob war nicht im Bild · mindestens 5 Teile behalten', W / 2, 185);
+    const sw = Math.min(88, (XR - XL - 80) / CZ_SEG), x0 = W / 2 - sw * CZ_SEG / 2;
+    vs.seg.forEach((q, i) => { const b = { x: x0 + i * sw + 3, y: 240, w: sw - 6, h: 180 }, k = vs.keep[i];
+      g.fillStyle = q > 0.75 ? '#2fbf4a' : q > 0.4 ? '#d9b21a' : '#d23a3a'; g.globalAlpha = k ? 1 : 0.25; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 10); g.fill(); g.globalAlpha = 1;
+      g.fillStyle = '#fff'; g.font = '800 16px system-ui'; g.fillText(Math.round(q * 100) + '%', b.x + b.w / 2, b.y + b.h / 2);
+      if (!k) { g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(b.x + 10, b.y + 10); g.lineTo(b.x + b.w - 10, b.y + b.h - 10); g.moveTo(b.x + b.w - 10, b.y + 10); g.lineTo(b.x + 10, b.y + b.h - 10); g.stroke(); g.fillStyle = '#fff'; g.font = '900 22px system-ui'; g.fillText('✂', b.x + b.w / 2, b.y - 16); }
+      vs.btns.push(Object.assign({ act: () => { vs.keep[i] = !vs.keep[i]; } }, b)); });
+    const kept = vs.keep.filter(Boolean).length; g.fillStyle = kept >= 5 ? '#cfcfdc' : '#ff6b6b'; g.font = '700 20px system-ui'; g.fillText('Behalten: ' + kept + ' von ' + CZ_SEG + ' Teilen' + (kept < 5 ? ' – zu kurz!' : ''), W / 2, 470);
+    vsBtn({ x: W / 2 - 150, y: 520, w: 300, h: 60 }, 'Schnitt fertig', '#ff2d7a', () => { vs.ph = 'upload'; vs.title = -1; vs.up = 0; }, kept >= 5);
+  } else if (vs.ph === 'upload' || vs.ph === 'fertig') {
+    const T = CZ_TOPICS.find(x => x.id === vs.topic);
+    if (vs.ph === 'upload' && vs.up === 0) {
+      g.fillStyle = '#cfcfdc'; g.font = '700 24px system-ui'; g.textAlign = 'center'; g.fillText('Wähl einen Titel', W / 2, 160);
+      [['normal', '×1,0 Views', '#3a3a44'], ['spannend', '×1,2 Views', '#2f6fe0'], ['Clickbait', '×1,5 Views, aber −10 % Qualität', '#c0392b']].forEach(([lab, sub, col], i) => {
+        const b = { x: W / 2 - 330, y: 200 + i * 110, w: 660, h: 90 }, sel = vs.title === i; g.fillStyle = sel ? col : '#1a1a22'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 16); g.fill(); g.lineWidth = sel ? 4 : 2; g.strokeStyle = sel ? '#fff' : '#3a3a44'; g.stroke();
+        g.fillStyle = '#fff'; g.font = '800 22px system-ui'; g.fillText('„' + T.titles[i] + '“', W / 2, b.y + 36); g.fillStyle = '#9a9aaa'; g.font = '600 15px system-ui'; g.fillText(lab + ' · ' + sub, W / 2, b.y + 66);
+        vs.btns.push(Object.assign({ act: () => { vs.title = i; } }, b)); });
+      vsBtn({ x: W / 2 - 150, y: 560, w: 300, h: 60 }, '⬆ Hochladen', '#ff2d7a', () => { vs.up = 0.001; }, vs.title >= 0);
+    } else if (vs.ph === 'upload') {
+      vs.up = Math.min(1, vs.up + dt / 2.2); g.fillStyle = '#cfcfdc'; g.font = '700 26px system-ui'; g.textAlign = 'center'; g.fillText('Wird hochgeladen …', W / 2, 300);
+      g.fillStyle = '#2a2a34'; g.beginPath(); g.roundRect(W / 2 - 300, 340, 600, 30, 15); g.fill(); g.fillStyle = '#ff2d7a'; g.beginPath(); g.roundRect(W / 2 - 300, 340, 600 * vs.up, 30, 15); g.fill();
+      if (vs.up >= 1) vsFinish();
+    } else {
+      const r = vs.res; g.fillStyle = '#fff'; g.font = '900 40px system-ui'; g.textAlign = 'center'; g.fillText('Online! 🎉', W / 2, 200);
+      g.font = '800 24px system-ui'; g.fillText('„' + r.title + '“', W / 2, 260);
+      g.fillStyle = '#ffd23a'; g.font = '900 54px system-ui'; g.fillText('★'.repeat(r.stars) + '☆'.repeat(5 - r.stars), W / 2, 340);
+      g.fillStyle = '#cfcfdc'; g.font = '700 20px system-ui'; g.fillText('Qualität: ' + Math.round(r.q * 100) + ' %  ·  Filmen ' + Math.round(r.film * 100) + ' %  ·  Schnitt ' + Math.round(r.cut * 100) + ' %', W / 2, 400);
+      g.fillText('Erwartet: ca. ' + fmtK(r.target) + ' Views in den nächsten Stunden' + (r.trend ? ' (Trend-Bonus!)' : ''), W / 2, 440);
+      g.fillStyle = '#8a8a9a'; g.font = '600 16px system-ui'; g.fillText('Views, Follower und Geld kommen jetzt von alleine – schau in der Clipz-App nach.', W / 2, 480);
+      vsBtn({ x: W / 2 - 150, y: 530, w: 300, h: 60 }, 'Fertig', '#ff2d7a', () => { vs.open = false; });
+    }
+  }
+  g.restore();
+}
+function vsFinish() {
+  vs.res = czMake(vs.topic, vs.title, vs.seg, vs.keep); vs.ph = 'fertig'; return;
+  const T = CZ_TOPICS.find(x => x.id === vs.topic), film = vs.seg.reduce((a, v) => a + v, 0) / vs.seg.length;
+  const kept = vs.seg.filter((v, i) => vs.keep[i]), cut = kept.reduce((a, v) => a + v, 0) / kept.length * Math.min(1, kept.length / 6);
+  let q = Math.max(0.05, Math.min(1, cut * 0.8 + film * 0.2 - (vs.title === 2 ? 0.1 : 0)));
+  const trend = vs.topic === czTrend(), mult = [1, 1.2, 1.5][vs.title], stars = Math.max(1, Math.min(5, Math.round(q * 5)));
+  const target = Math.floor((80 + cz.f * (0.6 + 1.6 * q)) * (0.4 + 1.6 * q * q) * (trend ? 1.6 : 1) * mult * (0.75 + Math.random() * 0.55));
+  const v = { title: T.titles[vs.title], topic: vs.topic, q, stars, views: 0, likes: 0, target, t0: gt.T };
+  cz.vids.push(v); if (cz.vids.length > 60) cz.vids.shift(); if (cz.today !== gDay()) { cz.today = gDay(); cz.nToday = 0; } cz.nToday++; saveCz();
+  vs.res = { title: v.title, stars, q, film, cut, target, trend }; vs.ph = 'fertig';
+}
+
 // ---------- Tastenbelegung (Fenster) ----------
 const KBP = { w: 760, h: 780 };
 function kbBox() { return { x: W / 2 - KBP.w / 2, y: H / 2 - KBP.h / 2, w: KBP.w, h: KBP.h }; }
@@ -8852,7 +9104,7 @@ function frame(t) {
   let vy = (keys.has('d') ? 1 : 0) - (keys.has('u') ? 1 : 0);
   if (joy.on && Math.hypot(joy.dx, joy.dy) > 0.15) { vx = joy.dx; vy = joy.dy; }
   if (!fade.dir && vy > -0.3) doorLock = false;
-  if ((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device || kb.open) { vx = 0; vy = 0; }
+  if ((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device || kb.open || vs.open) { vx = 0; vy = 0; }
   const m = Math.hypot(vx, vy);
   bob.moving = m > 0.01;
   if (bob.moving) {
@@ -8893,7 +9145,7 @@ function frame(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -8911,6 +9163,7 @@ function frame(t) {
   if (cur === petRoom() && lief.klo) list.push({ y: KLO.y, f: drawKlo });
   if (cur === 'tierhaus2' && lief.haendler) list.push({ y: TR.y, f: drawTrader });
   if (cur === 'tierhaus2' && lief.investor) list.push({ y: TR2.y, f: drawInvestor });
+  if (cur === 'tierhaus2') for (const o of SRV) if (lief[o.id]) list.push({ y: SRV_Y, f: () => drawServer(o) });
   if (cur === 'garten' && lief.tierhaus) list.push({ y: TH.y, f: drawTierhausAussen });
   if (cur === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ y: BH.y, f: drawBotanikAussen });
   if (cur === 'garten' && lief.sprinkler) for (const [sx, sy] of SPRINK()) list.push({ y: sy, f: () => drawSprinkler(sx, sy) });
@@ -8930,7 +9183,7 @@ function frame(t) {
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawKrAlarm(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawKrAlarm(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawStudio(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
