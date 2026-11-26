@@ -5978,7 +5978,7 @@ function drawTierbett() {
   g.restore();
 }
 const HH = { x: 1150, y: 600 };
-function nearHundehaus() { if (cur !== petRoom() || !lief.hundehaus || fade.dir || build.on) return null; if (Math.abs(bob.x - HH.x) < 190 && Math.abs(bob.y - (HH.y + 30)) < 120) return (furn.garten || []).find(f => f.t === 'napf' && f.hh) || null; return null; }
+function nearHundehaus() { if (cur !== petRoom() || !lief.hundehaus || fade.dir || build.on) return null; if (Math.abs(bob.x - HH.x) < 190 && Math.abs(bob.y - (HH.y + 30)) < 120) return (furn[petRoom()] || []).find(f => f.t === 'napf' && f.hh) || { hh: true, food: null }; return null; }
 function drawHundehaus() {
   const s = scaleAt(HH.y), x = HH.x, y = HH.y, t = 0.55, w = 260 * s, h = 170 * s, d = 120 * s, dx = -d * t, dy = -d * 0.55;
   g.save(); g.lineWidth = 5; g.strokeStyle = LINE; g.lineJoin = 'round';
