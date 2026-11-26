@@ -189,11 +189,26 @@ const ROOMS = {
               arches: [{ x: -120, to: 'tierhaus', ax: -120, label: 'Runter' }] },
   garten: { name: 'Garten', outside: true, kind: 'garten', exits: {}, wide: [-450, 1650], maxY: H - 30,
               arches: [{ x: 600, to: 'pink', ax: W / 2, ay: H - 60, label: 'Ins Haus' }] },
-  laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz' }, maxY: H - 175, wide: [-600, 1800],
+  laborplatz: { name: 'Primaten-Labor', outside: true, kind: 'street', facade: 'labor', exits: { l: 'polizeiplatz', r: 'gerichtsplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'labor', at: [600, FLOOR + 80], bank: true } },
   labor: { name: 'Im Labor', wall: ['#e8eef3', '#f6f9fb'], floorStyle: 'fliesen', exits: {}, wide: [-400, 1700],
               door: { x: 510, w: 180, to: 'laborplatz', at: [600, FLOOR + 70] },
               objs: [{ type: 'npc', outfit: 'forscher', x: 1100, base: 720, w: 120, depth: 30, t: -1 }, { type: 'npc', outfit: 'forscher', x: -150, base: 640, w: 120, depth: 30, t: 1 }] },
+  gerichtsplatz: { name: 'Gericht', outside: true, kind: 'street', facade: 'gericht', exits: { l: 'laborplatz' }, maxY: H - 175, wide: [-600, 1800],
+              door: { x: 500, w: 200, to: 'gerichtssaal', at: [600, FLOOR + 80], bank: true } },
+  gerichtssaal: { name: 'Gerichtssaal', wall: ['#e4d3b0', '#f3e8cf'], exits: {}, wide: [-450, 1700],
+              door: { x: 510, w: 180, to: 'gerichtsplatz', at: [600, FLOOR + 70] },
+              objs: [
+                { type: 'npc', outfit: 'richter', x: 1250, base: 500, w: 120, depth: 30, t: -1 },
+                { type: 'richterbank', x: 1030, w: 440, base: 580, h: 125, depth: 60 },
+                { type: 'zstand', x: 830, w: 130, base: 640, h: 110, depth: 50 },
+                { type: 'npc', outfit: 'polizist', x: 1560, base: 700, w: 120, depth: 30, t: -1 },
+                { type: 'npc', outfit: 'staatsanwalt', x: 180, base: 700, w: 120, depth: 30, t: 1 },
+                { type: 'gtisch', x: 20, w: 320, base: 770, h: 90, depth: 50, label: 'Staatsanwalt' },
+                { type: 'gtisch', x: -400, w: 320, base: 770, h: 90, depth: 50, label: 'Verteidigung', vert: true },
+                { type: 'zbank', x: -420, w: 300, base: 560, h: 80, depth: 40 },
+                { type: 'moebel', t: 'pflanze', fx: 1620, base: 520, r: 0 },
+              ] },
   polizeiplatz: { name: 'Polizeistation', outside: true, kind: 'street', facade: 'polizei', exits: { l: 'haltestelle', r: 'laborplatz' }, maxY: H - 175, wide: [-650, 1850],
               door: { x: 500, w: 200, to: 'wache', at: [600, FLOOR + 80], bank: true } },
   wache: { name: 'Polizeiwache', wall: ['#cfd8e6', '#e8eef6'], floorStyle: 'fliesen', exits: { l: 'zellen' }, wide: [-500, 1700],
@@ -272,6 +287,91 @@ function drawRoad() {
   for (let x = 30 + Math.floor((XL - 30) / 160) * 160; x < XR; x += 160) g.fillRect(x, ROAD + 80, 90, 10);
 }
 // ---------- Polizeistation und Gefängnis ----------
+function suitFront(x, y, w, h, shirt, tie) {
+  g.strokeStyle = '#111'; g.lineWidth = 4;
+  g.fillStyle = shirt; g.beginPath(); g.moveTo(x + 80, y); g.lineTo(x + w / 2, y + 96); g.lineTo(x + w - 80, y); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = tie; g.beginPath(); g.moveTo(x + w / 2 - 10, y + 6); g.lineTo(x + w / 2 + 10, y + 6); g.lineTo(x + w / 2 + 14, y + 74); g.lineTo(x + w / 2, y + 90); g.lineTo(x + w / 2 - 14, y + 74); g.closePath(); g.fill(); g.lineWidth = 3; g.stroke();
+  g.fillStyle = 'rgba(0,0,0,.25)'; for (const by of [y + 106, y + 128]) { g.beginPath(); g.arc(x + w / 2, by, 5, 0, 7); g.fill(); }
+}
+function robeFront(x, y, w, h, band) {
+  g.strokeStyle = '#111'; g.lineWidth = 4;
+  g.fillStyle = band; g.fillRect(x + w / 2 - 46, y, 26, h); g.fillRect(x + w / 2 + 20, y, 26, h); g.strokeRect(x + w / 2 - 46, y, 26, h); g.strokeRect(x + w / 2 + 20, y, 26, h);
+  g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 3; for (const k of [30, 60, w - 60, w - 30]) { g.beginPath(); g.moveTo(x + k, y + 10); g.lineTo(x + k, y + h); g.stroke(); }
+}
+function beffchen(x, y, w) { g.fillStyle = '#fff'; g.strokeStyle = '#111'; g.lineWidth = 3; for (const dx of [-16, 2]) { g.beginPath(); g.roundRect(x + w / 2 + dx, y + 4, 14, 40, [0, 0, 4, 4]); g.fill(); g.stroke(); } }
+// ---------- Gericht ----------
+function drawWaage(x, y, k, col) {
+  g.save(); g.translate(x, y); g.scale(k, k); g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = col || '#e0b030'; const sw = Math.sin(performance.now() / 900) * 0.06;
+  g.fillRect(-6, -60, 12, 110); g.strokeRect(-6, -60, 12, 110); g.beginPath(); g.moveTo(-40, 62); g.lineTo(40, 62); g.lineTo(26, 48); g.lineTo(-26, 48); g.closePath(); g.fill(); g.stroke();
+  g.save(); g.rotate(sw); g.fillRect(-80, -52, 160, 10); g.strokeRect(-80, -52, 160, 10);
+  for (const sx of [-74, 74]) { g.beginPath(); g.moveTo(sx, -46); g.lineTo(sx - 26, 4); g.moveTo(sx, -46); g.lineTo(sx + 26, 4); g.stroke(); g.beginPath(); g.moveTo(sx - 32, 4); g.quadraticCurveTo(sx, 34, sx + 32, 4); g.closePath(); g.fill(); g.stroke(); }
+  g.restore(); g.beginPath(); g.arc(0, -64, 10, 0, 7); g.fill(); g.stroke(); g.restore();
+}
+function drawGerichtFacade() {
+  for (const tx of [-430, 1630]) {
+    g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
+    g.fillStyle = '#1fa830'; g.beginPath(); g.arc(tx, FLOOR - 160, 70, 0, 7); g.fill(); g.stroke();
+  }
+  const X0 = -220, X1 = 1420, top = 170; g.lineWidth = 6; g.strokeStyle = LINE;
+  g.fillStyle = '#efe9dc'; g.fillRect(X0, top, X1 - X0, FLOOR - top); g.strokeRect(X0, top, X1 - X0, FLOOR - top);
+  // Giebel mit Waage
+  g.fillStyle = '#e2dac8'; g.beginPath(); g.moveTo(X0 - 40, top); g.lineTo(600, top - 150); g.lineTo(X1 + 40, top); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#d4cab4'; g.fillRect(X0 - 40, top - 4, X1 - X0 + 80, 30); g.strokeRect(X0 - 40, top - 4, X1 - X0 + 80, 30);
+  drawWaage(600, top - 92, 0.42);
+  g.fillStyle = '#3a2814'; g.font = '900 30px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('AMTSGERICHT', 600, top - 26);
+  // Säulen
+  for (let x = X0 + 50; x < X1 - 40; x += 150) {
+    if (x > 400 && x < 760) continue;
+    g.fillStyle = '#f7f3ea'; g.fillRect(x, top + 40, 56, FLOOR - top - 70); g.strokeRect(x, top + 40, 56, FLOOR - top - 70);
+    g.strokeStyle = 'rgba(0,0,0,.15)'; g.lineWidth = 3; for (const k of [14, 28, 42]) { g.beginPath(); g.moveTo(x + k, top + 46); g.lineTo(x + k, FLOOR - 36); g.stroke(); } g.strokeStyle = LINE; g.lineWidth = 6;
+    g.fillStyle = '#e2dac8'; g.fillRect(x - 10, top + 26, 76, 18); g.strokeRect(x - 10, top + 26, 76, 18); g.fillRect(x - 10, FLOOR - 34, 76, 18); g.strokeRect(x - 10, FLOOR - 34, 76, 18);
+  }
+  // Treppe
+  for (let i = 0; i < 3; i++) { g.fillStyle = i % 2 ? '#d4cab4' : '#e2dac8'; g.fillRect(380 - i * 30, FLOOR - 16 + i * 0, 440 + i * 60, 16); }
+  g.fillStyle = '#d4cab4'; g.fillRect(380, FLOOR - 16, 440, 16); g.lineWidth = 5; g.strokeRect(380, FLOOR - 16, 440, 16);
+}
+function drawGerichtssaalWand() {
+  g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  // Holzvertäfelung unten (nicht über der Tür)
+  for (const [a, b] of [[XL, 500], [700, XR]]) { g.fillStyle = '#8a5a30'; g.fillRect(a, FLOOR - 150, b - a, 150); g.fillStyle = 'rgba(255,255,255,.08)'; for (let x = Math.ceil(a / 120) * 120; x < b - 20; x += 120) { g.fillRect(x + 10, FLOOR - 136, 96, 120); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; g.strokeRect(x + 10, FLOOR - 136, 96, 120); } g.fillStyle = LINE; g.fillRect(a, FLOOR - 152, b - a, 5); }
+  // Wappen mit Waage über der Richterbank
+  g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#1f3a6e'; g.beginPath(); g.moveTo(1170, 40); g.lineTo(1330, 40); g.lineTo(1330, 170); g.quadraticCurveTo(1250, 230, 1170, 170); g.closePath(); g.fill(); g.stroke();
+  drawWaage(1250, 125, 0.55);
+  g.fillStyle = '#3a2814'; g.font = 'italic 700 22px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Im Namen des Volkes', 1250, 252);
+  // Fenster links
+  for (const wx of [-250, 180]) { g.fillStyle = '#bfe4ff'; g.fillRect(wx - 70, 70, 140, 180); g.lineWidth = 6; g.strokeRect(wx - 70, 70, 140, 180); g.beginPath(); g.moveTo(wx, 70); g.lineTo(wx, 250); g.moveTo(wx - 70, 160); g.lineTo(wx + 70, 160); g.stroke(); g.fillStyle = '#7a1a2a'; g.fillRect(wx - 86, 60, 26, 200); g.fillRect(wx + 60, 60, 26, 200); g.strokeRect(wx - 86, 60, 26, 200); g.strokeRect(wx + 60, 60, 26, 200); }
+  g.restore();
+}
+const WOOD_PAL = mkPal('#7a4a24', '#8e5a2e'), WOOD_LT = mkPal('#a06a3a', '#b47a44');
+function drawRichterbank(o) {
+  const top = o.base - o.h; g.lineWidth = 5; g.strokeStyle = LINE;
+  cube(o.x, top, o.w, o.h, o.depth, WOOD_PAL, true, 0.25);
+  g.fillStyle = 'rgba(255,255,255,.08)'; for (let i = 0; i < 3; i++) { g.fillRect(o.x + 20 + i * (o.w - 40) / 3, top + 30, (o.w - 40) / 3 - 16, o.h - 50); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; g.strokeRect(o.x + 20 + i * (o.w - 40) / 3, top + 30, (o.w - 40) / 3 - 16, o.h - 50); }
+  drawWaage(o.x + o.w / 2, top + 66, 0.26);
+  // Hammer
+  g.lineWidth = 3; g.strokeStyle = LINE; cube(o.x + o.w - 120, top - 18, 60, 22, 24, WOOD_LT, true, 0.25); cube(o.x + o.w - 100, top - 14, 70, 8, 8, WOOD_LT, true, 0.25);
+}
+function drawGTisch(o) {
+  const top = o.base - o.h; g.lineWidth = 5; g.strokeStyle = LINE;
+  cube(o.x, top, o.w, 18, o.depth, WOOD_LT, true, 0.25);
+  cube(o.x + 10, top + 18, o.w - 20, o.h - 18, o.depth - 14, WOOD_PAL, false, 0.25);
+  g.fillStyle = '#f4ecd8'; g.beginPath(); g.roundRect(o.x + o.w / 2 - 80, top + 34, 160, 30, 6); g.fill(); g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#3a2814'; g.font = '800 16px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.label, o.x + o.w / 2, top + 50);
+  g.fillStyle = '#fff'; g.fillRect(o.x + 40, top - 8, 60, 8); g.strokeRect(o.x + 40, top - 8, 60, 8);
+}
+function drawZStand(o) {
+  const top = o.base - o.h; g.lineWidth = 5; g.strokeStyle = LINE;
+  cube(o.x, top, o.w, o.h, o.depth, WOOD_PAL, true, 0.25);
+  g.fillStyle = '#f4ecd8'; g.beginPath(); g.roundRect(o.x + 10, top + 20, o.w - 20, 28, 6); g.fill(); g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#3a2814'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Zeuge', o.x + o.w / 2, top + 34);
+  g.lineWidth = 4; g.beginPath(); g.moveTo(o.x + o.w / 2, top); g.lineTo(o.x + o.w / 2 + 14, top - 40); g.stroke(); g.fillStyle = '#333'; g.beginPath(); g.arc(o.x + o.w / 2 + 16, top - 44, 9, 0, 7); g.fill(); g.stroke();
+}
+function drawZBank(o) {
+  const top = o.base - o.h; g.lineWidth = 5; g.strokeStyle = LINE;
+  cube(o.x, top - 50, o.w, 50, 14, WOOD_PAL, true, 0.25);
+  cube(o.x, top + 20, o.w, 16, o.depth, WOOD_LT, true, 0.25);
+  cube(o.x + 14, top + 36, 20, o.h - 36, 14, WOOD_PAL, false, 0.25); cube(o.x + o.w - 34, top + 36, 20, o.h - 36, 14, WOOD_PAL, false, 0.25);
+}
 function drawPolizeiFacade() {
   for (const tx of [-430, 1580]) {
     g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
@@ -418,6 +518,7 @@ function drawStreet(R) {
   if (R.facade === 'bank') drawBankFacade();
   else if (R.facade === 'polizei') drawPolizeiFacade();
   else if (R.facade === 'labor') drawLaborFacade();
+  else if (R.facade === 'gericht') drawGerichtFacade();
   else if (R.facade === 'moebel') {
     for (const tx of [90, 330]) {
       g.fillStyle = '#8a4316'; g.fillRect(tx - 14, FLOOR - 120, 28, 120); g.strokeRect(tx - 14, FLOOR - 120, 28, 120);
@@ -722,6 +823,10 @@ function drawObj(o) {
   else if (o.type === 'versteck') drawVersteck(o);
   else if (o.type === 'loot') drawLootSpot(o);
   else if (o.type === 'theke') drawTheke(o);
+  else if (o.type === 'richterbank') drawRichterbank(o);
+  else if (o.type === 'gtisch') drawGTisch(o);
+  else if (o.type === 'zstand') drawZStand(o);
+  else if (o.type === 'zbank') drawZBank(o);
   else if (o.type === 'gitter') { if (!o.jailDoor || jailed()) drawGitter(o); }
   else if (o.type === 'zwand') drawZwand(o);
   else if (o.type === 'stand') drawStand(o);
@@ -2433,6 +2538,7 @@ function room() {
   if (R.door) drawDoor(R.door);
   if (cur === 'bank_innen') drawTresor();
   if (cur === 'wache') drawWacheExtras();
+  if (cur === 'gerichtssaal') drawGerichtssaalWand();
   if (cur === 'polizeiplatz') drawStreifenwagen(1250);
   if (cur === 'labor') drawLaborInnen();
 }
@@ -2979,6 +3085,30 @@ Object.assign(OUTFITS, {
       cube(hx - 4 + 6 * t, hy - 22, HEAD.w + 8, 26, DEPTH + 6, HP, true, t);
       cube(hx + HEAD.w * 0.45 + 6 * t, hy - 34, HEAD.w * 0.5, 14, DEPTH, HP, true, t);
     } },
+  anwalt: { name: 'Anwalt', bp: mkPal('#5b616e', '#6c7380'), noText: true,
+    bodyFront: (x, y, w, h) => { suitFront(x, y, w, h, '#f4f4f4', '#2f6fe0'); g.fillStyle = '#3a2a1a'; g.fillRect(x + w - 70, y + h - 56, 46, 34); g.lineWidth = 3; g.strokeRect(x + w - 70, y + h - 56, 46, 34); g.fillRect(x + w - 56, y + h - 64, 18, 8); },
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#5a3a20', '#6e4a2a'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 4 + 6 * t, hy - 20, HEAD.w + 8, 24, DEPTH + 6, HP, true, t); cube(hx - 4 + 6 * t, hy - 20, 40, 60, DEPTH + 6, HP, false, t); } },
+  anwalt_partner: { name: 'Partner-Anwalt', bp: mkPal('#1c2846', '#26355a'), noText: true,
+    bodyFront: (x, y, w, h) => { g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 2; for (let k = 18; k < w; k += 18) { g.beginPath(); g.moveTo(x + k, y); g.lineTo(x + k, y + h); g.stroke(); } suitFront(x, y, w, h, '#f4f4f4', '#d0202a'); g.fillStyle = '#d0202a'; g.beginPath(); g.moveTo(x + 36, y + 34); g.lineTo(x + 66, y + 34); g.lineTo(x + 51, y + 48); g.closePath(); g.fill(); g.lineWidth = 2; g.strokeStyle = '#111'; g.stroke(); },
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#1a1410', '#2a2018'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 4 + 6 * t, hy - 24, HEAD.w + 8, 28, DEPTH + 6, HP, true, t); cube(hx + HEAD.w * 0.5 + 6 * t, hy - 36, HEAD.w * 0.46, 14, DEPTH, HP, true, t); } },
+  staranwalt: { name: 'Star-Anwalt', bp: mkPal('#ececec', '#ffffff'), noText: true,
+    bodyFront: (x, y, w, h) => { suitFront(x, y, w, h, '#1b1d22', '#f0b90b'); g.fillStyle = '#f0b90b'; g.beginPath(); g.arc(x + 52, y + 40, 10, 0, 7); g.fill(); g.lineWidth = 3; g.strokeStyle = '#111'; g.stroke(); g.fillStyle = '#111'; g.font = '900 12px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('§', x + 52, y + 41); },
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#e0b030', '#f0c848'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 4 + 6 * t, hy - 26, HEAD.w + 8, 30, DEPTH + 6, HP, true, t); cube(hx + 20 + 6 * t, hy - 40, HEAD.w * 0.6, 16, DEPTH, HP, true, t);
+      g.fillStyle = '#111'; g.fillRect(hx + 30 + 6 * t, hy + 4, HEAD.w - 60, 10); g.fillRect(hx + 36 + 6 * t, hy + 4, 60, 30); g.fillRect(hx + HEAD.w - 96 + 6 * t, hy + 4, 60, 30); } },
+  staatsanwalt: { name: 'Staatsanwalt', bp: mkPal('#18181c', '#222228'), noText: true,
+    bodyFront: (x, y, w, h) => { robeFront(x, y, w, h, '#2a2a30'); g.fillStyle = '#fff'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.moveTo(x + w / 2 - 22, y); g.lineTo(x + w / 2, y + 30); g.lineTo(x + w / 2 + 22, y); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.fillRect(x + w / 2 - 6, y + 22, 12, 46); g.strokeRect(x + w / 2 - 6, y + 22, 12, 46); },
+    front: (bx, by, hx, hy, t) => { const HP = mkPal('#8a8a8a', '#a0a0a0'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx - 4 + 6 * t, hy - 18, HEAD.w + 8, 22, DEPTH + 6, HP, true, t); g.fillStyle = 'rgba(0,0,0,0)'; g.lineWidth = 5; g.strokeRect(hx + 40 + 6 * t, hy + 50, 60, 34); g.strokeRect(hx + HEAD.w - 100 + 6 * t, hy + 50, 60, 34); g.beginPath(); g.moveTo(hx + 100 + 6 * t, hy + 64); g.lineTo(hx + HEAD.w - 100 + 6 * t, hy + 64); g.stroke(); } },
+  richter: { name: 'Richter', bp: mkPal('#141418', '#1e1e24'), noText: true,
+    bodyFront: (x, y, w, h) => { robeFront(x, y, w, h, '#26262e'); beffchen(x, y, w); } },
+  oberrichter: { name: 'Oberrichter', bp: mkPal('#141418', '#1e1e24'), noText: true,
+    bodyFront: (x, y, w, h) => { robeFront(x, y, w, h, '#6a1a2a'); beffchen(x, y, w); },
+    front: (bx, by, hx, hy, t) => { const WP = mkPal('#f2f2ee', '#ffffff'); g.lineWidth = 4; g.strokeStyle = '#111';
+      cube(hx - 14 + 6 * t, hy - 30, HEAD.w + 28, 36, DEPTH + 10, WP, true, t);
+      for (const sx of [hx - 34, hx + HEAD.w - 6]) for (let r = 0; r < 4; r++) cube(sx + 6 * t, hy + 4 + r * 36, 40, 34, DEPTH, WP, r === 0, t);
+      g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let c = 0; c < 6; c++) { g.beginPath(); g.arc(hx + 10 + c * 40 + 6 * t, hy - 12, 12, 0, Math.PI); g.stroke(); } } },
+  verfassungsrichter: { name: 'Verfassungsrichter', bp: mkPal('#b01020', '#c81828'), noText: true,
+    bodyFront: (x, y, w, h) => { robeFront(x, y, w, h, '#8a0a18'); beffchen(x, y, w); g.fillStyle = '#f0b90b'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.arc(x + 46, y + 56, 13, 0, 7); g.fill(); g.stroke(); },
+    front: (bx, by, hx, hy, t) => { const CP = mkPal('#b01020', '#c81828'); g.lineWidth = 4.5; g.strokeStyle = '#111'; cube(hx + 10 + 6 * t, hy - 44, HEAD.w - 20, 50, DEPTH, CP, true, t); g.fillStyle = '#f0b90b'; g.fillRect(hx + 10 + 6 * t, hy - 4, HEAD.w - 20, 8); } },
   kommissar: { name: 'Kommissar', bp: mkPal('#4a4f57', '#5a6069'), noText: true,
     bodyFront: (x, y, w, h) => {
       g.strokeStyle = '#111'; g.lineWidth = 4;
@@ -3520,7 +3650,8 @@ function nearBox() {
 function nearPakete() { const o = (ROOMS[cur].objs || []).find(o => o.liefer); return job && job.id === 'liefer' && onShift() && o && !fade.dir && Math.abs(bob.x - o.fx) < 200 && Math.abs(bob.y - o.base) < 160 && o; }
 function nearSchalter() { return cur === 'bank_innen' && !fade.dir && (ROOMS[cur].objs || []).find(o => o.type === 'schalter' && Math.abs(bob.x - (o.x + o.w / 2)) < 220 && Math.abs(bob.y - o.base) < 170); }
 function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse'); }
-function nearRevier() { if (!(job && job.id === 'polizei' && onShift() && cur === 'wache' && !fade.dir)) return null; const o = (ROOMS.wache.objs || []).find(o => o.type === 'theke'); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
+const JOB_SPOTS = { polizei: ['wache', 'theke'], anwalt: ['gerichtssaal', 'gtisch'], richter: ['gerichtssaal', 'richterbank'] };
+function nearRevier() { if (!(job && JOB_SPOTS[job.id] && onShift() && !fade.dir)) return null; const [rm, ty] = JOB_SPOTS[job.id]; if (cur !== rm) return null; const o = (ROOMS[rm].objs || []).find(o => o.type === ty && (ty !== 'gtisch' || o.vert)); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
 function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender()); }
 
@@ -4931,6 +5062,7 @@ const ADMIN = {
     ['Polizei', '#1f4f9e', tpTo('polizeiplatz', [600, 650])],
     ['Gefängnis', '#ff7a1a', tpTo('zellen', [600, 600])],
     ['Labor', '#2a8a6a', tpTo('laborplatz', [600, 650])],
+    ['Gericht', '#8a6a3a', tpTo('gerichtsplatz', [600, 650])],
     ['Aus der Haft entlassen', '#13b84a', () => { jail.until = gt.T; saveJail(); }],
   ],
 };
@@ -6010,6 +6142,8 @@ function drawSleep(dt) {
 const JOBS = {
   kasse:  { name: 'Kassierer im Tierladen', place: 'Tierladen', wage: 15, days: [0, 2, 4, 5], from: 10 * 60, to: 14 * 60, outfit: 'tierladen', go: 'ab zur Kasse!', extra: '+ Trinkgeld' },
   polizei: { name: 'Polizist auf der Wache', place: 'Polizeiwache', wage: 22, days: [1, 2, 4, 6], from: 8 * 60, to: 12 * 60, outfit: 'polizist', ranks: ['polizist', 'swat', 'kommissar'], mode: 'polizei', go: 'ab zur Wache an die Theke!', extra: '+ 8 €/Einsatz' },
+  anwalt: { name: 'Anwalt am Gericht', place: 'Gericht', wage: 28, days: [1, 3, 5], from: 9 * 60, to: 13 * 60, outfit: 'anwalt', ranks: ['anwalt', 'anwalt_partner', 'staranwalt'], mode: 'gericht', go: 'ab ins Gericht an den Tisch der Verteidigung!', extra: '+ 15 € pro gewonnenem Fall' },
+  richter: { name: 'Richter am Gericht', place: 'Gericht', wage: 36, days: [2, 4, 6], from: 13 * 60, to: 17 * 60, outfit: 'richter', ranks: ['richter', 'oberrichter', 'verfassungsrichter'], mode: 'gericht', go: 'ab ins Gericht an die Richterbank!', extra: '+ 20 € pro gerechtem Urteil' },
   liefer: { name: 'Lieferfahrer im Möbelhaus', place: 'Möbelhaus', wage: 18, days: [1, 3, 6], from: 12 * 60, to: 16 * 60, outfit: 'liefer', mode: 'liefer', go: 'ab ins Möbelhaus zu den Paketen!', extra: '+ 4 € pro Paket' },
 };
 const MAX_WARN = 3, MAX_SICK = 3, BAN_DAYS = 30, UNEMP_PAY = 40;
@@ -6399,6 +6533,239 @@ function lfMove(x, y) {
   if (d.px > m.x && d.px < m.x + m.w && d.py > m.y - 40 && d.py < m.y + m.h + 40) { d.placed = true; d.drag = null; }
 }
 function lfUp() { const d = wk.door; if (d && d.drag) { d.drag = null; d.px = W / 2; d.py = 790; } }
+// ---------- Gerichts-Jobs: Anwalt und Richter ----------
+const SEV = ['leicht', 'mittel', 'schwer'], STRAFE = ['Verwarnung', 'Geldstrafe', 'Gefängnis'];
+// lie >= 0: unschuldig – diese Aussage ist falsch, key = Beweise, die sie widerlegen. lie = -1: schuldig.
+const FAELLE = [
+  { t: 'Der Kuchen-Klau', who: 'Herr Krümel', ch: 'Kuchen von Omas Fensterbank gestohlen', sev: 0, wit: 'Frau Spitz',
+    st: ['Ich sah ihn um 15 Uhr an Omas Fenster.', 'Die Sonne schien hell, ich sah alles genau.', 'Er hatte danach Krümel am Mund.', 'Dann rannte er zur Bushaltestelle.'], lie: 1, key: [0],
+    ev: [['Wetterbericht', 'Am Tattag regnete es den ganzen Nachmittag in Strömen.'], ['Busfahrplan', 'Der Bus fuhr an dem Tag um 15:10 Uhr.'], ['Kassenbon', 'Herr Krümel kaufte um 14:50 Uhr selbst ein Stück Kuchen.'], ['Foto der Fensterbank', 'Der Teller ist leer, daneben liegen Krümel.']],
+    sa: 'Er war am Fenster und hatte Krümel am Mund – eindeutig!', ve: 'Er hatte sich seinen eigenen Kuchen gekauft.' },
+  { t: 'Das kaputte Fenster', who: 'Timo', ch: 'Fenster mit dem Fußball eingeschossen', sev: 1, wit: 'Hausmeister Kurt',
+    st: ['Um 18 Uhr hörte ich Glas klirren.', 'Timo spielt hier jeden Tag Fußball.', 'Im Wohnzimmer lag danach Timos roter Fußball.', 'Timo ist sofort weggerannt.'], lie: 2, key: [0],
+    ev: [['Ball aus dem Wohnzimmer', 'Ein kleiner gelber Tennisball mit Bissspuren.'], ['Trainingsplan', 'Timo hatte an dem Tag Training bis 17:30 Uhr.'], ['Foto vom Fenster', 'Ein kleines, rundes Loch im Glas.'], ['Nachbarshund', 'Spielt am liebsten mit Tennisbällen.']],
+    sa: 'Sein Ball lag im Zimmer, also war es Timo.', ve: 'Das war gar nicht Timos Ball.' },
+  { t: 'Überfall auf den Kiosk', who: 'Bruno', ch: 'Kiosk überfallen und die Kasse geleert', sev: 2, wit: 'Frau Lutz',
+    st: ['Der Täter kam um 22 Uhr in den Kiosk.', 'Er trug eine schwarze Maske.', 'Ich erkannte Bruno an seinem Tattoo am Arm.', 'Er floh auf einem Fahrrad.'], lie: 2, key: [0],
+    ev: [['Foto vom Polizeiarzt', 'Bruno hat am ganzen Körper kein einziges Tattoo.'], ['Überwachungsvideo', 'Täter mit schwarzer Maske, 22:01 Uhr.'], ['Reifenspur', 'Fahrradspuren vor dem Kiosk.'], ['Kasse', 'Es fehlen 230 €.']],
+    sa: 'Die Zeugin hat Bruno ganz sicher erkannt.', ve: 'Die Zeugin kann Bruno gar nicht erkannt haben.' },
+  { t: 'Das grüne Fahrrad', who: 'Lena', ch: 'Fahrrad am Bahnhof gestohlen', sev: 1, wit: 'Paul',
+    st: ['Mein Rad stand abgeschlossen am Bahnhof.', 'Es ist grün und hat einen Korb.', 'Abends fuhr Lena mit meinem grünen Rad vorbei.', 'Das Schloss lag aufgeschnitten am Boden.'], lie: 2, key: [0],
+    ev: [['Ampelkamera, 19 Uhr', 'Lena fährt vorbei – auf einem roten Rad ohne Korb.'], ['Rechnung', 'Lena hat letzte Woche ein Fahrrad gekauft.'], ['Schloss', 'Mit einer großen Zange durchgeschnitten.'], ['Bahnhofsuhr', 'Geht auf die Minute genau.']],
+    sa: 'Paul hat Lena auf seinem Rad gesehen!', ve: 'Lena fährt ihr eigenes Rad.' },
+  { t: 'Die bunte Wand', who: 'Kevin', ch: 'Rathauswand mit Graffiti besprüht', sev: 0, wit: 'Herr Grau',
+    st: ['Die Wand wurde nachts besprüht.', 'Das Bild ist grün und lila.', 'Ich sah Kevin mit seiner Dose sprühen.', 'Kevin wohnt gleich um die Ecke.'], lie: 2, key: [0],
+    ev: [['Kevins Spraydose', 'Nur rote Farbe – und noch verschweißt, nie benutzt.'], ['Foto der Wand', 'Ein großes grün-lila Bild.'], ['Straßenlaterne', 'Leuchtet die ganze Nacht.'], ['Meldeamt', 'Kevin wohnt in der Nachbarstraße.']],
+    sa: 'Ein Zeuge hat ihn beim Sprühen gesehen.', ve: 'Mit dieser Dose hat niemand gesprüht.' },
+  { t: 'Wo ist Bello?', who: 'Frau Kralle', ch: 'Hund Bello entführt', sev: 2, wit: 'Herr Wuff',
+    st: ['Bello verschwand am Samstag.', 'Am Samstag war Frau Kralle in meinem Garten.', 'Bello mag eigentlich keine Fremden.', 'Ich habe überall nach ihm gesucht.'], lie: 1, key: [0],
+    ev: [['Flugticket', 'Frau Kralle war von Freitag bis Montag auf Mallorca.'], ['Loch im Zaun', 'Genau so groß wie Bello.'], ['GPS-Halsband', 'Bello war am Samstag im Stadtpark.'], ['Suchplakat', 'Herr Wuff hat 50 Plakate aufgehängt.']],
+    sa: 'Sie war im Garten – und dann war Bello weg.', ve: 'Meine Mandantin war gar nicht in der Stadt.' },
+  { t: 'Der leere Kaffeeautomat', who: 'Herr Zahl', ch: 'Geld aus dem Kaffeeautomaten gestohlen', sev: 0, wit: 'Chefin Frau Boss',
+    st: ['Um 8 Uhr war der Automat noch voll.', 'Um 9 Uhr stand Herr Zahl am Automaten.', 'Er hatte einen Schraubenzieher dabei.', 'Danach fehlten 50 €.'], lie: 1, key: [0, 3],
+    ev: [['Stempelkarte', 'Herr Zahl kam an dem Tag erst um 11:30 Uhr ins Büro.'], ['Schraubenzieher', 'Gehört dem Hausmeister.'], ['Automaten-Zähler', 'Um 8 Uhr waren 50 € drin.'], ['Zugticket', 'Sein Zug hatte an dem Morgen 3 Stunden Verspätung.']],
+    sa: 'Er stand am Automaten – mit Werkzeug!', ve: 'Herr Zahl war um 9 Uhr noch gar nicht da.' },
+  { t: 'Der Bananen-Raub', who: 'Herr Grün', ch: 'Bananen vom Marktstand gestohlen', sev: 0, wit: 'Marktfrau Olga',
+    st: ['Die Bananen lagen vorne am Stand.', 'Plötzlich griff Herr Grün zu und rannte weg.', 'Er trug seinen grünen Hut.', 'Danach fehlten 12 Bananen.'], lie: 1, key: [0],
+    ev: [['Video vom Markt', 'Ein Affe springt vom Dach und schnappt sich die Bananen!'], ['Grüner Hut', 'Herr Grün trägt ihn jeden Tag.'], ['Bananenschalen', 'Liegen oben auf dem Dach.'], ['Kassenbuch', '12 Bananen fehlen.']],
+    sa: 'Die Marktfrau hat alles gesehen!', ve: 'Mein Mandant hat keine Banane angefasst.' },
+  { t: 'Die Schoko-Tasche', who: 'Herr Nasch', ch: 'Schokolade im Supermarkt geklaut', sev: 0, wit: 'Kassierer Ben',
+    st: ['Herr Nasch nahm eine Tafel Schokolade.', 'Er steckte sie in seine Jackentasche.', 'Er ging ohne zu zahlen nach draußen.', 'Draußen habe ich ihn angehalten.'], lie: -1,
+    ev: [['Video', 'Herr Nasch steckt die Schokolade ein.'], ['Jackentasche', 'Darin: eine Tafel Schokolade, nicht bezahlt.'], ['Kasse', 'Herr Nasch hat nichts bezahlt.'], ['Preisschild', 'Schokolade: 1,49 €.']],
+    sa: 'Das Video zeigt es ganz klar.', ve: 'Er hat nur vergessen zu bezahlen.' },
+  { t: 'Raser in der Schulstraße', who: 'Frau Bleifuß', ch: 'Mit 90 km/h durch die 30er-Zone', sev: 1, wit: 'Polizist Meier',
+    st: ['Der Blitzer löste um 7:45 Uhr aus.', 'Das Auto war rot.', 'Am Steuer saß Frau Bleifuß.', 'Gleich danach kam ein Schulbus.'], lie: -1,
+    ev: [['Blitzerfoto', 'Rotes Auto, 90 km/h, Frau Bleifuß am Steuer.'], ['Kennzeichen', 'Das Auto gehört Frau Bleifuß.'], ['Messgerät', 'Frisch geprüft, funktioniert.'], ['Verkehrsschild', '30er-Zone vor der Schule.']],
+    sa: 'Das Foto beweist alles.', ve: 'Sie war nur spät dran für die Arbeit.' },
+  { t: 'Der Bank-Tresor', who: 'Herr Knack', ch: 'In die Bank eingebrochen und Geld gestohlen', sev: 2, wit: 'Wachmann Rolf',
+    st: ['Um 3 Uhr nachts ging der Alarm los.', 'Ein Mann rannte mit einem Sack heraus.', 'Er stieg in einen blauen Van.', 'Ich habe mir das Kennzeichen notiert.'], lie: -1,
+    ev: [['Fingerabdrücke', 'Am Tresor – von Herrn Knack.'], ['Garage von Herrn Knack', 'Ein blauer Van und ein Sack voller Geld.'], ['Kennzeichen', 'Gehört zum Van von Herrn Knack.'], ['Werkzeug', 'Bohrer mit Spänen vom Tresor.']],
+    sa: 'Fingerabdrücke und Beute – klarer geht es nicht.', ve: 'Er wollte nur sein eigenes Geld abheben.' },
+  { t: 'Der zerkratzte Sportwagen', who: 'Herr Neid', ch: 'Das Auto vom Nachbarn zerkratzt', sev: 1, wit: 'Frau Glanz',
+    st: ['Mein Auto stand vor dem Haus.', 'Nachts schlich Herr Neid um mein Auto herum.', 'Am Morgen war eine lange Kratzspur dran.', 'Er beschwert sich oft über mein Auto.'], lie: -1,
+    ev: [['Türkamera', 'Herr Neid kratzt mit einem Schlüssel am Auto.'], ['Schlüssel', 'Mit roten Lackresten – wie das Auto.'], ['Brief', 'Von Herrn Neid: „Ihr Auto ist zu laut!“'], ['Werkstatt-Rechnung', 'Reparatur: 800 €.']],
+    sa: 'Die Kamera hat ihn gefilmt.', ve: 'Er ist nur zufällig vorbeigelaufen.' },
+  { t: 'Parken vor der Feuerwehr', who: 'Herr Eilig', ch: 'Vor dem Feuerwehrtor geparkt', sev: 0, wit: 'Feuerwehrmann Tom',
+    st: ['Das Auto stand direkt vor dem Tor.', 'Wir konnten fast nicht ausfahren.', 'Herr Eilig kam nach 20 Minuten zurück.', 'Er war beim Bäcker, sagte er.'], lie: -1,
+    ev: [['Foto', 'Das Auto von Herrn Eilig vor dem Feuerwehrtor.'], ['Bäckertüte', 'Zwei Brötchen, gekauft um 10:20 Uhr.'], ['Schild', 'Ausfahrt freihalten – gut sichtbar.'], ['Einsatzbericht', 'Ausfahrt 3 Minuten zu spät.']],
+    sa: 'Er hat die Feuerwehr blockiert.', ve: 'Es waren doch nur ein paar Minuten.' },
+  { t: 'Die Labor-Affen', who: 'Dr. Banane', ch: 'Affen aus dem Labor geschmuggelt und verkauft', sev: 2, wit: 'Dr. Kolben',
+    st: ['Nachts fehlten drei Affen im Labor.', 'Nur Dr. Banane hatte einen Schlüssel.', 'Morgens roch sein Auto nach Affe.', 'Im Internet tauchte eine Affen-Anzeige auf.'], lie: -1,
+    ev: [['Käfigschlüssel', 'In der Tasche von Dr. Banane.'], ['Internet-Anzeige', '„Affen zu verkaufen“ – mit seiner Telefonnummer.'], ['Haare im Auto', 'Affenhaare auf dem Rücksitz.'], ['Kontoauszug', '3.000 € von einem Käufer.']],
+    sa: 'Schlüssel, Anzeige, Geld – alles passt.', ve: 'Die Affen sind von alleine weggelaufen.' },
+];
+const grShuf = a => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+function grStart() { wk.served = 0; wk.failed = 0; wk.gLast = []; grNext(); }
+function grNext() {
+  const rich = job.id === 'richter';
+  let pool = FAELLE.map((c, i) => i).filter(i => (rich || FAELLE[i].lie >= 0) && !wk.gLast.includes(i));
+  if (!pool.length) { wk.gLast = []; pool = FAELLE.map((c, i) => i).filter(i => rich || FAELLE[i].lie >= 0); }
+  const i = pool[Math.floor(Math.random() * pool.length)]; wk.gLast.push(i); if (wk.gLast.length > 5) wk.gLast.shift();
+  const c = FAELLE[i], so = grShuf([0, 1, 2, 3]), eo = grShuf([0, 1, 2, 3]);
+  wk.gc = { c, so, eo, lie: c.lie >= 0 ? so.indexOf(c.lie) : -1, keys: (c.key || []).map(k => eo.indexOf(k)), ph: 'brief', t: 3.2, hearts: 3, selS: -1, selE: -1, step: 'urteil', shake: 0, wrongT: 0, msg: '', hammer: 0, btns: [] };
+}
+function grWin(v, title, msg, col) { const m = wk.gc; m.ph = 'res'; m.t = 3.6; m.ok = v > 0; m.title = title; m.rmsg = msg; m.col = col; if (v > 0) { wk.served++; if (!unpaid()) { wk.bonus += v; wk.tip = { v, t: 1.8 }; } } else wk.failed++; }
+function grEinspruch() {
+  const m = wk.gc; if (m.ph !== 'play' || m.selS < 0 || m.selE < 0) return;
+  if (m.selS === m.lie && m.keys.includes(m.selE)) { grWin(15, 'EINSPRUCH!', 'Die Aussage ist widerlegt – ' + m.c.who + ' wird freigesprochen!', '#e02424'); return; }
+  m.hearts--; m.shake = 0.5; m.wrongT = 2.2;
+  m.msg = m.selS === m.lie ? 'Die Aussage ist verdächtig – aber dieser Beweis passt nicht dazu.' : 'Einspruch abgelehnt! Diese Aussage stimmt.';
+  m.selE = -1;
+  if (m.hearts <= 0) grWin(0, 'VERLOREN', m.c.who + ' wurde verurteilt. Falsch war: „' + m.c.st[m.c.lie] + '“', '#555b66');
+}
+function grUrteil(schuldig, strafe) {
+  const m = wk.gc, c = m.c; m.hammer = 0.6;
+  if (!schuldig) {
+    if (c.lie >= 0) grWin(20, 'FREISPRUCH!', 'Gerecht! „' + c.ev[c.key[0]][0] + '“ widerlegt die Aussage.', '#13a36b');
+    else grWin(0, 'FEHLURTEIL!', c.who + ' war schuldig – die Beweise waren eindeutig.', '#555b66');
+    return;
+  }
+  if (c.lie >= 0) { grWin(0, 'FEHLURTEIL!', c.who + ' war unschuldig: „' + c.ev[c.key[0]][0] + '“ widerlegt die Aussage.', '#555b66'); return; }
+  if (strafe === c.sev) grWin(20, 'SCHULDIG!', 'Gerechtes Urteil: ' + STRAFE[strafe] + ' für eine ' + SEV[c.sev] + 'e Tat.', '#c0392b');
+  else grWin(8, 'SCHULDIG!', 'Richtig verurteilt – aber für eine ' + SEV[c.sev] + 'e Tat wäre ' + STRAFE[c.sev] + ' richtig gewesen.', '#c07a1b');
+}
+function grDown(x, y) {
+  const m = wk.gc; if (!m) return;
+  if (m.ph === 'brief') { m.ph = 'play'; return; }
+  if (m.ph === 'res') { if (m.t < 3) grNext(); return; }
+  for (const b of m.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { b.act(); return; }
+}
+function grKey(code) {
+  const m = wk.gc; if (!m) return;
+  if (m.ph === 'brief') { if (code === 'Space' || code === 'Enter') m.ph = 'play'; return; }
+  if (m.ph === 'res') { if ((code === 'Space' || code === 'Enter') && m.t < 3) grNext(); return; }
+  const d = /^Digit([1-4])$/.exec(code);
+  if (job.id === 'anwalt') { if (d) m.selS = +d[1] - 1; if (code === 'Enter' || code === 'Space') grEinspruch(); }
+}
+function updateGericht(dt) {
+  const m = wk.gc; if (!m) return;
+  if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
+  m.shake = Math.max(0, m.shake - dt); m.wrongT = Math.max(0, m.wrongT - dt); m.hammer = Math.max(0, m.hammer - dt);
+  if (m.ph === 'brief') { m.t -= dt; if (m.t <= 0) m.ph = 'play'; }
+  else if (m.ph === 'res') { m.t -= dt; if (m.t <= 0) grNext(); }
+}
+function grWrap(text, maxW) { const out = []; let line = ''; for (const w of text.split(' ')) { const tst = line ? line + ' ' + w : w; if (g.measureText(tst).width > maxW && line) { out.push(line); line = w; } else line = tst; } if (line) out.push(line); return out; }
+function grText(text, x, y, maxW, font, col, lh, maxL) { g.font = font; g.fillStyle = col; g.textAlign = 'left'; g.textBaseline = 'middle'; const L = grWrap(text, maxW).slice(0, maxL || 9); L.forEach((l, i) => g.fillText(l, x, y + i * lh)); return L.length; }
+function grBtn(m, b, label, col, act, on = true) {
+  g.save(); g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = on ? col : '#4a4f58'; g.beginPath(); g.roundRect(b.x, b.y + 5, b.w, b.h, 14); g.fillStyle = 'rgba(0,0,0,.35)'; g.fill();
+  g.fillStyle = on ? col : '#4a4f58'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 14); g.fill(); g.stroke();
+  g.fillStyle = on ? '#fff' : '#9aa3b2'; g.font = '900 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1); g.restore();
+  if (on) m.btns.push(Object.assign({ act }, b));
+}
+function drawGerichtScene(m) {
+  const t = performance.now() / 1000, rich = job.id === 'richter', myOut = JOBS[job.id].ranks[Math.max(0, (job.rank || 1) - 1)];
+  g.fillStyle = '#3a2210'; g.fillRect(XL, 0, VW, H); g.fillStyle = '#6b3f22'; g.fillRect(XL, 0, VW, 440);
+  g.fillStyle = 'rgba(255,255,255,.06)'; for (let x = Math.floor(XL / 130) * 130; x < XR; x += 130) { g.fillRect(x + 12, 70, 106, 300); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; g.strokeRect(x + 12, 70, 106, 300); }
+  g.fillStyle = '#1f3a6e'; g.strokeStyle = LINE; g.lineWidth = 5; g.beginPath(); g.moveTo(W / 2 - 56, 24); g.lineTo(W / 2 + 56, 24); g.lineTo(W / 2 + 56, 104); g.quadraticCurveTo(W / 2, 140, W / 2 - 56, 104); g.closePath(); g.fill(); g.stroke();
+  drawWaage(W / 2, 80, 0.36);
+  g.fillStyle = '#4a2a14'; g.fillRect(XL, 400, VW, 40); g.fillStyle = LINE; g.fillRect(XL, 398, VW, 4);
+  // Richter
+  const hk = m.hammer > 0 ? Math.sin((0.6 - m.hammer) / 0.6 * Math.PI) : 0;
+  drawBobFig(W / 2, 345, 0.5, 0, Math.sin(t * 2) * 1.2, 1, rich ? myOut : 'richter', false);
+  cube(W / 2 - 240, 300, 480, 110, 34, WOOD_PAL, true, 0);
+  drawWaage(W / 2, 360, 0.26);
+  // Hammer
+  g.save(); g.translate(W / 2 + 170, 296); g.rotate(-0.9 + hk * 0.9 + (m.hammer > 0 ? 0 : Math.sin(t) * 0.05)); g.lineWidth = 3; g.strokeStyle = LINE;
+  g.fillStyle = '#b47a44'; g.fillRect(-4, -60, 8, 60); g.strokeRect(-4, -60, 8, 60); g.fillStyle = '#7a4a24'; g.fillRect(-22, -76, 44, 22); g.strokeRect(-22, -76, 44, 22); g.restore();
+  if (m.hammer > 0 && m.hammer < 0.32) { g.save(); g.strokeStyle = '#ffd23a'; g.lineWidth = 5; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.beginPath(); g.moveTo(W / 2 + 140 + Math.cos(a) * 22, 296 + Math.sin(a) * 12); g.lineTo(W / 2 + 140 + Math.cos(a) * 46, 296 + Math.sin(a) * 26); g.stroke(); } g.restore(); }
+  // Verteidigung links (+ Angeklagter), Staatsanwalt rechts
+  const lx = Math.max(XL + 170, W / 2 - 470), rx = Math.min(XR - 170, W / 2 + 470);
+  drawBobFig(lx - 70, 440, 0.48, 0.5, Math.sin(t * 2.2) * 1.2, 1, rich ? 'anwalt' : myOut, false);
+  drawBobFig(lx + 90, 440, 0.44, 0.4, Math.sin(t * 1.7) * 1, 1, 'hoodie', false);
+  cube(lx - 170, 404, 370, 40, 26, WOOD_LT, true, 0.35);
+  drawBobFig(rx + 20, 440, 0.48, -0.5, Math.sin(t * 2.4) * 1.2, 1, 'staatsanwalt', false);
+  cube(rx - 130, 404, 290, 40, 26, WOOD_LT, true, -0.35);
+}
+function drawGerichtRes(m) {
+  const p = Math.min(1, (3.6 - m.t) * 4), sc = 0.6 + 0.4 * p + (p >= 1 ? Math.sin(performance.now() / 120) * 0.02 : 0);
+  g.save(); g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(XL, 0, VW, H);
+  g.translate(W / 2, 330); g.scale(sc, sc);
+  g.fillStyle = m.col; g.strokeStyle = LINE; g.lineWidth = 8; g.beginPath();
+  for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2, r = i % 2 ? 190 : 250; g.lineTo(Math.cos(a) * r * 1.6, Math.sin(a) * r * 0.62); } g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.font = '900 84px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 12; g.strokeText(m.title, 0, 0); g.fillText(m.title, 0, 0);
+  g.restore();
+  g.save(); g.fillStyle = 'rgba(12,16,26,.9)'; g.beginPath(); g.roundRect(W / 2 - 440, 560, 880, 110, 18); g.fill();
+  const n = grText(m.rmsg, W / 2 - 410, 594, 820, '700 22px system-ui', '#fff', 30, 3);
+  g.fillStyle = '#8a93a6'; g.font = '600 15px system-ui'; g.textAlign = 'center'; if (m.t < 3) g.fillText('Klick / Leertaste: nächster Fall', W / 2, 700);
+  g.restore();
+}
+function drawGericht() {
+  const m = wk.gc; if (!m) return; m.btns = [];
+  const shx = m.shake > 0 ? Math.sin(m.shake * 60) * 10 * m.shake : 0;
+  g.save(); g.translate(shx, 0);
+  drawGerichtScene(m);
+  const rich = job.id === 'richter', c = m.c, P = { x: W / 2 - 580, y: 446, w: 1160, h: 424 }, cw = 568;
+  g.fillStyle = '#f4ecd8'; g.strokeStyle = LINE; g.lineWidth = 5; g.beginPath(); g.roundRect(P.x, P.y, P.w, P.h, 18); g.fill(); g.stroke();
+  const L = P.x + 16, R = P.x + P.w / 2 + 6;
+  if (m.ph === 'brief') {
+    g.fillStyle = '#3a2814'; g.font = '900 40px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Fall ' + (wk.served + wk.failed + 1) + ': ' + c.t, W / 2, P.y + 70);
+    g.font = '700 24px system-ui'; g.fillText((rich ? 'Angeklagt: ' : 'Dein Mandant: ') + c.who, W / 2, P.y + 140);
+    g.fillStyle = '#6b4a2a'; g.font = '600 22px system-ui'; g.fillText('Vorwurf: ' + c.ch + ' (' + SEV[c.sev] + ')', W / 2, P.y + 186);
+    g.font = '600 19px system-ui'; g.fillStyle = '#3a2814';
+    const how = rich ? ['Lies Anklage, Aussagen und Beweise.', 'Widerlegt ein Beweis eine Aussage? Dann Freispruch – sonst schuldig und die passende Strafe.']
+                     : ['Eine Aussage des Zeugen ist falsch.', 'Wähle die falsche Aussage und das Beweisstück, das sie widerlegt – dann EINSPRUCH!'];
+    how.forEach((l, i) => g.fillText(l, W / 2, P.y + 250 + i * 32));
+    g.fillStyle = '#8a6a4a'; g.font = '600 16px system-ui'; g.fillText('Klick oder Leertaste zum Starten', W / 2, P.y + 370);
+    g.restore(); grHud(); return;
+  }
+  if (!rich) {
+    g.fillStyle = '#3a2814'; g.font = '900 19px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText('Aussage von ' + c.wit, L + 4, P.y + 24); g.fillText('Deine Beweise', R + 4, P.y + 24);
+    for (let i = 0; i < 3; i++) { g.font = '22px system-ui'; g.textAlign = 'right'; g.fillStyle = i < m.hearts ? '#e02424' : '#c8b89a'; g.fillText('♥', P.x + P.w - 20 - i * 26, P.y + 24); }
+    m.so.forEach((si, i) => {
+      const b = { x: L, y: P.y + 48 + i * 76, w: cw - 10, h: 68 }, sel = m.selS === i;
+      g.fillStyle = sel ? '#ffe08a' : '#fffaf0'; g.lineWidth = sel ? 5 : 3; g.strokeStyle = sel ? '#c07a1b' : '#b8a483'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill(); g.stroke();
+      g.fillStyle = '#6b4a2a'; g.font = '900 18px system-ui'; g.textAlign = 'center'; g.fillText(String(i + 1), b.x + 22, b.y + b.h / 2);
+      grText('„' + c.st[si] + '“', b.x + 44, b.y + (grWrap('„' + c.st[si] + '“', b.w - 56).length > 1 ? 22 : 34), b.w - 56, '600 17px system-ui', '#2a1c10', 24, 2);
+      m.btns.push({ x: b.x, y: b.y, w: b.w, h: b.h, act: () => { m.selS = i; } });
+    });
+    m.eo.forEach((ei, i) => {
+      const b = { x: R, y: P.y + 48 + i * 76, w: cw - 10, h: 68 }, sel = m.selE === i, e = c.ev[ei];
+      g.fillStyle = sel ? '#bfe0ff' : '#fffaf0'; g.lineWidth = sel ? 5 : 3; g.strokeStyle = sel ? '#2f6fe0' : '#b8a483'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill(); g.stroke();
+      g.fillStyle = '#e8d8b0'; g.fillRect(b.x + 10, b.y + 12, 38, 44); g.strokeStyle = LINE; g.lineWidth = 2; g.strokeRect(b.x + 10, b.y + 12, 38, 44); g.fillStyle = '#6b4a2a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.fillText('§', b.x + 29, b.y + 35);
+      g.fillStyle = '#2a1c10'; g.font = '800 16px system-ui'; g.textAlign = 'left'; g.fillText(e[0], b.x + 60, b.y + 18);
+      grText(e[1], b.x + 60, b.y + 40, b.w - 70, '500 14px system-ui', '#4a3a28', 18, 2);
+      m.btns.push({ x: b.x, y: b.y, w: b.w, h: b.h, act: () => { m.selE = i; } });
+    });
+    if (m.wrongT > 0) { g.fillStyle = '#c0392b'; g.font = '800 17px system-ui'; g.textAlign = 'center'; g.fillText(m.msg, W / 2, P.y + 362); }
+    else { g.fillStyle = '#8a6a4a'; g.font = '600 15px system-ui'; g.textAlign = 'center'; g.fillText('Falsche Aussage + passender Beweis wählen (Tasten 1–4, Enter = Einspruch)', W / 2, P.y + 362); }
+    grBtn(m, { x: W / 2 - 150, y: P.y + P.h - 54, w: 300, h: 44 }, 'EINSPRUCH!', '#e02424', grEinspruch, m.selS >= 0 && m.selE >= 0);
+  } else {
+    let y = P.y + 22;
+    g.fillStyle = '#3a2814'; g.font = '900 18px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(c.who + ': ' + c.ch, L + 4, y);
+    g.fillStyle = c.sev === 2 ? '#c0392b' : c.sev === 1 ? '#c07a1b' : '#2f8a3a'; g.font = '800 15px system-ui'; g.fillText('Schwere der Tat: ' + SEV[c.sev], L + 4, y + 24);
+    y += 56; y += 22 * grText('Staatsanwalt: ' + c.sa, L + 4, y, cw - 20, '600 15px system-ui', '#5a1a1a', 20, 2) + 4;
+    y += 22 * grText('Verteidigung: ' + c.ve, L + 4, y, cw - 20, '600 15px system-ui', '#1a3a5a', 20, 2) + 8;
+    g.fillStyle = '#3a2814'; g.font = '800 16px system-ui'; g.fillText('Zeuge ' + c.wit + ' sagt:', L + 4, y); y += 24;
+    m.so.forEach(si => { y += 21 * grText('• ' + c.st[si], L + 10, y, cw - 30, '500 15px system-ui', '#2a1c10', 19, 2); });
+    g.fillStyle = '#3a2814'; g.font = '900 18px system-ui'; g.textAlign = 'left'; g.fillText('Beweise', R + 4, P.y + 22);
+    m.eo.forEach((ei, i) => {
+      const b = { x: R, y: P.y + 40 + i * 66, w: cw - 10, h: 60 }, e = c.ev[ei];
+      g.fillStyle = '#fffaf0'; g.lineWidth = 3; g.strokeStyle = '#b8a483'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill(); g.stroke();
+      g.fillStyle = '#2a1c10'; g.font = '800 15px system-ui'; g.textAlign = 'left'; g.fillText(e[0], b.x + 14, b.y + 16);
+      grText(e[1], b.x + 14, b.y + 38, b.w - 24, '500 14px system-ui', '#4a3a28', 17, 2);
+    });
+    const by = P.y + P.h - 60;
+    if (m.step === 'urteil') {
+      grBtn(m, { x: W / 2 - 330, y: by, w: 300, h: 48 }, 'SCHULDIG', '#c0392b', () => { m.step = 'strafe'; });
+      grBtn(m, { x: W / 2 + 30, y: by, w: 300, h: 48 }, 'FREISPRUCH', '#13a36b', () => grUrteil(false));
+    } else {
+      g.fillStyle = '#6b4a2a'; g.font = '700 15px system-ui'; g.textAlign = 'center'; g.fillText('Welche Strafe?  leicht → Verwarnung · mittel → Geldstrafe · schwer → Gefängnis', W / 2, by - 18);
+      STRAFE.forEach((lab, i) => grBtn(m, { x: W / 2 - 420 + i * 290, y: by, w: 260, h: 48 }, lab, ['#2f8a3a', '#c07a1b', '#c0392b'][i], () => grUrteil(true, i)));
+      grBtn(m, { x: P.x + P.w - 130, y: by, w: 110, h: 48 }, 'Zurück', '#5a6070', () => { m.step = 'urteil'; });
+    }
+  }
+  g.restore();
+  if (m.ph === 'res') drawGerichtRes(m);
+  grHud();
+}
+function grHud() {
+  if (wk.tip) { g.globalAlpha = Math.min(1, wk.tip.t); marker('+' + wk.tip.v + ' € Bonus!', W / 2, 250 - (1.8 - wk.tip.t) * 30, 34, '#0a8a2f'); g.globalAlpha = 1; }
+  const info = 'Schicht bis ' + hm(JOBS[job.id].to) + '   ·   ' + hm(gMin()) + ' Uhr   ·   ' + (job.id === 'richter' ? 'Urteile' : 'Fälle gewonnen') + ': ' + wk.served + (wk.failed ? '   ·   Daneben: ' + wk.failed : '') + (unpaid() ? '   ·   Strafe: ohne Lohn' : '');
+  g.font = '700 22px system-ui'; const iw = g.measureText(info).width + 40; g.fillStyle = 'rgba(15,20,30,.6)'; g.beginPath(); g.roundRect(XL + 20, 18, iw, 46, 23); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(info, XL + 40, 42);
+  const cb = wkSize().close; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = '#ff4d4d'; g.beginPath(); g.arc(cb.x, cb.y, cb.r, 0, 7); g.fill(); g.stroke();
+  g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cb.x - 15, cb.y - 15); g.lineTo(cb.x + 15, cb.y + 15); g.moveTo(cb.x + 15, cb.y - 15); g.lineTo(cb.x - 15, cb.y + 15); g.stroke(); g.lineCap = 'butt';
+}
 // ---------- Polizei-Job: 6 verschiedene Einsätze ----------
 const POL_MISSIONS = {
   radar:    { name: 'Blitzer-Kontrolle',  how: 'Halte zu schnelle Autos an (über 50): Leertaste oder Klick, wenn sie im Blitzer sind.' },
@@ -6599,6 +6966,7 @@ function startWork() {
   Object.assign(wk, { on: true, t0: performance.now(), start: gt.T, bonus: 0, items: [], cust: null, phase: 'wait', wait: 0.8, drag: null, flash: 0, end: false, served: 0, bag: [] });
   if (wk.mode === 'liefer') lfStart();
   if (wk.mode === 'polizei') polStart();
+  if (wk.mode === 'gericht') grStart();
   keys.clear(); joy.on = false;
 }
 function newCustomer() {
@@ -6634,6 +7002,7 @@ function workDown(x, y) {
   if (Math.hypot(x - u.close.x, y - u.close.y) < u.close.r + 8) { wk.end = true; return; }
   if (wk.mode === 'liefer') { lfDown(x, y); return; }
   if (wk.mode === 'polizei') { polDown(x, y); return; }
+  if (wk.mode === 'gericht') { grDown(x, y); return; }
   if (wk.phase === 'pay' && x > u.pay.x && x < u.pay.x + u.pay.w && y > u.pay.y && y < u.pay.y + u.pay.h) { payNow(); return; }
   const it = wkItemAt(x, y); if (it && wk.phase === 'scan') { wk.drag = { it, dx: it.x - x, dy: it.y - y }; it.held = true; }
 }
@@ -6651,6 +7020,7 @@ addEventListener('keydown', e => {
   if (wk.end) { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') finishWork(); return; }
   if (e.code === 'Escape') wk.end = true;
   if (wk.mode === 'polizei' && !e.repeat) polKey(e.code);
+  if (wk.mode === 'gericht' && !e.repeat) grKey(e.code);
   if (wk.mode === 'liefer' && !e.repeat) { if (e.code === 'ArrowLeft' || e.code === 'KeyA') lfPress('l'); else if (e.code === 'ArrowRight' || e.code === 'KeyD') lfPress('r'); else if (e.code === 'Space') lfPress('stop'); }
 
 }, true);
@@ -6689,6 +7059,7 @@ function updateWork(dt) {
   if (gt.T >= shiftEndT() || !onShift(60 * 24)) { wk.end = true; return; }
   if (wk.mode === 'liefer') { updateLiefer(dt); return; }
   if (wk.mode === 'polizei') { updatePolice(dt); return; }
+  if (wk.mode === 'gericht') { updateGericht(dt); return; }
   wk.flash = Math.max(0, wk.flash - dt);
   if (wk.tip) { wk.tip.t -= dt; if (wk.tip.t <= 0) wk.tip = null; }
   const c = wk.cust;
@@ -6710,7 +7081,7 @@ function drawWork(dt) {
   updateWork(dt);
   if (!wk.on) return;
   const t = performance.now() / 1000, u = wkSize();
-  if (wk.mode === 'polizei') drawPolice(); else if (wk.mode === 'liefer') drawLiefer(); else {
+  if (wk.mode === 'polizei') drawPolice(); else if (wk.mode === 'gericht') drawGericht(); else if (wk.mode === 'liefer') drawLiefer(); else {
   // Laden hinten
   for (const s of stripes) { g.fillStyle = s.light ? '#cdf5bf' : '#7fd96b'; g.fillRect(s.x, 0, s.w, 460); g.fillStyle = LINE; g.fillRect(s.x - 2, 0, 4, 460); }
   drawShelf({ x: XL + 30, w: 360, base: 440, h: 300, seed: 7 });
@@ -6786,7 +7157,7 @@ function drawWork(dt) {
     const J = JOBS[job.id], mins = workedMin(), lohn = unpaid() ? 0 : Math.round(mins / 60 * J.wage);
     g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '800 32px system-ui'; g.fillText(gt.T >= shiftEndT() ? 'Feierabend!' : 'Schicht beendet', P.x + 110, P.y + 44);
     g.font = '600 18px system-ui'; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(JOBS[job.id].name, P.x + 110, P.y + 76);
-    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], [wk.mode === 'liefer' ? 'Pakete' : wk.mode === 'polizei' ? 'Einsätze geschafft' : 'Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], [wk.mode === 'liefer' ? 'Paket-Bonus & Trinkgeld' : 'Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
+    const rows = [['Gearbeitet', Math.floor(mins / 60) + ' Std. ' + Math.floor(mins % 60) + ' Min.'], [wk.mode === 'liefer' ? 'Pakete' : wk.mode === 'polizei' ? 'Einsätze geschafft' : wk.mode === 'gericht' ? (job.id === 'richter' ? 'Gerechte Urteile' : 'Gewonnene Fälle') : 'Kunden', String(wk.served)], ['Lohn', unpaid() ? 'Strafe: 0 €' : money(lohn)], [wk.mode === 'liefer' ? 'Paket-Bonus & Trinkgeld' : 'Trinkgeld & Bonus', money(unpaid() ? 0 : wk.bonus)]];
     rows.forEach(([a, b], i) => {
       const y = P.y + 140 + i * 56;
       g.fillStyle = '#fff'; g.beginPath(); g.roundRect(P.x + 30, y, P.w - 60, 46, 14); g.fill();
@@ -6981,6 +7352,7 @@ function drawSeasonAir(dt) {
 // Große Updates
 OUTFITS.bobi.abil = ['welle'];
 const BIG_UPDATES = [
+  ['1.47', 'Gericht', 'Neues Gericht neben dem Labor mit Gerichtssaal – Jobs als Anwalt und Richter mit eigenen Roben und Anzügen'],
   ['1.46', 'Krypto-Händler', 'Autoklicker 3 (alle 3 s) und ein Händler oben im Tierhaus, der deine Krypto beim Profit-Ziel verkauft'],
   ['1.45', 'Tierhaus 2. Stock', 'Das Tierhaus wird zweistöckig – in der Nähe zoomt die Kamera raus'],
   ['1.44', 'Profit-Alarm', 'Krypto: Ziel-Plus pro Währung einstellen – erreicht, wird es direkt auf dem Bildschirm angezeigt'],
