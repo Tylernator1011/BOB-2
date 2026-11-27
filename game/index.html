@@ -6431,8 +6431,21 @@ function drawBigBobo(x, y, k, t, look) {
   const OR = ['#ffb732', '#ffe08a', '#b86e0a'];
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + S(4), S(230), S(30), 0, 0, 7); g.fill();
   // Beine, Arme hinten, Bauch, Kopf
-  ball(x - S(85), y - S(70), S(80), S(72), ...OR); ball(x + S(85), y - S(70), S(80), S(72), ...OR);
-  ball(x - S(215) - S(20) * tt, y - S(300) + b2, S(110), S(120), ...OR); ball(x + S(215) - S(20) * tt, y - S(300) + b2, S(110), S(120), ...OR);
+  const limb = (x1, y1, x2, y2, r, base, light, dark) => {
+    const ang = Math.atan2(y2 - y1, x2 - x1), len = Math.hypot(x2 - x1, y2 - y1);
+    g.save(); g.translate(x1, y1); g.rotate(ang);
+    const gr = g.createLinearGradient(0, -r, 0, r); gr.addColorStop(0, light); gr.addColorStop(0.45, base); gr.addColorStop(1, dark);
+    g.fillStyle = gr; g.beginPath(); g.roundRect(-r, -r, len + 2 * r, 2 * r, r); g.fill(); g.stroke(); g.restore();
+  };
+  const sw = Math.sin(t * 1.6) * 0.12;
+  // Beine mit Schuhen
+  limb(x - S(80), y - S(150), x - S(90), y - S(40), S(46), ...OR); limb(x + S(80), y - S(150), x + S(90), y - S(40), S(46), ...OR);
+  ball(x - S(100), y - S(22), S(68), S(30), '#2a2a30', '#5a5a66', '#0e0e12'); ball(x + S(100), y - S(22), S(68), S(30), '#2a2a30', '#5a5a66', '#0e0e12');
+  // Arme hinter dem Bauch: Oberarm + Unterarm, runde Hände
+  const sh = y - S(420) + b2;
+  const arm = (side) => { const ax = x + side * S(190) - S(15) * tt, ex = x + side * S(285), ey = sh + S(150), hx2 = x + side * S(270) + side * S(40) * sw, hy2 = sh + S(290);
+    limb(ax, sh, ex, ey, S(48), ...OR); limb(ex, ey, hx2, hy2, S(44), ...OR); ball(hx2, hy2 + S(14), S(46), S(42), '#f0d098', '#fff0cc', '#b89058'); };
+  arm(-1); arm(1);
   ball(x, y - S(300) + b2, S(235), S(230), ...OR);
   // Krawatte folgt der Bauchwölbung
   const tx = x + S(60) * tt;
