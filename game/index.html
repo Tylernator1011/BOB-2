@@ -5598,8 +5598,8 @@ const WEB_ITEMS = [
   { id: 'lv2gold', cat: 'haus', name: 'Gold-Rezept Lv2', price: 9000, desc: ['Auch Futter Lv2 macht', 'Goldkacke (kurz)'], once: true, needs: 'lv3gold' },
   { id: 'lv1gold', cat: 'haus', name: 'Gold-Rezept Lv1', price: 14000, desc: ['Auch Futter Lv1 macht', 'Goldkacke (ganz kurz)'], once: true, needs: 'lv2gold' },
   { id: 'goldvoll', cat: 'haus', name: 'Gold-Meisterrezept', price: 60000, desc: ['Alle Gold-Rezepte so lang', 'wie Futter Lv4'], once: true, needs: 'lv1gold' },
-  { id: 'gold5', cat: 'haus', name: 'Gold-Veredelung', price: 250000, desc: ['Jede Goldkacke ist', '5× so viel wert'], once: true, needs: 'goldvoll' },
-  { id: 'lohn5', cat: 'haus', name: 'Lohn-Turbo', price: 300000, desc: ['Dein Stundenlohn bei', 'jedem Job ×5'], once: true },
+  { id: 'gold5', cat: 'haus', name: 'Gold-Veredelung', price: 90000, desc: ['Jede Goldkacke ist', '5× so viel wert'], once: true, needs: 'goldvoll' },
+  { id: 'lohn5', cat: 'haus', name: 'Lohn-Turbo', price: 30000, desc: ['Dein Stundenlohn bei', 'jedem Job ×5'], once: true },
   { id: 'dwconn', cat: 'haus', name: 'Darkweb-Connection', price: 400000, desc: ['Alles Geld, das reinkommt,', 'ist 1,5× so viel'], once: true },
   { id: 'klick', cat: 'haus', name: 'Streichel-Bonus', price: 2500, desc: ['Jeder Klick aufs Tier:', '+1 € Bargeld (Rechtsklick: Infos)'], once: true, needs: 'hundehaus' },
   { id: 'auto', cat: 'haus', name: 'Autoklicker', price: 5000, desc: ['Klickt alle 5 Sekunden', 'dein Tier: +1 € Bargeld'], once: true, needs: 'klick' },
@@ -5619,7 +5619,7 @@ const WEB_ITEMS = [
   { id: 'kralarm', cat: 'haus', name: 'Profit-Alarm', price: 20000, desc: ['Krypto: Ziel-Plus', 'wird direkt angezeigt'], once: true },
   { id: 'tierhaus2', cat: 'haus', name: 'Tierhaus 2. Stock', price: 30000, desc: ['Das Tierhaus wird', 'zweistöckig'], once: true, needs: 'tierhaus' },
   { id: 'keller', cat: 'haus', name: 'Untergrund-Basis', price: 75000, desc: ['Ein Keller unter dem', 'Tierhaus – deine Basis'], once: true, needs: 'tierhaus' },
-  { id: 'ziegelmaschine', cat: 'haus', name: 'Ziegelstein-Maschine', price: 45000, desc: ['Steht im Keller und', 'produziert Ziegelsteine'], once: true, needs: 'keller' },
+  { id: 'ziegelmaschine', cat: 'haus', name: 'Ziegelstein-Maschine', price: 45000, desc: ['Macht Ziegel im Keller –', 'Big Bobo verkauft sie'], once: true, needs: 'keller' },
   { id: 'ziegelmaschine2', cat: 'haus', name: 'Ziegelstein-Maschine 2', price: 60000, desc: ['Eine zweite Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine' },
   { id: 'zmspeed1', cat: 'haus', name: 'Turbo-Brennofen I', price: 70000, desc: ['Ziegel alle 8 statt', '10 Minuten'], once: true, needs: 'ziegelmaschine' },
   { id: 'ziegelmaschine3', cat: 'haus', name: 'Ziegelstein-Maschine 3', price: 80000, desc: ['Eine dritte Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine2' },
@@ -6388,7 +6388,8 @@ function workerTick(dt) {
       if (w.st === 'walk' && w.node) { const tx = w.node.x + w.side * 85, ty = w.node.y + 12, dx = tx - w.x, dy = ty - w.y, d = Math.hypot(dx, dy), sp = 190 * dt; if (Math.abs(dx) > 2) w.dir = dx < 0 ? -1 : 1; if (d <= sp) { w.x = tx; w.y = ty; w.st = 'hit'; w.t = 0.8; w.dir = -w.side; } else { w.x += dx / d * sp; w.y += dy / d * sp * 0.8; } }
       else if (w.st === 'hit' && w.node) { w.t -= dt; if (w.t <= 0) { w.t = 0.8; mineHit(w.node); } }
     } else {
-      w.st = 'idle'; w.node = null;
+      w.st = 'idle'; w.node = null; w.acc = (w.acc || 0) + dt;
+      if (w.acc >= 5) { w.acc = 0; const taken = ALLW.filter(o => o !== w && o.room === w.room).map(o => o.node); const n = mineNodes(w.room).find(q => !taken.includes(q)); if (n) { n.hp = 0; oreGive(n.k); n.back = gt.T + (n.deep ? 120 : 90); } }
     }
   }
 }
@@ -6609,8 +6610,8 @@ function drawKellerTuer(cx) {
 }
 // Ziegelstein-Maschine im Keller: macht alle 10 Spielminuten einen Ziegel (Ablage max. 60)
 const ZMS = [
-  { k: 'ziegelmaschine', tr: 'zmTray', x: 120, y: 820 }, { k: 'ziegelmaschine2', tr: 'zmTray2', x: 900, y: 820 }, { k: 'ziegelmaschine3', tr: 'zmTray3', x: 1680, y: 820 },
-  { k: 'ziegelmaschine4', tr: 'zmTray4', x: -60, y: 620 }, { k: 'ziegelmaschine5', tr: 'zmTray5', x: 1760, y: 620 }, { k: 'ziegelmaschine6', tr: 'zmTray6', x: 2400, y: 620 }].map(m => ({ ...m, say: '', sayT: 0 }));
+  { k: 'ziegelmaschine', tr: 'zmTray', x: 120, y: 820 }, { k: 'ziegelmaschine2', tr: 'zmTray2', x: 820, y: 820 }, { k: 'ziegelmaschine3', tr: 'zmTray3', x: 1520, y: 820 },
+  { k: 'ziegelmaschine4', tr: 'zmTray4', x: 2220, y: 820 }, { k: 'ziegelmaschine5', tr: 'zmTray5', x: 2920, y: 820 }, { k: 'ziegelmaschine6', tr: 'zmTray6', x: 3620, y: 820 }].map(m => ({ ...m, say: '', sayT: 0 }));
 const ZM = ZMS[0]; let zmT = null;
 function zmInt() { return lief.zmspeed6 ? 2 : lief.zmspeed5 ? 3 : lief.zmspeed4 ? 4 : lief.zmspeed3 ? 5 : lief.zmspeed2 ? 6 : lief.zmspeed1 ? 8 : 10; }
 function zmMul() { return lief.zmmulti3 ? 3 : lief.zmmulti2 ? 2 : 1; }
@@ -9688,7 +9689,7 @@ function srvCount() { return SRV.filter(v => lief[v.id]).length; }
 function serverTick() {
   const n = srvCount(); if (!n) { srvT = gt.T; return; } if (srvT === null) { srvT = gt.T; return; }
   const d = gt.T - srvT; if (d < 10) return; srvT = gt.T; const h = d / 60;
-  const eur = 40 * n * h; kr.hold.btb = (kr.hold.btb || 0) + eur / kr.p.btb;
+  const eur = 150 * n * h; kr.hold.btb = (kr.hold.btb || 0) + eur / kr.p.btb;
   cz.f += 15 * n * h; const v = cz.vids[cz.vids.length - 1]; if (v) { const add = 180 * n * h; v.views += add; v.target += add; cz.pend += add * 0.03; }
   lief.srvMined = (lief.srvMined || 0) + eur;
 }
