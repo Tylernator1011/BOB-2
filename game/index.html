@@ -2577,7 +2577,7 @@ function room() {
 // Raumwechsel mit kurzem Abblenden
 const fade = { a: 0, dir: 0, to: null, at: null };
 let banner = { text: ROOMS.spawn.name, t: 2.2 };
-function go(to, at) { if (fade.dir) return; doorLock = true; Object.assign(fade, { dir: 1, to, at }); }
+function go(to, at) { if (fade.dir || !ROOMS[to]) return; doorLock = true; Object.assign(fade, { dir: 1, to, at }); }
 function updateFade(dt) {
   if (!fade.dir) return;
   fade.a += fade.dir * dt * 5;
@@ -9945,6 +9945,7 @@ function frame(t) {
     requestAnimationFrame(frame); }
 }
 function frameBody(t) {
+  if (!ROOMS[cur]) { cur = 'haltestelle'; bob.x = 600; bob.y = 650; }
   if (!FIT_DONE && t > 600) measureFits();
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   // große Räume: Kamera folgt Bob
@@ -9998,7 +9999,7 @@ function frameBody(t) {
   if (bob.x < XL + 10 && ex.l) go(ex.l, [rb(ex.l)[1] - 40, bob.y]);
   else if (bob.x > XR - 10 && ex.r) go(ex.r, [rb(ex.r)[0] + 40, bob.y]);
   else if (bob.y > H + 40 && ex.d) go(ex.d, ROOMS[ex.d].openTop ? [bob.x, ROOMS[ex.d].top + 70] : ROOMS[ex.d].door ? [ROOMS[ex.d].door.x + ROOMS[ex.d].door.w / 2, FLOOR + 70] : [W / 2, FLOOR + 70]);
-  if (R.openTop && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
+  if (R.openTop && ex.u && bob.y < R.top + 4 && vy < -0.3) go(ex.u, [bob.x, H - 30]);
   // Tür in der Wand: nach oben hineinlaufen
   for (const a of R.arches || []) if (!doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - a.x) < 110) { go(a.to, [a.ax, a.ay || FLOOR + 70]); doorLock = true; }
   if (cur === 'garten' && lief.mine && lief.gartenxl && !doorLock && !fade.dir && vy < -0.3 && Math.abs(bob.x - MI.x) < 70 && bob.y > MI.y - 10 && bob.y <= MI.y + 22) { go('mine', [600, FLOOR + 70]); doorLock = true; }
