@@ -6452,21 +6452,6 @@ function drawBigBobo(x, y, k, t, look) {
   }
   // Rumpf: riesig und rund, oben schmal
   const ty = y - S(250), shY = y - S(660) + br;
-  // Kopf: Glatze, klein im Verhältnis
-  const hx = x + S(26) * tt, hy = shY - S(74); g.save(); g.translate(hx, hy); g.scale(1.3, 1.3); g.translate(-hx, -hy);
-  { const gr = g.createRadialGradient(hx + S(70) * lx, hy - S(50), S(6), hx, hy, S(120)); gr.addColorStop(0, '#fff0d8'); gr.addColorStop(0.45, '#eac08a'); gr.addColorStop(1, '#a8784a'); g.fillStyle = gr; }
-  g.beginPath(); g.moveTo(hx - S(78), hy + S(10)); g.bezierCurveTo(hx - S(86), hy - S(110), hx + S(86), hy - S(110), hx + S(78), hy + S(10)); g.bezierCurveTo(hx + S(74), hy + S(80), hx - S(74), hy + S(80), hx - S(78), hy + S(10)); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(hx - S(26) + S(20) * lx, hy - S(62), S(24), S(10), -0.3, 0, 7); g.fill();
-  const fx = hx + S(22) * tt;
-  // Brauen (grimmig)
-  g.strokeStyle = '#3a2410'; g.lineWidth = S(8); g.beginPath(); g.moveTo(fx - S(46), hy - S(22)); g.lineTo(fx - S(12), hy - S(12)); g.moveTo(fx + S(46), hy - S(22)); g.lineTo(fx + S(12), hy - S(12)); g.stroke();
-  // Goldenes Auge + normales Auge
-  const ge = g.createRadialGradient(fx - S(30), hy + S(2), S(2), fx - S(28), hy + S(4), S(26)); ge.addColorStop(0, 'rgba(255,250,170,.95)'); ge.addColorStop(0.35, 'rgba(255,210,40,.8)'); ge.addColorStop(1, 'rgba(255,210,40,0)'); g.fillStyle = ge; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(26), 0, 7); g.fill();
-  g.fillStyle = '#ffd21a'; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(9), 0, 7); g.fill(); g.lineWidth = S(2.5); g.strokeStyle = '#8a6a00'; g.stroke();
-  g.fillStyle = '#111'; g.beginPath(); g.arc(fx + S(28), hy + S(4), S(8), 0, 7); g.fill();
-  // Mund (schiefes Grinsen wie im Original)
-  g.strokeStyle = '#111'; g.lineWidth = S(10); g.beginPath(); g.moveTo(fx - S(16), hy + S(30)); g.quadraticCurveTo(fx - S(22), hy + S(48), fx - S(4), hy + S(46)); g.lineTo(fx + S(26), hy + S(44)); g.moveTo(fx - S(16), hy + S(30)); g.lineTo(fx - S(8), hy + S(24)); g.stroke();
-  g.restore(); g.lineWidth = Math.max(2, S(5)); g.strokeStyle = LINE;
   { const gr = g.createRadialGradient(x + S(220) * lx, y - S(520) + br, S(20), x, y - S(430) + br, S(330)); gr.addColorStop(0, SUIT[0]); gr.addColorStop(0.5, SUIT[1]); gr.addColorStop(1, SUIT[2]); g.fillStyle = gr; }
   g.beginPath(); g.moveTo(x - S(70), shY); g.bezierCurveTo(x - S(250), shY + S(20), x - S(275), y - S(420) + br, x - S(250), ty - S(20)); g.quadraticCurveTo(x, ty + S(30), x + S(250), ty - S(20)); g.bezierCurveTo(x + S(275), y - S(420) + br, x + S(250), shY + S(20), x + S(70), shY); g.closePath(); g.fill(); g.stroke();
   g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(x + S(150) * lx, y - S(540) + br, S(46), S(90), -0.35, 0, 7); g.fill();
@@ -6482,6 +6467,21 @@ function drawBigBobo(x, y, k, t, look) {
   g.lineWidth = Math.max(2, S(5));
   g.fillStyle = '#e0141a'; g.beginPath(); g.moveTo(cx - S(150), vb + S(10)); g.lineTo(cx - S(140), vb - S(20)); g.lineTo(cx - S(120), vb - S(4)); g.lineTo(cx - S(100), vb - S(22)); g.lineTo(cx - S(92), vb + S(10)); g.closePath(); g.fill(); g.stroke();
   g.strokeStyle = 'rgba(120,60,0,.6)'; g.lineWidth = S(4); g.beginPath(); g.moveTo(cx - S(160), vb + S(10)); g.lineTo(cx - S(86), vb + S(10)); g.stroke(); g.strokeStyle = LINE; g.lineWidth = Math.max(2, S(5));
+  // Kopf: Glatze, klein im Verhältnis
+  const hx = x + S(26) * tt, hy = shY - S(46); g.save(); g.translate(hx, hy); g.scale(1.3, 1.3); g.translate(-hx, -hy);
+  { const gr = g.createRadialGradient(hx + S(70) * lx, hy - S(50), S(6), hx, hy, S(120)); gr.addColorStop(0, '#fff0d8'); gr.addColorStop(0.45, '#eac08a'); gr.addColorStop(1, '#a8784a'); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(hx - S(78), hy + S(10)); g.bezierCurveTo(hx - S(86), hy - S(110), hx + S(86), hy - S(110), hx + S(78), hy + S(10)); g.bezierCurveTo(hx + S(74), hy + S(80), hx - S(74), hy + S(80), hx - S(78), hy + S(10)); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(hx - S(26) + S(20) * lx, hy - S(62), S(24), S(10), -0.3, 0, 7); g.fill();
+  const fx = hx + S(22) * tt;
+  // Brauen (grimmig)
+  g.strokeStyle = '#3a2410'; g.lineWidth = S(8); g.beginPath(); g.moveTo(fx - S(46), hy - S(22)); g.lineTo(fx - S(12), hy - S(12)); g.moveTo(fx + S(46), hy - S(22)); g.lineTo(fx + S(12), hy - S(12)); g.stroke();
+  // Goldenes Auge + normales Auge
+  const ge = g.createRadialGradient(fx - S(30), hy + S(2), S(2), fx - S(28), hy + S(4), S(26)); ge.addColorStop(0, 'rgba(255,250,170,.95)'); ge.addColorStop(0.35, 'rgba(255,210,40,.8)'); ge.addColorStop(1, 'rgba(255,210,40,0)'); g.fillStyle = ge; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(26), 0, 7); g.fill();
+  g.fillStyle = '#ffd21a'; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(9), 0, 7); g.fill(); g.lineWidth = S(2.5); g.strokeStyle = '#8a6a00'; g.stroke();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(fx + S(28), hy + S(4), S(8), 0, 7); g.fill();
+  // Mund (schiefes Grinsen wie im Original)
+  g.strokeStyle = '#111'; g.lineWidth = S(10); g.beginPath(); g.moveTo(fx - S(16), hy + S(30)); g.quadraticCurveTo(fx - S(22), hy + S(48), fx - S(4), hy + S(46)); g.lineTo(fx + S(26), hy + S(44)); g.moveTo(fx - S(16), hy + S(30)); g.lineTo(fx - S(8), hy + S(24)); g.stroke();
+  g.restore(); g.lineWidth = Math.max(2, S(5)); g.strokeStyle = LINE;
   g.restore();
 }
 function drawBBBuero() {
