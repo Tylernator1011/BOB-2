@@ -3558,7 +3558,8 @@ let chars = { owned: ['bob'], on: 'bob' }; try { chars = Object.assign(chars, JS
 const CHARS = { bob: { name: 'Bob', outfit: 'gruen', desc: 'Der Original-Bob' }, jeff: { name: 'Jeff', outfit: 'jeff', desc: 'Bobs Sohn' } };
 function saveChars() { try { localStorage.setItem('bob-chars', JSON.stringify(chars)); } catch (e) {} }
 function wearKey(id) { return id === 'bob' ? 'bob-kleidung' : 'bob-kleidung-' + id; }
-function loadWear(id) { try { const w = JSON.parse(localStorage.getItem(wearKey(id)) || 'null'); if (w && w.owned) return w; } catch (e) {} const o = CHARS[id].outfit; return { owned: [o], on: o, acc: {}, accOwned: [] }; }
+function outfitChar(k) { return /^jeff/.test(k) ? 'jeff' : 'bob'; }
+function loadWear(id) { const o = CHARS[id].outfit; try { const w = JSON.parse(localStorage.getItem(wearKey(id)) || 'null'); if (w && w.owned) { w.owned = w.owned.filter(k => outfitChar(k) === id); if (!w.owned.includes(o)) w.owned.unshift(o); if (outfitChar(w.on) !== id && !/^mmo_|^apo_/.test(w.on)) w.on = o; return w; } } catch (e) {} return { owned: [o], on: o, acc: {}, accOwned: [] }; }
 let wear = loadWear(CHARS[chars.on] ? chars.on : (chars.on = 'bob'));
 function saveWear() { try { localStorage.setItem(wearKey(chars.on), JSON.stringify(wear)); } catch (e) {} }
 function wearOf(id) { return id === chars.on ? wear : loadWear(id); }
@@ -3777,7 +3778,7 @@ function wrItems() {
   if (wr.mode === 'acc') return (wear.accOwned || []).filter(k => ACC[k]);
   if (wr.mode === 'waffen') return Object.keys(WEAPONS).filter(k => (!WEAPONS[k].char || WEAPONS[k].char === chars.on) && (!WEAPONS[k].unlock || WEAPONS[k].unlock()));
   if (wr.mode === 'char') return chars.owned.filter(k => CHARS[k]);
-  return wear.owned.filter(k => OUTFITS[k]);
+  return wear.owned.filter(k => OUTFITS[k] && outfitChar(k) === chars.on);
 }
 function wrOn() { if (wr.mode === 'char') return chars.on; if (wr.mode === 'waffen') return weap.sel; if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
 function wrMaxScroll() { return Math.max(0, Math.ceil(wrItems().length / WR.cols) - WR.rows); }
@@ -5196,7 +5197,7 @@ const ADMIN = {
     ['Bargeld auf 0 €', '#7b8190', () => { bank.cash = 0; saveBank(); }],
   ],
   sachen: [
-    ['Alle Outfits', '#9b5de5', () => { wear.owned = Object.keys(OUTFITS); saveWear(); }],
+    ['Alle Outfits', '#9b5de5', () => { wear.owned = Object.keys(OUTFITS).filter(k => outfitChar(k) === chars.on && !/^mmo_/.test(k)); if (outfitChar(wear.on) !== chars.on) wear.on = CHARS[chars.on].outfit; saveWear(); }],
     ['Alle Möbel (+3)', '#ff8a1a', () => { for (const k in FURN) if (FURN[k].price || k === 'transportbox' || SHOP_FURN[k]) inv[k] = (inv[k] || 0) + 3; saveFurn(); }],
     ['Alle Wände & Böden', '#ffb21a', () => { deko.walls = Object.keys(WALLS); deko.floors = Object.keys(FLOORS); saveDeko(); }],
     ['Futter & Samen', '#2fa84f', () => { for (const l of [1, 2, 3, 4]) garden.food[l] = (garden.food[l] || 0) + 5; for (const k in SEEDS) garden.seeds[k] = (garden.seeds[k] || 0) + 2; saveGarden(); }],
