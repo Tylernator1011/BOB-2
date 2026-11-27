@@ -207,6 +207,9 @@ const ROOMS = {
   gerichtsplatz: { name: 'Gericht', outside: true, kind: 'street', facade: 'gericht', exits: { l: 'laborplatz' }, maxY: H - 175, wide: [-600, 1800],
               door: { x: 500, w: 200, to: 'gerichtssaal', at: [600, FLOOR + 80], bank: true } },
   wuestenweg: { name: 'Wüstenstraße', outside: true, kind: 'wuestenweg', exits: { l: 'wueste', r: 'bankplatz' }, maxY: H - 30, wide: [-600, 1800] },
+  wildstr: { name: 'Waldstraße', outside: true, kind: 'wildstr', exits: { l: 'wildnis' }, maxY: H - 175, wide: [-1900, 1500],
+              stop: { x: 1000, name: 'Wildnis', dests: ['haltestelle', 'tierladen', 'moebelhaus'] } },
+  wildnis: { name: 'Wildnis', outside: true, flat: true, kind: 'wildnis', exits: { r: 'wildstr' }, wide: [-28000, 1600], openTop: true, top: -7000, vtop: -7350, tall: 7000, maxY: H + 6970 },
   wueste: { name: 'Wüste', outside: true, desert: true, flat: true, kind: 'wueste', exits: { r: 'wuestenweg' }, wide: [-2200, 3400], openTop: true, top: -900, vtop: -1250, tall: 900, maxY: H + 870 },
   gerichtssaal: { name: 'Gerichtssaal', wall: ['#e4d3b0', '#f3e8cf'], exits: {}, wide: [-450, 1700],
               door: { x: 510, w: 180, to: 'gerichtsplatz', at: [600, FLOOR + 70] },
@@ -242,12 +245,12 @@ const ROOMS = {
                 { type: 'gitter', x: 800, w: 90, base: 700, h: 400, depth: 24 }, { type: 'gitter', x: 1090, w: 90, base: 700, h: 400, depth: 24 },
               ] },
   haltestelle: { name: 'Bushaltestelle', outside: true, kind: 'street', grass: true, exits: { l: 'draussen', r: 'polizeiplatz' }, maxY: H - 175, objs: [{ type: 'gulli', x: 420, y: 672, base: 600, to: ['kanal5', 800] }],
-              stop: { x: 760, name: 'Zuhause', dests: ['tierladen', 'moebelhaus'] } },
+              stop: { x: 760, name: 'Zuhause', dests: ['tierladen', 'moebelhaus', 'wildstr'] } },
   tierladen: { name: 'Tierladen', outside: true, kind: 'street', shop: true, exits: {}, maxY: H - 175,
-              stop: { x: 260, name: 'Tierladen', dests: ['haltestelle', 'moebelhaus'] },
+              stop: { x: 260, name: 'Tierladen', dests: ['haltestelle', 'moebelhaus', 'wildstr'] },
               door: { x: 760, w: 180, to: 'laden', at: [600, FLOOR + 70] } },
   moebelhaus: { name: 'Möbelhaus', outside: true, kind: 'street', facade: 'moebel', exits: {}, maxY: H - 175,
-              stop: { x: 240, name: 'Möbelhaus', dests: ['haltestelle', 'tierladen'] },
+              stop: { x: 240, name: 'Möbelhaus', dests: ['haltestelle', 'tierladen', 'wildstr'] },
               door: { x: 770, w: 200, to: 'moebel_innen', at: [600, FLOOR + 70] } },
   moebel_innen: { name: 'Im Möbelhaus', wall: ['#ffd84a', '#fff0a8'], floorStyle: 'fliesen', exits: {},
               door: { x: 510, w: 180, to: 'moebelhaus', at: [870, FLOOR + 70] },
@@ -2520,6 +2523,8 @@ function room() {
   else if (R.kind === 'botanik') drawBotanikRoom(R);
   else if (R.kind === 'wuestenweg') drawWuestenweg(R);
   else if (R.kind === 'wueste') drawWueste(R);
+  else if (R.kind === 'wildnis') drawWildnis(R);
+  else if (R.kind === 'wildstr') drawWildStrasse(R);
   else if (R.kind === 'mine') drawMineRoom(R);
   else if (R.kind === 'keller') drawKeller(R);
   else if (R.kind === 'bbbuero') drawBBRoom(R);
@@ -4210,7 +4215,7 @@ function rowIcon(it) {
   if (it.wd !== undefined) return ['cash', '#1f4f9e'];
   if (it.mk || it.mw || it.mb) return ['cash', '#3a2d4a'];
   if (it.troph) return ['trophy', TROPHIES[it.troph].col === '#ffcc1a' ? '#e0a10f' : TROPHIES[it.troph].col];
-  if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : 'sofa', '#2f6fe0'];
+  if (it.dest) return [it.dest === 'haltestelle' ? 'home' : it.dest === 'tierladen' ? 'paw' : it.dest === 'wildstr' ? 'sun' : 'sofa', '#2f6fe0'];
   if (it.sleep) return [it.sleep === 'morgen' ? 'sun' : 'moon', it.sleep === 'morgen' ? '#ff9a1a' : '#4b3fa8'];
   if (it.seed) return ['seed', SEEDS[it.seed].col];
   if (it.cook) return ['pot', '#ff7a1a'];
@@ -4667,6 +4672,7 @@ function furnBox(f) {
 function solids(room) {
   const list = (ROOMS[room].objs || []).filter(o => !o.jailDoor || jailed()).map(o => o.type === 'moebel' ? furnBox({ t: o.t, x: o.fx, y: o.base, r: o.r }) : o.type === 'npc' ? { x: o.x - o.w / 2, w: o.w, base: o.base, depth: o.depth } : o);
   for (const f of furn[room] || []) if (!FURN[f.t].flat && !FURN[f.t].wall && !f.gtopf) list.push(furnBox(f));
+  if (room === 'wildnis') wildSolids(list);
   if (room === 'garten' && lief.toepfe && lief.tierhaus) { list.push({ x: TH.x - 225, w: 95, base: TH.y + 46, depth: 40 }); list.push({ x: TH.x + 130, w: 95, base: TH.y + 46, depth: 40 }); }
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'orange' && lief.mitbewohner) list.push({ x: MB.x - 60, w: 120, base: MB.y, depth: 30 });
@@ -5192,6 +5198,7 @@ const ADMIN = {
     ['Labor', '#2a8a6a', tpTo('laborplatz', [600, 650])],
     ['Gericht', '#8a6a3a', tpTo('gerichtsplatz', [600, 650])],
     ['Wüste', '#e6bf78', tpTo('wueste', [3000, 700])],
+    ['Wildnis', '#3f9a38', tpTo('wildnis', [1300, 640])],
     ['Aus der Haft entlassen', '#13b84a', () => { jail.until = gt.T; saveJail(); }],
   ],
 };
@@ -6075,6 +6082,208 @@ function drawWueste(R) {
   // Hitzeflimmern
   g.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 5; i++) g.fillRect(XL, top + 60 + i * 30 + Math.sin(t * 2 + i) * 6, VW, 8);
 }
+// ---------- Wildnis: riesiges Gebiet mit Wald, Wiesen, Wüste, Canyons und Bergen ----------
+const WLD = { x0: -28000, x1: 1600, top: -7000, bot: H + 7000 };
+function wHash(a, b, s) { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+const WB_NAMES = { wald: 'Wald', wiese: 'Wiese', wueste: 'Wüste', canyon: 'Canyon', berg: 'Berge' };
+const WB_COL = { wald: [63, 150, 56], wiese: [108, 200, 80], wueste: [236, 202, 136], canyon: [200, 106, 60], berg: [138, 146, 152] };
+const WB_SEEDS = (() => {
+  const L = [{ x: 900, y: 600, b: 'wiese' }, { x: -1200, y: 200, b: 'wald' }, { x: -2600, y: -1800, b: 'wald' }, { x: -2400, y: 2600, b: 'wald' }];
+  let sd = 4242; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const pick = (x, y, q) => x > -6500 ? (q < 0.72 ? 'wald' : 'wiese') : y < -2200 ? (q < 0.82 ? 'berg' : 'wald') : x < -19000 ? (q < 0.8 ? 'wueste' : 'canyon') : y > 1800 ? (q < 0.72 ? 'canyon' : 'wueste') : ['wiese', 'wald', 'canyon', 'berg', 'wueste', 'wald'][Math.floor(q * 6)];
+  for (let i = 0; i < 90; i++) { const x = WLD.x0 + r() * (WLD.x1 - WLD.x0 - 1500), y = WLD.top + r() * (WLD.bot - WLD.top); L.push({ x, y, b: pick(x, y, r()) }); }
+  return L;
+})();
+const wCache = new Map(); let wOff = null, wOffG = null, wOffKey = '';
+function wBiome2(x, y) {
+  const wx = x + Math.sin(y * 0.0013) * 420 + Math.sin(y * 0.0037 + 1) * 160, wy = y + Math.sin(x * 0.0011) * 420 + Math.sin(x * 0.0029 + 2) * 160;
+  let d1 = 1e18, d2 = 1e18, s1 = null, s2 = null;
+  for (const s of WB_SEEDS) { const dx = s.x - wx, dy = s.y - wy, d = dx * dx + dy * dy; if (d < d1) { d2 = d1; s2 = s1; d1 = d; s1 = s; } else if (d < d2) { d2 = d; s2 = s; } }
+  return [s1.b, s2.b, Math.sqrt(d2) - Math.sqrt(d1)];
+}
+function wBiome(x, y) { return wBiome2(x, y)[0]; }
+function wGround(tx, ty) {
+  const k = tx + ',' + ty; let c = wCache.get(k); if (c) return c;
+  const x = tx * 64 + 32, y = ty * 64 + 32, [b1, b2, gap] = wBiome2(x, y); const snow = v => v === 'berg' ? Math.max(0, Math.min(1, (-y - 3600) / 2400)) : 0;
+  const col = v => { const c0 = WB_COL[v], s = snow(v); return c0.map((q, i) => q + ([242, 246, 250][i] - q) * s); };
+  const t = Math.min(1, gap / 340), A = col(b1), B = col(b2), m = 0.5 + 0.5 * t;
+  c = A.map((q, i) => Math.round(B[i] + (q - B[i]) * m));
+  if (wCache.size > 30000) wCache.clear(); wCache.set(k, c); return c;
+}
+// große Dinge (Berge, Tafelberge, Seen, Dünen) auf einem groben Raster
+const wBigC = new Map();
+function wBig(cx, cy) {
+  const k = cx + ',' + cy; if (wBigC.has(k)) return wBigC.get(k);
+  let f = null; const x = cx * 1100 + 550 + (wHash(cx, cy, 1) - 0.5) * 500, y = cy * 1100 + 550 + (wHash(cx, cy, 2) - 0.5) * 500, q = wHash(cx, cy, 3), s = 0.75 + wHash(cx, cy, 4) * 0.6;
+  if (x > WLD.x0 + 400 && x < WLD.x1 - 1800 && y > WLD.top + 300 && y < WLD.bot - 200) {
+    const b = wBiome(x, y);
+    if (b === 'berg' && q < 0.7) f = { k: 'berg', x, y, s, snow: y < -3400 || q < 0.2 };
+    else if (b === 'canyon' && q < 0.55) f = { k: 'mesa', x, y, s };
+    else if (b === 'canyon' && q < 0.8) f = { k: 'schlucht', x, y, s };
+    else if ((b === 'wald' || b === 'wiese') && q < 0.13) f = { k: 'see', x, y, s };
+    else if (b === 'wueste' && q < 0.45) f = { k: 'duene', x, y, s };
+  }
+  wBigC.set(k, f); return f;
+}
+function wBigBox(f) {
+  if (f.k === 'berg') return { x: f.x - 300 * f.s, w: 600 * f.s, base: f.y + 10, depth: 150 * f.s };
+  if (f.k === 'mesa') return { x: f.x - 270 * f.s, w: 540 * f.s, base: f.y + 10, depth: 130 * f.s };
+  if (f.k === 'see') return { x: f.x - 300 * f.s, w: 600 * f.s, base: f.y + 110 * f.s, depth: 230 * f.s };
+  if (f.k === 'schlucht') return { x: f.x - 380 * f.s, w: 760 * f.s, base: f.y + 40 * f.s, depth: 80 * f.s };
+  return null;
+}
+// kleine Dinge auf einem feinen Raster
+const wSmC = new Map();
+const WS_TYPES = { wald: [['baum', 5], ['tanne', 4], ['busch', 2], ['pilz', 1], ['stamm', 1], [null, 3]], wiese: [['blumen', 4], ['baum', 1], ['busch', 1], ['stein', 1], [null, 5]],
+  wueste: [['kaktus', 3], ['stein', 2], ['busch', 1], ['schaedel', 1], [null, 7]], canyon: [['rotfels', 3], ['toterbaum', 2], ['kaktus', 1], [null, 6]], berg: [['fels', 3], ['tanne', 3], [null, 5]] };
+function wSmall(cx, cy) {
+  const k = cx + ',' + cy; if (wSmC.has(k)) return wSmC.get(k);
+  const x = cx * 210 + 105 + (wHash(cx, cy, 5) - 0.5) * 150, y = cy * 210 + 105 + (wHash(cx, cy, 6) - 0.5) * 150; let it = null;
+  if (x > WLD.x0 + 60 && x < WLD.x1 - 60 && y > WLD.top + 60 && y < WLD.bot - 20 && !(x > 700 && Math.abs(y - 620) < 260)) {
+    const b = wBiome(x, y), L = WS_TYPES[b], tot = L.reduce((a, e) => a + e[1], 0); let r = wHash(cx, cy, 7) * tot, t = null; for (const [n, w] of L) { if (r < w) { t = n; break; } r -= w; }
+    if (t) { let free = true; const bx = Math.floor(x / 1100), by = Math.floor(y / 1100);
+      for (let i = -1; i <= 1 && free; i++) for (let j = -1; j <= 1; j++) { const f = wBig(bx + i, by + j); if (f && Math.abs(f.x - x) < 520 * f.s && Math.abs(f.y - y) < (f.k === 'berg' || f.k === 'mesa' ? 260 : 330) * f.s) { free = false; break; } }
+      if (free) it = { k: t, x, y, s: 0.8 + wHash(cx, cy, 8) * 0.5, snow: b === 'berg' && y < -3800, f: wHash(cx, cy, 9) < 0.5 ? -1 : 1 }; }
+  }
+  if (wSmC.size > 40000) wSmC.clear(); wSmC.set(k, it); return it;
+}
+const WS_SOLID = { baum: 18, tanne: 18, stein: 30, fels: 34, rotfels: 34, kaktus: 16, toterbaum: 12, stamm: 46 };
+function wildSolids(list) {
+  const bx = Math.floor(bob.x / 1100), by = Math.floor(bob.y / 1100);
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const f = wBig(bx + i, by + j); const b = f && wBigBox(f); if (b) list.push(b); }
+  const sx = Math.floor(bob.x / 210), sy = Math.floor(bob.y / 210);
+  for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const it = wSmall(sx + i, sy + j); const w = it && WS_SOLID[it.k]; if (w) list.push({ x: it.x - w * it.s, w: 2 * w * it.s, base: it.y + 6, depth: 18 }); }
+}
+function wViewY() { return [camTop - 80, camTop + H / camZv + 80]; }
+function drawWildnis(R) {
+  const t = performance.now() / 1000, [y0, y1] = wViewY();
+  // Himmel ganz im Norden
+  if (y0 < WLD.top) { const sky = g.createLinearGradient(0, WLD.top - 900, 0, WLD.top); sky.addColorStop(0, '#3f8ce0'); sky.addColorStop(1, '#cfe9ff'); g.fillStyle = sky; g.fillRect(XL - 50, WLD.top - 1400, VW + 100, 1400); }
+  // Boden in weichen Übergängen
+  const tx0 = Math.floor((XL - 128) / 64), tx1 = Math.ceil((XR + 128) / 64), ty0 = Math.floor(Math.max(WLD.top - 64, y0 - 64) / 64), ty1 = Math.ceil(Math.min(WLD.bot + 160, y1 + 64) / 64);
+  { const nw = tx1 - tx0 + 1, nh = ty1 - ty0 + 1; if (!wOff) { wOff = document.createElement('canvas'); wOffG = wOff.getContext('2d'); } if (wOff.width < nw || wOff.height < nh) { wOff.width = Math.max(nw, wOff.width); wOff.height = Math.max(nh, wOff.height); }
+    const key = tx0 + ',' + ty0 + ',' + nw + ',' + nh; if (key !== wOffKey) { wOffKey = key; const img = wOffG.createImageData(nw, nh); for (let ty = 0; ty < nh; ty++) for (let tx = 0; tx < nw; tx++) { const c = wGround(tx0 + tx, ty0 + ty), o = (ty * nw + tx) * 4; img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255; } wOffG.putImageData(img, 0, 0); }
+    g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'low'; g.drawImage(wOff, 0, 0, nw, nh, tx0 * 64, ty0 * 64, nw * 64, nh * 64); g.restore(); }
+  // flache Sachen: Seen, Dünen, Schluchten, Gras, Blumen
+  const bx0 = Math.floor((XL - 900) / 1100), bx1 = Math.floor((XR + 900) / 1100), by0 = Math.floor((y0 - 600) / 1100), by1 = Math.floor((y1 + 1200) / 1100);
+  g.lineWidth = 4; g.strokeStyle = LINE;
+  for (let cy = by0; cy <= by1; cy++) for (let cx = bx0; cx <= bx1; cx++) { const f = wBig(cx, cy); if (!f) continue; const s = f.s;
+    if (f.k === 'see') { g.fillStyle = '#d9c98a'; g.beginPath(); g.ellipse(f.x, f.y, 330 * s, 150 * s, 0, 0, 7); g.fill(); const lg = g.createRadialGradient(f.x - 80 * s, f.y - 40 * s, 10, f.x, f.y, 310 * s); lg.addColorStop(0, '#7fd0ff'); lg.addColorStop(1, '#2a7ac8'); g.fillStyle = lg; g.beginPath(); g.ellipse(f.x, f.y, 300 * s, 130 * s, 0, 0, 7); g.fill(); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 3; for (let k = 0; k < 3; k++) { const wx = f.x - 120 * s + k * 110 * s, wy = f.y - 30 * s + k * 26 * s + Math.sin(t * 2 + k) * 4; g.beginPath(); g.moveTo(wx - 24, wy); g.quadraticCurveTo(wx, wy - 8, wx + 24, wy); g.stroke(); } g.strokeStyle = LINE; g.lineWidth = 4; }
+    else if (f.k === 'duene') { g.fillStyle = 'rgba(255,240,200,.45)'; g.beginPath(); g.ellipse(f.x - 60 * s, f.y - 20 * s, 380 * s, 90 * s, -0.1, 0, 7); g.fill(); g.fillStyle = 'rgba(190,140,70,.28)'; g.beginPath(); g.ellipse(f.x + 80 * s, f.y + 30 * s, 340 * s, 60 * s, -0.1, 0, 7); g.fill(); }
+    else if (f.k === 'schlucht') { g.save(); g.translate(f.x, f.y); g.scale(s, s); const sg = g.createLinearGradient(0, -90, 0, 90); sg.addColorStop(0, '#5a1e0c'); sg.addColorStop(0.5, '#2a0c06'); sg.addColorStop(1, '#7a3214'); g.fillStyle = sg;
+      g.beginPath(); g.moveTo(-400, 0); g.bezierCurveTo(-250, -90, -80, -40, 60, -70); g.bezierCurveTo(200, -100, 320, -40, 400, 0); g.bezierCurveTo(300, 60, 150, 30, 20, 70); g.bezierCurveTo(-120, 100, -280, 50, -400, 0); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = 'rgba(255,170,110,.35)'; g.beginPath(); g.moveTo(-380, -4); g.bezierCurveTo(-250, -80, -80, -30, 60, -60); g.bezierCurveTo(200, -90, 320, -34, 390, -2); g.bezierCurveTo(300, -40, 200, -70, 60, -44); g.bezierCurveTo(-80, -20, -240, -66, -380, -4); g.fill(); g.restore(); }
+  }
+  const sx0 = Math.floor((XL - 120) / 210), sx1 = Math.floor((XR + 120) / 210), sy0 = Math.floor((y0 - 40) / 210), sy1 = Math.floor((y1 + 300) / 210);
+  for (let cy = sy0; cy <= sy1; cy++) for (let cx = sx0; cx <= sx1; cx++) {
+    const it = wSmall(cx, cy);
+    // Grashalme / Steinchen als Bodentextur
+    const gx = cx * 210 + wHash(cx, cy, 11) * 210, gy = cy * 210 + wHash(cx, cy, 12) * 210, b = wBiome(gx, gy);
+    if (b === 'wald' || b === 'wiese') { g.strokeStyle = b === 'wald' ? '#2c7a2a' : '#3e9a32'; g.lineWidth = 3; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx - 7, gy - 16); g.moveTo(gx, gy); g.lineTo(gx, gy - 20); g.moveTo(gx, gy); g.lineTo(gx + 7, gy - 16); g.stroke(); }
+    else { g.fillStyle = b === 'canyon' ? 'rgba(120,50,20,.35)' : b === 'berg' ? 'rgba(80,86,94,.35)' : 'rgba(170,120,60,.3)'; g.beginPath(); g.ellipse(gx, gy, 8, 5, 0, 0, 7); g.ellipse(gx + 16, gy + 6, 5, 3, 0, 0, 7); g.fill(); }
+    if (it && it.k === 'blumen') { for (let k = 0; k < 5; k++) { const fx = it.x + (wHash(cx, cy, 20 + k) - 0.5) * 90, fy = it.y + (wHash(cx, cy, 30 + k) - 0.5) * 50; g.strokeStyle = '#2c7a2a'; g.lineWidth = 2; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 14); g.stroke(); g.fillStyle = ['#ff5a7a', '#ffd23a', '#fff', '#b07aff'][k % 4]; g.beginPath(); g.arc(fx, fy - 16, 6, 0, 7); g.fill(); g.fillStyle = '#ffb020'; g.beginPath(); g.arc(fx, fy - 16, 2.4, 0, 7); g.fill(); } }
+  }
+  g.strokeStyle = LINE; g.lineWidth = 4;
+  // Weg-Markierung am Eingang
+  if (XR > 600) { g.fillStyle = 'rgba(150,110,60,.45)'; g.beginPath(); g.ellipse(1250, 640, 420, 70, 0, 0, 7); g.fill(); }
+}
+function wildList(list) {
+  const [y0, y1] = wViewY();
+  const bx0 = Math.floor((XL - 900) / 1100), bx1 = Math.floor((XR + 900) / 1100), by0 = Math.floor((y0 - 200) / 1100), by1 = Math.floor((y1 + 1300) / 1100);
+  for (let cy = by0; cy <= by1; cy++) for (let cx = bx0; cx <= bx1; cx++) { const f = wBig(cx, cy); if (f && (f.k === 'berg' || f.k === 'mesa')) list.push({ y: f.y, f: () => drawWildBig(f) }); }
+  const sx0 = Math.floor((XL - 160) / 210), sx1 = Math.floor((XR + 160) / 210), sy0 = Math.floor((y0 - 40) / 210), sy1 = Math.floor((y1 + 420) / 210);
+  for (let cy = sy0; cy <= sy1; cy++) for (let cx = sx0; cx <= sx1; cx++) { const it = wSmall(cx, cy); if (it && it.k !== 'blumen') list.push({ y: it.y, f: () => drawWildSmall(it) }); }
+  list.push({ y: 560, f: drawWildSchild });
+}
+function drawWildSchild() {
+  if (XR < 800) return; g.save(); g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = '#8a5a30'; g.fillRect(1394, 450, 12, 110); g.strokeRect(1394, 450, 12, 110);
+  g.fillStyle = '#e8d28a'; g.beginPath(); g.moveTo(1310, 430); g.lineTo(1490, 430); g.lineTo(1520, 460); g.lineTo(1490, 490); g.lineTo(1310, 490); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#3a2814'; g.font = '900 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('STRASSE →', 1410, 461); g.restore();
+}
+function drawWildBig(f) {
+  g.save(); g.translate(f.x, f.y); g.scale(f.s, f.s); g.lineWidth = 5 / f.s; g.strokeStyle = LINE; g.lineJoin = 'round';
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(0, 4, 360, 60, 0, 0, 7); g.fill();
+  if (f.k === 'berg') {
+    const P = new Path2D(); P.moveTo(-360, 0); P.bezierCurveTo(-260, -260, -120, -760, -10, -880); P.quadraticCurveTo(10, -900, 30, -876); P.bezierCurveTo(140, -740, 270, -280, 360, 0); P.quadraticCurveTo(0, 50, -360, 0); P.closePath();
+    const gr = g.createLinearGradient(-360, 0, 360, 0); gr.addColorStop(0, '#b4bcc6'); gr.addColorStop(0.5, '#8a929c'); gr.addColorStop(1, '#565d66'); g.fillStyle = gr; g.fill(P);
+    // Schattenseite
+    g.save(); g.clip(P); g.fillStyle = 'rgba(30,34,44,.28)'; g.beginPath(); g.moveTo(10, -890); g.bezierCurveTo(60, -600, 120, -300, 90, 30); g.lineTo(400, 30); g.lineTo(400, -900); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(40,44,52,.35)'; g.lineWidth = 4; for (const [a, b2] of [[-150, -420], [130, -360], [-60, -200]]) { g.beginPath(); g.moveTo(a, b2); g.quadraticCurveTo(a + 30, b2 + 80, a + 10, b2 + 170); g.stroke(); }
+    // Schneekappe
+    const sl = f.snow ? -560 : -720; g.fillStyle = '#f6f9fc'; g.beginPath(); g.moveTo(-400, sl); for (let k = 0; k <= 8; k++) { const x = -400 + k * 100; g.quadraticCurveTo(x - 50, sl + (k % 2 ? 70 : 20), x, sl + (k % 2 ? 30 : 60)); } g.lineTo(400, -950); g.lineTo(-400, -950); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(160,190,220,.35)'; g.beginPath(); g.moveTo(20, -890); g.bezierCurveTo(60, -760, 90, -660, 110, sl + 40); g.lineTo(400, sl); g.lineTo(400, -950); g.closePath(); g.fill();
+    g.restore(); g.lineWidth = 5 / f.s; g.strokeStyle = LINE; g.stroke(P);
+  } else {
+    const P = new Path2D(); P.moveTo(-330, 0); P.bezierCurveTo(-310, -120, -290, -300, -270, -390); P.quadraticCurveTo(-262, -420, -220, -424); P.lineTo(220, -424); P.quadraticCurveTo(262, -420, 270, -390); P.bezierCurveTo(290, -300, 310, -120, 330, 0); P.quadraticCurveTo(0, 46, -330, 0); P.closePath();
+    const gr = g.createLinearGradient(-330, 0, 330, 0); gr.addColorStop(0, '#ec9a60'); gr.addColorStop(0.45, '#cf6c38'); gr.addColorStop(1, '#8a3c18'); g.fillStyle = gr; g.fill(P);
+    g.save(); g.clip(P); for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? 'rgba(120,40,10,.22)' : 'rgba(255,200,150,.16)'; g.beginPath(); g.moveTo(-400, -360 + k * 62); g.quadraticCurveTo(0, -340 + k * 62 + (k % 3) * 10, 400, -366 + k * 62); g.lineTo(400, -330 + k * 62); g.quadraticCurveTo(0, -306 + k * 62, -400, -326 + k * 62); g.closePath(); g.fill(); }
+    g.fillStyle = 'rgba(60,20,6,.25)'; g.beginPath(); g.moveTo(150, -430); g.bezierCurveTo(200, -300, 240, -120, 220, 40); g.lineTo(400, 40); g.lineTo(400, -430); g.closePath(); g.fill(); g.restore();
+    g.lineWidth = 5 / f.s; g.stroke(P);
+    // Oberseite (flaches Plateau mit Tiefe)
+    g.fillStyle = '#f0a870'; g.beginPath(); g.ellipse(0, -424, 236, 34, 0, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = '#4a8a2a'; g.lineWidth = 3 / f.s; for (const x of [-120, -20, 90]) { g.beginPath(); g.moveTo(x, -420); g.lineTo(x - 6, -436); g.moveTo(x, -420); g.lineTo(x + 6, -436); g.stroke(); }
+  }
+  g.restore();
+}
+function drawWildSmall(it) {
+  const t = performance.now() / 1000; g.save(); g.translate(it.x, it.y); g.scale(it.s * it.f, it.s); g.lineWidth = 4 / it.s; g.strokeStyle = LINE; g.lineJoin = 'round';
+  const sh = (rx, ry) => { g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(0, 2, rx, ry, 0, 0, 7); g.fill(); };
+  const rad = (x, y, r, c0, c1, c2) => { const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r); gr.addColorStop(0, c0); gr.addColorStop(0.55, c1); gr.addColorStop(1, c2); return gr; };
+  const blobs = (C, fill) => { g.fillStyle = LINE; for (const [x, y, r] of C) { g.beginPath(); g.arc(x, y, r + 4 / it.s, 0, 7); g.fill(); } g.fillStyle = fill; for (const [x, y, r] of C) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } };
+  const k = it.k;
+  if (k === 'baum') {
+    sh(60, 16); const tg = g.createLinearGradient(-16, 0, 16, 0); tg.addColorStop(0, '#9a6a3a'); tg.addColorStop(1, '#5a3a1a'); g.fillStyle = tg; g.beginPath(); g.moveTo(-16, 0); g.lineTo(-12, -110); g.lineTo(12, -110); g.lineTo(16, 0); g.quadraticCurveTo(0, 6, -16, 0); g.fill(); g.stroke();
+    const sw = Math.sin(t * 1.2 + it.x) * 3; blobs([[sw - 40, -150, 52], [sw + 40, -150, 52], [sw, -196, 62], [sw, -130, 50]], rad(sw - 10, -170, 100, '#8ee06a', '#3fa236', '#1f6a22'));
+  } else if (k === 'tanne') {
+    sh(50, 14); g.fillStyle = '#5a3a1a'; g.fillRect(-10, -40, 20, 40); g.strokeRect(-10, -40, 20, 40);
+    for (let i = 0; i < 3; i++) { const yb = -30 - i * 62, w = 70 - i * 16; const gr = g.createLinearGradient(-w, 0, w, 0); gr.addColorStop(0, '#4aa04a'); gr.addColorStop(1, '#145a26'); g.fillStyle = gr; g.beginPath(); g.moveTo(-w, yb); g.quadraticCurveTo(-w * 0.3, yb - 40, 0, yb - 92); g.quadraticCurveTo(w * 0.3, yb - 40, w, yb); g.quadraticCurveTo(0, yb + 14, -w, yb); g.closePath(); g.fill(); g.stroke();
+      if (it.snow) { g.fillStyle = '#f6f9fc'; g.beginPath(); g.moveTo(-w * 0.3, yb - 60); g.quadraticCurveTo(0, yb - 50, w * 0.3, yb - 60); g.lineTo(0, yb - 92); g.closePath(); g.fill(); } }
+  } else if (k === 'busch') { sh(46, 12); blobs([[-22, -22, 26], [20, -22, 26], [0, -40, 30]], rad(-6, -30, 50, '#8ee06a', '#3fa236', '#1f6a22')); }
+  else if (k === 'pilz') { sh(20, 6); g.fillStyle = '#f4efe2'; g.beginPath(); g.roundRect(-8, -30, 16, 30, 6); g.fill(); g.stroke(); g.fillStyle = rad(-4, -40, 30, '#ff7a6a', '#e0262b', '#8a0a10'); g.beginPath(); g.ellipse(0, -32, 28, 18, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#fff'; for (const [a, b] of [[-12, -40], [6, -44], [14, -36]]) { g.beginPath(); g.arc(a, b, 4, 0, 7); g.fill(); } }
+  else if (k === 'stamm') { sh(60, 12); const gr = g.createLinearGradient(0, -40, 0, 0); gr.addColorStop(0, '#a87a44'); gr.addColorStop(1, '#5a3a1a'); g.fillStyle = gr; g.beginPath(); g.roundRect(-56, -40, 100, 38, 18); g.fill(); g.stroke(); g.fillStyle = '#d9b27a'; g.beginPath(); g.ellipse(44, -21, 12, 19, 0, 0, 7); g.fill(); g.stroke(); g.strokeStyle = 'rgba(90,50,20,.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(44, -21, 6, 10, 0, 0, 7); g.stroke(); }
+  else if (k === 'kaktus') { sh(34, 10); const gr = g.createLinearGradient(-16, 0, 16, 0); gr.addColorStop(0, '#6ad06a'); gr.addColorStop(1, '#1f7a2a'); g.fillStyle = gr; g.beginPath(); g.roundRect(-16, -110, 32, 110, 16); g.fill(); g.stroke(); g.beginPath(); g.roundRect(-46, -80, 22, 46, 11); g.fill(); g.stroke(); g.beginPath(); g.roundRect(24, -66, 22, 40, 11); g.fill(); g.stroke(); g.fillRect(-28, -48, 14, 10); g.fillRect(14, -38, 12, 10); }
+  else if (k === 'stein' || k === 'fels' || k === 'rotfels') { const big = k === 'stein' ? 0.8 : 1.1; g.scale(big, big); sh(44, 12); g.fillStyle = k === 'rotfels' ? rad(-8, -30, 50, '#f0a070', '#c8603a', '#7a2e12') : rad(-8, -30, 50, '#d6d9dd', '#9aa0a8', '#5a6068'); g.beginPath(); g.moveTo(-42, 0); g.bezierCurveTo(-48, -30, -20, -54, 4, -52); g.bezierCurveTo(32, -50, 48, -26, 42, 0); g.quadraticCurveTo(0, 8, -42, 0); g.fill(); g.stroke(); if (it.snow) { g.fillStyle = '#f6f9fc'; g.beginPath(); g.ellipse(0, -46, 26, 8, 0, 0, 7); g.fill(); } }
+  else if (k === 'toterbaum') { sh(34, 8); g.strokeStyle = '#5a3a1a'; g.lineCap = 'round'; g.lineWidth = 12; g.beginPath(); g.moveTo(0, 0); g.lineTo(-4, -90); g.stroke(); g.lineWidth = 7; g.beginPath(); g.moveTo(-3, -60); g.quadraticCurveTo(-30, -80, -40, -110); g.moveTo(-3, -80); g.quadraticCurveTo(24, -96, 30, -126); g.moveTo(-4, -90); g.lineTo(-8, -124); g.stroke(); }
+  else if (k === 'schaedel') { g.fillStyle = '#f4efe2'; g.beginPath(); g.arc(0, -14, 16, Math.PI, 0); g.lineTo(10, -2); g.lineTo(-10, -2); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#222'; g.beginPath(); g.arc(-6, -14, 4, 0, 7); g.arc(6, -14, 4, 0, 7); g.fill(); }
+  g.restore();
+}
+function drawWildHud() {
+  if (cur !== 'wildnis') return; const b = wBiome(bob.x, bob.y), dm = Math.max(0, Math.round((WLD.x1 - bob.x) / 20)), txt = WB_NAMES[b] + '  ·  Straße: ' + (dm >= 1000 ? (dm / 1000).toFixed(1) + ' km' : dm + ' m') + ' →';
+  g.save(); g.font = '800 20px system-ui'; const w = g.measureText(txt).width + 36, x = (XL + XR) / 2 - w / 2; g.fillStyle = 'rgba(20,24,30,.72)'; g.beginPath(); g.roundRect(x, 18, w, 40, 20); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, (XL + XR) / 2, 39); g.restore();
+}
+// Straße, die in der Wildnis endet (Bushaltestelle)
+function drawWildStrasse(R) {
+  const t = performance.now() / 1000;
+  const sky = g.createLinearGradient(0, 0, 0, FLOOR); sky.addColorStop(0, '#4fa8f0'); sky.addColorStop(1, '#d8f0ff'); g.fillStyle = sky; g.fillRect(XL, 0, VW, FLOOR);
+  g.fillStyle = '#fff6b0'; g.beginPath(); g.arc(XL + 300 - camX * 0.2, 100, 50, 0, 7); g.fill();
+  // ferne Berge
+  for (const [x, w, h, c] of [[-1500, 520, 300, '#8a9ab0'], [-900, 640, 360, '#7a8aa2'], [-200, 500, 260, '#8a9ab0'], [500, 600, 320, '#7a8aa2'], [1200, 520, 250, '#8a9ab0']]) { const px = x - camX * 0.3; g.fillStyle = c; g.beginPath(); g.moveTo(px - w / 2, FLOOR); g.bezierCurveTo(px - w / 4, FLOOR - h * 0.6, px - 40, FLOOR - h, px, FLOOR - h); g.bezierCurveTo(px + 40, FLOOR - h, px + w / 4, FLOOR - h * 0.6, px + w / 2, FLOOR); g.fill(); g.fillStyle = '#f6f9fc'; g.beginPath(); g.moveTo(px - 70, FLOOR - h + 60); g.bezierCurveTo(px - 40, FLOOR - h + 6, px + 40, FLOOR - h + 6, px + 70, FLOOR - h + 60); g.quadraticCurveTo(px, FLOOR - h + 40, px - 70, FLOOR - h + 60); g.fill(); }
+  // Waldrand
+  for (let x = Math.floor(XL / 90) * 90 - 90; x < XR + 90; x += 90) { const h = 60 + (Math.abs(Math.sin(x * 0.37)) * 50); g.fillStyle = x % 180 ? '#2f7a32' : '#25672a'; g.beginPath(); g.arc(x, FLOOR - h * 0.4, 70, Math.PI, 0); g.fill(); }
+  // Wiese
+  const gr = g.createLinearGradient(0, FLOOR, 0, H); gr.addColorStop(0, '#4cb03e'); gr.addColorStop(1, '#5fc84a'); g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, H - FLOOR);
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  // Straße (endet links)
+  const r0 = ROAD - 30, END = -1100; g.fillStyle = '#4a4d55'; g.beginPath(); g.moveTo(XR + 20, r0); g.lineTo(END + 80, r0); g.quadraticCurveTo(END, r0, END, r0 + 70); g.lineTo(END, H + 10); g.lineTo(XR + 20, H + 10); g.fill();
+  g.fillStyle = '#888'; g.fillRect(END + 60, r0 - 6, XR - END, 6);
+  g.fillStyle = '#ddd'; for (let x = Math.ceil((END + 200) / 160) * 160; x < XR; x += 160) g.fillRect(x, r0 + 70, 80, 8);
+  // Risse und Gras auf der alten Straße
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3; for (const x of [-900, -600, -300]) { g.beginPath(); g.moveTo(x, r0 + 20); g.lineTo(x + 30, r0 + 60); g.lineTo(x + 10, r0 + 100); g.stroke(); }
+  g.strokeStyle = '#3e9a32'; g.lineWidth = 3; for (const x of [-1000, -850, -700, -520]) { g.beginPath(); g.moveTo(x, r0 + 80); g.lineTo(x - 6, r0 + 64); g.moveTo(x, r0 + 80); g.lineTo(x + 6, r0 + 64); g.stroke(); }
+  // Trampelpfad in die Wildnis
+  g.fillStyle = 'rgba(150,110,60,.55)'; g.beginPath(); g.moveTo(XL - 20, 520); g.bezierCurveTo(-1500, 540, -1300, 640, -1080, 640); g.lineTo(-1080, 720); g.bezierCurveTo(-1300, 720, -1600, 640, XL - 20, 640); g.closePath(); g.fill();
+  // Absperrung am Straßenende
+  g.lineWidth = 4; g.strokeStyle = LINE; for (const px of [-1090, -1090 + 0]) { }
+  for (const [px, py] of [[-1060, 700], [-1060, 820]]) { g.fillStyle = '#ddd'; g.fillRect(px - 6, py - 70, 12, 70); g.strokeRect(px - 6, py - 70, 12, 70); }
+  g.save(); g.translate(-1060, 0); g.fillStyle = '#fff'; g.beginPath(); g.roundRect(-14, 600, 28, 200, 6); g.fill(); g.stroke(); g.beginPath(); g.roundRect(-14, 600, 28, 200, 6); g.clip(); g.fillStyle = '#e0262b'; for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(-20, 600 + k * 40); g.lineTo(20, 580 + k * 40); g.lineTo(20, 600 + k * 40); g.lineTo(-20, 620 + k * 40); g.closePath(); g.fill(); } g.restore();
+  // Schild
+  g.fillStyle = '#8a5a30'; g.fillRect(-1300, 430, 12, 130); g.strokeRect(-1300, 430, 12, 130);
+  g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(-1210, 410); g.lineTo(-1380, 410); g.lineTo(-1410, 440); g.lineTo(-1380, 470); g.lineTo(-1210, 470); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#3a2814'; g.font = '900 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('← WILDNIS', -1305, 441);
+  g.fillStyle = '#fff'; g.beginPath(); g.roundRect(-980, 470, 210, 46, 8); g.fill(); g.stroke(); g.fillStyle = '#e0262b'; g.font = '900 18px system-ui'; g.fillText('STRASSE ENDET', -875, 494);
+  g.fillStyle = '#8a5a30'; g.fillRect(-881, 516, 12, 60); g.strokeRect(-881, 516, 12, 60);
+}
 // ---------- Angeln am Teich ----------
 const FISHES = {
   goldfisch: { name: 'Goldfisch', v: 15, w: 34, col: '#ff8a1a' },
@@ -6575,12 +6784,17 @@ function drawBBVitrine() {
   const t = performance.now() / 1000, x = 1025, y = 610, glow = 0.5 + 0.5 * Math.sin(t * 3); g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
   cube(x - 60, y - 110, 120, 110, 40, mkPal('#2a1a10', '#4a2a14'), true, 0.3);
   const lg = g.createRadialGradient(x, y - 170, 4, x, y - 170, 110); lg.addColorStop(0, `rgba(255,220,80,${0.6 * glow})`); lg.addColorStop(1, 'rgba(255,220,80,0)'); g.fillStyle = lg; g.fillRect(x - 120, y - 290, 240, 200);
-  cube(x - 34, y - 148, 68, 28, 30, mkPal('#e0a020', '#ffd23a'), true, 0.3);
-  // Glashaube
-  g.fillStyle = 'rgba(190,235,255,.22)'; g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(x - 52, y - 110); g.lineTo(x - 52, y - 220); g.lineTo(x - 64, y - 232); g.lineTo(x + 40, y - 232); g.lineTo(x + 52, y - 220); g.lineTo(x + 52, y - 110); g.closePath(); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(x - 52, y - 220); g.lineTo(x + 52, y - 220); g.stroke();
-  g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(x - 42, y - 210, 8, 90);
+  // Glaskasten als echter Würfel (gleiche Tiefe wie der Sockel)
+  const w = 104, h = 112, d = 34, dx = -d * 0.3, dy = -d * 0.55, x0 = x - 52 - dx * 0.35, yb = y - 110 + dy * 0.35;
+  const quad = (P, f, st) => { g.beginPath(); g.moveTo(P[0][0], P[0][1]); for (const q of P.slice(1)) g.lineTo(q[0], q[1]); g.closePath(); if (f) { g.fillStyle = f; g.fill(); } if (st) g.stroke(); };
+  g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2;
+  quad([[x0 + dx, yb - h + dy], [x0 + w + dx, yb - h + dy], [x0 + w + dx, yb + dy], [x0 + dx, yb + dy]], 'rgba(190,235,255,.12)', true);
+  quad([[x0, yb - h], [x0 + dx, yb - h + dy], [x0 + dx, yb + dy], [x0, yb]], 'rgba(190,235,255,.18)', true);
+  cube(x - 34 + dx * 0.5, yb - 30 + dy * 0.5, 68, 28, 18, mkPal('#e0a020', '#ffd23a'), true, 0.3);
+  g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3;
+  quad([[x0, yb - h], [x0 + w, yb - h], [x0 + w, yb], [x0, yb]], 'rgba(190,235,255,.2)', true);
+  quad([[x0, yb - h], [x0 + w, yb - h], [x0 + w + dx, yb - h + dy], [x0 + dx, yb - h + dy]], 'rgba(220,245,255,.38)', true);
+  g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(x0 + 12, yb - h + 10); g.lineTo(x0 + 22, yb - h + 10); g.lineTo(x0 + 12, yb - 20); g.lineTo(x0 + 6, yb - 20); g.closePath(); g.fill();
   for (let i = 0; i < 4; i++) { const a = t * 2 + i * 1.6; g.fillStyle = `rgba(255,250,200,${0.5 + 0.5 * Math.sin(a * 2)})`; g.beginPath(); g.arc(x + Math.cos(a) * 32, y - 140 + Math.sin(a) * 20, 2.5, 0, 7); g.fill(); }
   g.restore();
 }
@@ -9803,6 +10017,7 @@ function frameBody(t) {
   for (const o of ROOMS[cur].objs || []) list.push({ y: o.base, f: () => drawObj(o) });
   if (!build.on) { for (const sd of garden.world[cur] || []) list.push({ y: sd.y, f: () => drawSeed(sd) }); for (const c of garden.coins[cur] || []) list.push({ y: c.y, f: () => drawCoinPile(c) }); }
   if (st) list.push({ y: STOP_BASE, f: () => drawStop(st) });
+  if (cur === 'wildnis') wildList(list);
   if (!build.on) for (const id of activeList()) { const p = petFor(id); if (p.room === cur && !(p.mode !== 'home' && bob.hidden)) list.push({ y: p.mode === 'tragen' ? bob.y + 0.02 : p.y, f: () => drawPet(p) }); }
   if (!build.on) for (const a of dwHere()) list.push({ y: a.y, f: () => drawDrop(a) });
   if (cur === 'zellen' && guard.state !== 'off') list.push({ y: guard.y, f: drawGuard });
@@ -9840,7 +10055,7 @@ function frameBody(t) {
   if (bus && ROOMS[cur].stop) drawBus(bus.x);
   drawLeash(); drawPill();
   XL = SXL; XR = SXR; VW = SVW; g.setTransform(1, 0, 0, 1, -XL, 0);
-  drawNight(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawKrAlarm(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawStudio(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
+  drawNight(); drawWildHud(); drawJoy(); drawMenu(); drawClock(); drawAbilHud(); drawKrAlarm(); drawBuildUI(); drawWardrobe(); drawCatalog(dt); drawWeb(dt); drawKal(); drawWork(dt); drawHotbar(); drawBag(); drawPhone(dt); drawKeybinds(dt); drawStudio(dt); drawPetPanel(); drawJailHud(); drawApoHud(); drawSleep(dt); drawStanze(dt); drawTresorGame(dt); drawChase(dt); drawOverlay(dt); drawDeviceAsk();
   requestAnimationFrame(frame);
 }
 if (jailed()) { cur = 'zellen'; bob.x = 600; bob.y = 600; }
