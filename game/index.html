@@ -3810,6 +3810,10 @@ addEventListener('keydown', e => {
   if (row < wr.scroll) wrSetScroll(row); else if (row >= wr.scroll + WR.rows) wrSetScroll(row - WR.rows + 1);
   keys.clear();
 }, true);
+cv.addEventListener('wheel', e => { if (phone.open && phone.app === 'admin') { e.preventDefault(); phone.admScroll = (phone.admScroll || 0) + e.deltaY * 0.8; } }, { passive: false });
+function admDragTo(y) { const tr = phone.admTrack; if (!tr || !phone.admMax) return; phone.admScroll = Math.max(0, Math.min(1, (y - tr.y) / tr.h)) * phone.admMax; }
+cv.addEventListener('pointermove', e => { if (!phone.admDrag) return; const [, y] = toCanvas(e); if (phone.admDrag === 'list') { phone.admScroll = phone.admS0 - (y - phone.admY0); } else admDragTo(y); });
+addEventListener('pointerup', () => { phone.admDrag = false; });
 cv.addEventListener('wheel', e => { if (!wr.open) return; e.preventDefault(); wrSetScroll(wr.scroll + Math.sign(e.deltaY)); }, { passive: false });
 cv.addEventListener('pointermove', e => { if (!wr.open || !wr.drag) return; const [, y] = toCanvas(e); wrSetScroll((y - WR_TRACK.y) / WR_TRACK.h * (wrMaxScroll() + 1) - 0.5); });
 addEventListener('pointerup', () => { wr.drag = false; });
@@ -5126,6 +5130,8 @@ const ADMIN_TABS = [
   { id: 'tiere', name: 'Tiere', col: '#9b5de5', icon: 'paw' },
   { id: 'jobs', name: 'Jobs', col: '#e0a10f', icon: 'trophy' },
   { id: 'tp', name: 'Teleport', col: '#e0262b', icon: 'home' },
+  { id: 'bobgear', name: 'Bobgear', col: '#2fa0d8', icon: 'sun' },
+  { id: 'neu', name: 'Neu', col: '#ff3ad6', icon: 'trophy' },
 ];
 const tpTo = (r, at) => () => { togglePhone(false); go(r, at); };
 const ADMIN = {
@@ -5227,6 +5233,32 @@ const ADMIN = {
     ['Tresor-Spiel starten', '#4c535a', () => { togglePhone(false); startTresor({ kind: 'raub', reward: 700, t0: gt.T, t1: gt.T + 120 }); }],
     ['Darkweb: Termine löschen', '#7b8190', () => { dw.appts = []; dw.carry = null; saveDw(); }],
   ],
+  bobgear: [
+    ['Bobgear kaufen', '#2fa0d8', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.bobgear = true; saveLief(); gartenSetup(); }],
+    ['Einloggen', '#1a6aa8', () => { lief.bobgear = true; saveLief(); togglePhone(false); mmoLogin(); }],
+    ['+1.000 Col', '#ffd23a', () => { mmo.col += 1000; saveMmo(); }],
+    ['+10 Heiltränke', '#e0303a', () => { mmo.pots += 10; saveMmo(); }],
+    ['Level +5', '#7fd0ff', () => { mmo.lv += 5; mmo.hp = mmoMaxHp(); saveMmo(); }],
+    ['Bestes Schwert', '#fffbe0', () => { mmo.sword = 8; saveMmo(); }],
+    ['Kobold-Fürst besiegt', '#ff7a20', () => { mmo.clear.f1 = true; saveMmo(); }],
+    ['Alle Bosse besiegt', '#c060ff', () => { mmo.clear.f1 = mmo.clear.alf = mmo.clear.under = true; saveMmo(); }],
+    ['Bobgear zurücksetzen', '#7b8190', () => { Object.assign(mmo, { lv: 1, xp: 0, hp: 100, col: 50, sword: 1, pots: 3, clear: {}, cedar: 60 }); saveMmo(); }],
+    ['→ Stadt der Anfänge', '#6aa8f0', () => { if (!mmo.on) { mmo.on = true; mmo.prevWear = wear.on; mmo.back = [cur, bob.x, bob.y]; wear.on = 'mmo_held'; } togglePhone(false); go('mmo_stadt', [700, 700]); }],
+    ['→ Boss-Raum', '#7a1a2a', () => { if (!mmo.on) { mmo.on = true; mmo.prevWear = wear.on; mmo.back = [cur, bob.x, bob.y]; wear.on = 'mmo_held'; } togglePhone(false); go('mmo_boss', [300, 680]); }],
+    ['→ Alfheim', '#5a3a9a', () => { if (!mmo.on) { mmo.on = true; mmo.prevWear = wear.on; mmo.back = [cur, bob.x, bob.y]; wear.on = 'mmo_held'; } togglePhone(false); go('mmo_alf', [200, 650]); }],
+    ['→ Unterwelt', '#c8903e', () => { if (!mmo.on) { mmo.on = true; mmo.prevWear = wear.on; mmo.back = [cur, bob.x, bob.y]; wear.on = 'mmo_held'; } togglePhone(false); go('mmo_under', [200, 650]); }],
+  ],
+  neu: [
+    ['Alle bobnet-Upgrades', '#ff3ad6', () => { for (let r = 0; r < 4; r++) for (const it of WEB_ITEMS) if (it.once && (!it.needs || lief[it.needs]) && (!it.needs2 || lief[it.needs2])) lief[it.id] = true; saveLief(); gartenSetup(); }],
+    ['Waffenkisten (je 1)', '#556b2f', () => { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) inv[k] = (inv[k] || 0) + 1; saveFurn(); }],
+    ['Waffe: Riesen-Lolli', '#ffe11a', () => { weap.sel = 'lolli'; weap.out = false; saveWeap(); }],
+    ['Waffe: Schwert', '#c8ccd8', () => { mmo.clear.f1 = true; saveMmo(); weap.sel = 'mmoschwert'; saveWeap(); }],
+    ['Einzahl-Automat', '#3a6aaa', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.einzahlautomat = true; saveLief(); gartenSetup(); }],
+    ['6 Ziegelmaschinen', '#c4663a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.keller = true; for (const m of ZMS) lief[m.k] = true; saveLief(); gartenSetup(); }],
+    ['Ziegel-Upgrades max', '#e08a2a', () => { for (const k of ['zmspeed1', 'zmspeed2', 'zmspeed3', 'zmspeed4', 'zmspeed5', 'zmspeed6', 'zmlimit', 'zmmulti2', 'zmmulti3']) lief[k] = true; saveLief(); }],
+    ['Paletten voll', '#a87a44', () => { for (const m of ZMS) if (lief[m.k]) garden[m.tr] = zmMax(); saveGarden(); }],
+    ['Big Bobo verkauft jetzt', '#ffb732', () => { bbT = gt.T - 61; }],
+  ],
   tp: [
     ['Zuhause', '#6ad9fb', tpTo('spawn', [600, 700])],
     ['Draußen', '#45c43a', tpTo('draussen', [600, 650])],
@@ -5242,6 +5274,11 @@ const ADMIN = {
     ['Gericht', '#8a6a3a', tpTo('gerichtsplatz', [600, 650])],
     ['Wüste', '#e6bf78', tpTo('wueste', [3000, 700])],
     ['Wildnis', '#3f9a38', tpTo('wildnis', [1300, 640])],
+    ['Waldstraße (Bus)', '#2f7a32', tpTo('wildstr', [1000, 690])],
+    ['Gartenhaus', '#e8a25a', tpTo('tierhaus', [600, 720])],
+    ['Untergrund-Basis', '#5a5e66', tpTo('keller', [600, 720])],
+    ['Big Bobos Büro', '#8a1a2a', tpTo('bbbuero', [600, 760])],
+    ['Mine', '#5a4a3a', tpTo('mine', [600, 720])],
     ['Aus der Haft entlassen', '#13b84a', () => { jail.until = gt.T; saveJail(); }],
   ],
 };
@@ -5260,17 +5297,22 @@ function drawAdminApp(s) {
   const btns = []; phone.ui = { btns };
   const tab = phone.adminTab = phone.adminTab || 'geld';
   // Reiter: 2 Reihen mit 3
-  const tw = (s.w - 32) / 3;
+  const tw = (s.w - 32) / 3, tabRows = Math.ceil(ADMIN_TABS.length / 3);
   ADMIN_TABS.forEach((tb, i) => {
     const b = { x: s.x + 16 + (i % 3) * tw, y: s.y + 130 + Math.floor(i / 3) * 52, w: tw - 6, h: 44 }, on = tab === tb.id;
     g.fillStyle = on ? tb.col : '#23262e'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 12); g.fill();
     if (!on) { g.strokeStyle = '#33373f'; g.lineWidth = 2; g.stroke(); }
     uiIcon(tb.icon, b.x + 20, b.y + b.h / 2, 18, on ? '#fff' : tb.col);
     g.fillStyle = on ? '#fff' : '#cfd3da'; g.font = '700 14px system-ui'; g.textAlign = 'left'; g.fillText(tb.name, b.x + 34, b.y + b.h / 2 + 1);
-    btns.push({ b, act: () => { phone.adminTab = tb.id; } });
+    btns.push({ b, act: () => { phone.adminTab = tb.id; phone.admScroll = 0; } });
   });
   // Knöpfe als Kacheln in 2 Spalten
-  const list = ADMIN[tab], cw = (s.w - 40) / 2, top = s.y + 246;
+  const list = ADMIN[tab], cw = (s.w - 52) / 2, top0 = s.y + 130 + tabRows * 52 + 10, bot = s.y + s.h - 48, viewH = bot - top0, fullH = Math.ceil(list.length / 2) * 82, maxS = Math.max(0, fullH - viewH);
+  phone.admScroll = Math.max(0, Math.min(maxS, phone.admScroll || 0)); phone.admMax = maxS; const top = top0 - phone.admScroll;
+  // Scrollbalken wie im Kleiderschrank
+  const tr = { x: s.x + s.w - 22, y: top0, w: 12, h: viewH }; phone.admTrack = tr; g.fillStyle = '#23262e'; g.beginPath(); g.roundRect(tr.x, tr.y, tr.w, tr.h, 6); g.fill();
+  if (maxS > 0) { const th = Math.max(40, tr.h * viewH / fullH), ty = tr.y + (tr.h - th) * phone.admScroll / maxS; g.fillStyle = '#cfd3da'; g.beginPath(); g.roundRect(tr.x, ty, tr.w, th, 6); g.fill(); btns.push({ b: { x: tr.x - 10, y: tr.y, w: tr.w + 20, h: tr.h }, act: (x, y) => { phone.admDrag = true; admDragTo(y); }, track: true }); }
+  g.save(); g.beginPath(); g.rect(s.x, top0 - 4, s.w, viewH + 4); g.clip();
   list.forEach(([label, col, act], i) => {
     const b = { x: s.x + 16 + (i % 2) * (cw + 8), y: top + Math.floor(i / 2) * 82, w: cw, h: 72 };
     const hit = phone.adminHit === label && t - phone.adminHitT < 0.3;
@@ -5281,8 +5323,9 @@ function drawAdminApp(s) {
     g.font = '700 15px system-ui'; const yy = b.y + b.h / 2 + (hit ? 3 : 0);
     if (g.measureText(label).width <= b.w - 30) g.fillText(label, b.x + 20, yy);
     else { const w = label.split(' '); let l1 = '', k = 0; while (k < w.length && g.measureText((l1 + ' ' + w[k]).trim()).width <= b.w - 30) l1 = (l1 + ' ' + w[k++]).trim(); if (!l1) { l1 = w[0]; k = 1; } g.fillText(l1, b.x + 20, yy - 10); g.fillText(w.slice(k).join(' '), b.x + 20, yy + 10); }
-    btns.push({ b, act: () => { act(); phone.adminHit = label; phone.adminHitT = performance.now() / 1000; phone.msg = label + ' ✓'; phone.msgT = 1.6; } });
+    if (b.y + b.h > top0 && b.y < bot) btns.push({ b: { x: b.x, y: Math.max(b.y, top0), w: b.w, h: Math.min(b.y + b.h, bot) - Math.max(b.y, top0) }, act: () => { act(); phone.adminHit = label; phone.adminHitT = performance.now() / 1000; phone.msg = label + ' ✓'; phone.msgT = 1.6; } });
   });
+  g.restore();
   if (phone.msgT > 0) {
     g.globalAlpha = Math.min(1, phone.msgT * 2);
     g.font = '700 15px system-ui'; const mw = g.measureText(phone.msg).width + 40;
@@ -7582,7 +7625,7 @@ function drawJobsApp(s) {
 }
 function jobsClick(x, y) {
   const u = phone.ui; if (!u || !u.btns) return;
-  for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(); return; }
+  for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(x, y); return; }
 }
 
 // ---------- Arbeiten an der Kasse (aus Bobs Sicht) ----------
