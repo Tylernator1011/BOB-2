@@ -3590,8 +3590,10 @@ const ACC = {
     cube(cx - 76 + 4 * t, top - 62, 152, 26, DEPTH * 0.95, mkPal('#e0101a', '#f02a30'), false, t);
   } },
   lolli: { name: 'Riesen-Lolli', slot: 'hand', draw: (bx, by, hx, hy, t, f) => {
-    const tt = performance.now() / 1000, x0 = bx + BODY.w + 6, y0 = by + BODY.h - 30;
-    g.save(); g.translate(x0, y0); g.rotate(0.55 + Math.sin(tt * 2) * 0.05 + weapSwingAng());
+    const tt = performance.now() / 1000, A = weapAnimP(); let x0 = bx + BODY.w + 6, y0 = by + BODY.h - 30, rot = 0.55 + Math.sin(tt * 2) * 0.05 + weapSwingAng(), sc = 1;
+    if (A) { const q = A.dir > 0 ? A.p : 1 - A.p, e = 1 - Math.pow(1 - q, 3); const sx = bx + BODY.w * 0.2, sy = by - 40; x0 = sx + (x0 - sx) * e; y0 = sy + (y0 - sy) * e - Math.sin(q * Math.PI) * 120; rot = rot + (1 - e) * Math.PI * 2 * (A.dir > 0 ? -1 : 1); sc = 0.25 + 0.75 * e;
+      g.save(); g.globalAlpha = Math.sin(q * Math.PI); for (let i = 0; i < 8; i++) { const a = i * 0.785 + tt * 4, r = 60 + 40 * q; g.fillStyle = i % 2 ? '#ffe11a' : '#ffffff'; g.beginPath(); g.arc(x0 + Math.cos(a) * r, y0 - 120 * sc + Math.sin(a) * r, 7, 0, 7); g.fill(); } g.restore(); }
+    g.save(); g.translate(x0, y0); g.rotate(rot); g.scale(sc, sc);
     g.lineCap = 'round'; g.strokeStyle = '#111'; g.lineWidth = 18; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -120); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 11; g.stroke();
     for (let i = 0; i < 7; i++) { const y = -130 - i * 30; g.fillStyle = i % 2 ? '#0aa0f0' : '#ffe11a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, y, 30 - i * 2.2, 20, (i % 2 ? 0.35 : -0.35), 0, 7); g.fill(); g.stroke(); }
     const cols = ['#e0262b', '#2fd060', '#ff3ad6', '#22e6e6', '#ffe11a']; for (let i = 0; i < 16; i++) { g.fillStyle = cols[i % 5]; g.beginPath(); g.arc(Math.sin(i * 2.3) * 18, -130 - (i * 13) % 190, 4, 0, 7); g.fill(); }
@@ -3692,7 +3694,7 @@ function drawBob() {
   const hop = bob.moving ? -Math.abs(Math.sin(bob.phase)) * 9 * s : Math.sin(bob.phase * 0.5) * 1.2 * s;
   const sq = bob.moving ? 1 - Math.abs(Math.sin(bob.phase)) * 0.03 : 1;
   const lift = waveLift();
-  let accs = accWorn(); if (weapActive() && !accs.includes(WEAPONS[weap.on].acc)) accs = accs.filter(a => ACC[a].slot !== 'hand').concat([WEAPONS[weap.on].acc]);
+  let accs = accWorn(); if (weapActive()) accs = accs.filter(a => ACC[a].slot !== 'hand').concat([WEAPONS[weap.sel].acc]); else if (weap.sel && accs.includes(WEAPONS[weap.sel] && WEAPONS[weap.sel].acc) && weapAnimP()) {}
   drawBobFig(bob.x, bob.y - lift, k, bob.turn, lift > 0 ? Math.sin(performance.now() / 120) * 3 * s : hop, sq, wear.on, lift < 5, accs);
 }
 
@@ -3739,9 +3741,10 @@ function wrItems() {
   if (wr.mode === 'pet') { const p = wrPet(); return p ? petWearOf(p).owned.filter(k => PET_OUTFITS[k]) : []; }
   if (wr.mode === 'shop') return Object.keys(MARKT_KLEIDER);
   if (wr.mode === 'acc') return (wear.accOwned || []).filter(k => ACC[k]);
+  if (wr.mode === 'waffen') return Object.keys(WEAPONS);
   return wear.owned.filter(k => OUTFITS[k]);
 }
-function wrOn() { if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
+function wrOn() { if (wr.mode === 'waffen') return weap.sel; if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
 function wrMaxScroll() { return Math.max(0, Math.ceil(wrItems().length / WR.cols) - WR.rows); }
 function openWardrobe(mode) {
   wr.mode = mode || 'bob'; wr.open = true; wr.msg = ''; wr.slot = 1; wr.pi = Math.max(0, owned.indexOf(activePet));
@@ -3759,6 +3762,7 @@ const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CL
 function wrEquip(i) {
   const k = wrItems()[i]; if (!k) return; wr.sel = i; wr.msg = '';
   if (wr.mode === 'shop' && !wear.owned.includes(k)) return;
+  if (wr.mode === 'waffen') { if (weap.sel === k) { weap.sel = null; weap.out = false; } else { weap.sel = k; weap.out = false; } weapAnim = null; saveWeap(); return; }
   if (wr.mode === 'acc') { wear.acc = wear.acc || {}; const sl = ACC[k].slot; if (wear.acc[sl] === k) delete wear.acc[sl]; else wear.acc[sl] = k; saveWear(); return; }
   if (wr.mode === 'pet') { petWearOf(wrPet()).on = k; savePetWear(); } else { wear.on = k; saveWear(); }
 }
@@ -3847,7 +3851,7 @@ function drawWardrobe() {
   g.lineWidth = 6; g.strokeStyle = LINE; g.lineJoin = 'round';
   // Titel-Schild
   g.fillStyle = '#ffe066'; g.beginPath(); g.moveTo(XL + 60, 22); g.lineTo(XL + 560, 22); g.lineTo(XL + 540, 122); g.lineTo(XL + 80, 122); g.closePath(); g.fill(); g.stroke();
-  marker(wr.mode === 'pet' ? 'Haustiere' : wr.mode === 'shop' ? 'Klamotten' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
+  marker(wr.mode === 'pet' ? 'Haustiere' : wr.mode === 'shop' ? 'Klamotten' : wr.mode === 'waffen' ? 'Waffenkiste' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
   if (wr.mode === 'bob' || wr.mode === 'acc') for (const [m, lab, i] of [['bob', 'Outfits', 0], ['acc', 'Accessoires', 1]]) { const b = wrTab(i), on = wr.mode === m; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = on ? '#13f000' : '#fff'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 16); g.fill(); g.stroke(); marker(lab, b.x + b.w / 2, b.y + b.h / 2 + 2, 28, '#111'); }
   if (wr.mode === 'shop') {
     const ct = 'Bargeld: ' + money(Math.floor(bank.cash || 0)); g.font = '800 26px system-ui'; const cw = g.measureText(ct).width + 70;
@@ -3865,6 +3869,7 @@ function drawWardrobe() {
     if (k) {
       if (wr.mode === 'pet') drawPetCube(wrPet(), x + WR.cw / 2, y + WR.ch - 14, 96, 1, 0);
       else if (wr.mode === 'acc') drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [k]);
+      else if (wr.mode === 'waffen') drawBobFig(x + WR.cw / 2 - 20, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [WEAPONS[k].acc]);
       else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false, accWorn());
       if (wr.mode === 'acc' && accWorn().includes(k)) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
       if (k === wrOn()) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
@@ -3885,6 +3890,7 @@ function drawWardrobe() {
   // Vorschau
   const b1 = Math.sin(t * 1.7) * 3, px = (WR_TRACK.x + 40 + XR) / 2;
   if (wr.mode === 'acc') { drawBobFig(px, 770, 1.3, 1, b1, 1, wear.on, true, accWorn()); const k = items[wr.sel]; if (k) { marker(ACC[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(ACC_SLOTS[ACC[k].slot] + (accWorn().includes(k) ? ' · angezogen (nochmal klicken = ausziehen)' : ' · klicken zum Anziehen'), px, 196); } else marker('Noch keine Accessoires', px, 420, 34, '#fff'); }
+  else if (wr.mode === 'waffen') { const k = items[wr.sel]; drawBobFig(px - 60, 770, 1.3, 1, b1, 1, wear.on, true, accWorn().filter(a => ACC[a].slot !== 'hand').concat(k ? [WEAPONS[k].acc] : [])); if (k) { marker(WEAPONS[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(weap.sel === k ? 'Ausgewählt · mit ' + 'Q' + ' in die Hand nehmen' : 'Klicken zum Auswählen', px, 196); g.fillText(WEAPONS[k].desc, px, 228); } }
   else if (wr.mode !== 'pet') drawBobFig(px, 770, 1.3, 1, b1, 1, items[wr.sel] || wear.on, true, accWorn());
   else if (!wrPet()) { marker('Du hast noch kein Tier', px, 420, 40, '#fff'); wr.ui = null; }
   else {
@@ -6125,21 +6131,21 @@ function drawWueste(R) {
 }
 
 // ---------- Waffen aus der Kiste ----------
-let weap = { on: null }; try { weap = Object.assign(weap, JSON.parse(localStorage.getItem('bob-waffe') || '{}')); } catch (e) {}
-const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli' } };
-let weapT0 = -9;
-function saveWeap() { try { localStorage.setItem('bob-waffe', JSON.stringify(weap)); } catch (e) {} }
+let weap = { sel: null, out: false }; try { weap = Object.assign(weap, JSON.parse(localStorage.getItem('bob-waffe') || '{}')); if (weap.on) { weap.sel = weap.on; delete weap.on; } } catch (e) {}
+const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', desc: 'Linksklick: zuschlagen' } };
+let weapT0 = -9, weapAnim = null;
+function saveWeap() { try { localStorage.setItem('bob-waffe', JSON.stringify({ sel: weap.sel, out: weap.out })); } catch (e) {} }
 function nearKiste() { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) { const f = nearFurn(k); if (f) return f; } return null; }
-function kisteMenu() {
-  menu.kind = 'kiste'; menu.title = 'Waffen-Kiste – wähle deine Waffe';
-  menu.items = [{ label: 'Keine Waffe', tag: weap.on ? '' : 'ausgerüstet', tagCol: '#0a8a1f', fn: () => { weap.on = null; saveWeap(); } }];
-  for (const [k, w] of Object.entries(WEAPONS)) menu.items.push({ label: w.name, tag: weap.on === k ? 'ausgerüstet' : 'Klick zum Schlagen', tagCol: weap.on === k ? '#0a8a1f' : '#777', fn: () => { weap.on = k; saveWeap(); } });
-  menu.items.push({ label: 'Schließen' });
-  MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now(); menu.open = true; menu.sel = 0; keys.clear();
+function kisteMenu() { openWardrobe('waffen'); }
+function weapAnimP() { if (!weapAnim) return null; const p = (performance.now() / 1000 - weapAnim.t0) / 0.75; if (p >= 1) { if (weapAnim.dir < 0) weap.out = false; weapAnim = null; saveWeap(); return null; } return { p, dir: weapAnim.dir }; }
+function weapActive() { return weap.sel && WEAPONS[weap.sel] && (weap.out || weapAnim) && !mmo.on && !apo.on; }
+function weapToggle() {
+  if (!weap.sel || !WEAPONS[weap.sel] || mmo.on || apo.on || weapAnim) return;
+  if (weap.out) weapAnim = { t0: performance.now() / 1000, dir: -1 }; else { weap.out = true; weapAnim = { t0: performance.now() / 1000, dir: 1 }; }
 }
-function weapActive() { return weap.on && WEAPONS[weap.on] && !mmo.on && !apo.on; }
 function weapSwingAng() { const e = (performance.now() / 1000 - weapT0) / 0.38; return e >= 0 && e < 1 ? Math.sin(e * Math.PI) * 1.5 : 0; }
-function weapSwing() { if (!weapActive() || build.on || menu.open || phone.open || wr.open || web.open || bag.open) return false; if (performance.now() / 1000 - weapT0 < 0.38) return true; weapT0 = performance.now() / 1000; return true; }
+function weapSwing() { if (!weapActive() || weapAnim || build.on || menu.open || phone.open || wr.open || web.open || bag.open) return false; if (performance.now() / 1000 - weapT0 < 0.38) return true; weapT0 = performance.now() / 1000; return true; }
+addEventListener('keydown', e => { if (e.code !== 'KeyQ' || e.repeat || mmo.on || apo.on || menu.open || phone.open || wr.open || web.open || bag.open || shopCat.open || build.on || kb.open || kal.open) return; if (!weap.sel) return; e.preventDefault(); weapToggle(); });
 // ---------- Einzahlungsautomat im Gartenhaus + Geldwäsche ----------
 const ATM = { room: 'tierhaus', x: 1430 }; let wascheT = null;
 function nearAtm() { return cur === ATM.room && lief.einzahlautomat && !fade.dir && !build.on && Math.abs(bob.x - ATM.x) < 150 && bob.y < FLOOR + 190; }
