@@ -2662,7 +2662,7 @@ const OUTFITS = {
     bodyFront: (x, y, w, h) => { if (!jeffGrimmImg.complete || !jeffGrimmImg.width) return; const Z = 10, ox = 25.43207, oy = 183.70126; g.drawImage(jeffGrimmImg, (34.1 - ox) * Z, (233.33 - oy) * Z, 57.72 * Z, 33.35 * Z, x, y, w, h); },
     headFront: (x, y, w, h) => { g.fillStyle = '#fff700'; g.fillRect(x, y, w, h); },
     headOver: (x, y, w, h, t) => { if (!jeffGrimmImg.complete || !jeffGrimmImg.width) return; const Z = 10, ox = 25.43207, oy = 183.70126, sx = w / 54.51, sy = h / 39.76; g.beginPath(); g.rect(x - 200, y - 200, w + 400, h + 200); g.clip();
-      if (jeffGrimmHair.complete && jeffGrimmHair.width) { const dx = -DEPTH * t, dy = -DEPTH * 0.55, N = 6; for (let i = N; i >= 1; i--) { g.save(); g.filter = 'brightness(' + (2.4 - 0.6 * (1 - i / N)) + ')'; g.drawImage(jeffGrimmHair, 0, 0, 73.27 * Z, (233.33 - oy) * Z, x - (35.39 - ox) * sx + dx * i / N, y - (193.57 - oy) * sy + dy * i / N, 73.27 * sx, (233.33 - oy) * sy); g.restore(); } }
+      if (jeffGrimmHair.complete && jeffGrimmHair.width) { const dx = -DEPTH * t, dy = -DEPTH * 0.55, N = 6; for (let i = N; i >= 1; i--) { g.save(); g.filter = 'brightness(0)'; g.drawImage(jeffGrimmHair, 0, 0, 73.27 * Z, (233.33 - oy) * Z, x - (35.39 - ox) * sx + dx * i / N, y - (193.57 - oy) * sy + dy * i / N, 73.27 * sx, (233.33 - oy) * sy); g.restore(); } }
       g.drawImage(jeffGrimmImg, 0, 0, 73.27 * Z, (233.33 - oy) * Z, x - (35.39 - ox) * sx, y - (193.57 - oy) * sy, 73.27 * sx, (233.33 - oy) * sy); } },
   jeff_nacht: { name: 'Jeff Nacht', color: '#1e2a6a', noText: true, label: 'JEFF', labelCol: '#7fe8ff' },
   jeff_gold: { name: 'Jeff Gold', color: '#e0b030', noText: true, label: 'JEFF' },
