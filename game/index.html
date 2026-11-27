@@ -6289,10 +6289,10 @@ function drawBear(x, y, S, f, t, opt) {
   g.lineWidth = 7 * S; g.strokeStyle = LINE; g.lineJoin = 'round'; g.lineCap = 'round';
   g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(0, 6 * S, 300 * S, 38 * S, 0, 0, 7); g.fill();
   const kick = since < 0.06 ? (1 - since / 0.06) : 0;
-  const backAng = f > 0 ? Math.PI + 0.62 : -0.62, L = 330 * S;
+  const backAng = f > 0 ? Math.PI * 2 - 0.75 : -Math.PI + 0.75, L = 330 * S;
   let tgt = opt.ang ?? (f > 0 ? 0 : Math.PI); if (f > 0) { tgt = Math.atan2(Math.sin(tgt), Math.cos(tgt)); tgt = Math.max(-1.2, Math.min(1.2, tgt)) + Math.PI * 2; } else { tgt = Math.atan2(Math.sin(tgt), Math.cos(tgt)); if (tgt < 0) tgt += Math.PI * 2; tgt = Math.max(Math.PI - 1.2, Math.min(Math.PI + 1.2, tgt)) - Math.PI * 2; }
   const gunAng = backAng + (tgt - backAng) * aim + (rel > 0 ? Math.sin(Math.min(1, (1.4 - rel) / 1.4) * Math.PI) * 0.45 * f : 0);
-  const px = (f * 60 * S) * aim + (f > 0 ? 70 : -70) * S * (1 - aim), py = -560 * S * (1 - aim) + (-472 * S) * aim;
+  const px = (f * 60 * S) * aim + f * 150 * S * (1 - aim), py = -470 * S * (1 - aim) + (-472 * S) * aim;
   const ca = Math.cos(gunAng), sa = Math.sin(gunAng), back = (0.35 * L + kick * 5 * S);
   const gx = px - ca * back, gy = py - sa * back;
   const gun = () => { g.save(); g.translate(gx, gy); g.rotate(gunAng); if (ca < 0) g.scale(1, -1); if (rifleImg.complete && rifleImg.width) { const k = L / 351; g.scale(-1, 1); g.imageSmoothingQuality = 'high'; g.drawImage(rifleImg, -L, -48 * k, L, 107 * k); } g.restore(); };
