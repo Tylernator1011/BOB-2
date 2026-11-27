@@ -4437,12 +4437,12 @@ function toCanvas(e) { const r = cv.getBoundingClientRect(); return [(e.clientX 
 const petClicks = [];
 let lastPetClick = 0;
 function clickEarn(v) { if (!lief.klickbank) { earn(v); return; } v = Math.round(v * incM()); bank.money += v; const L = bank.log[bank.log.length - 1]; if (L && L.t === 'Tier-Klicks') L.v += v; else bank.log.push({ t: 'Tier-Klicks', v }); saveBank(); }
-function clickVal() { return lief.klick15 ? 15 : lief.klick10 ? 10 : lief.klick5 ? 5 : lief.klick3 ? 3 : lief.klick2 ? 2 : 1; }
+function clickVal() { return lief.klick250 ? 250 : lief.klick150 ? 150 : lief.klick100 ? 100 : lief.klick60 ? 60 : lief.klick40 ? 40 : lief.klick25 ? 25 : lief.klick15 ? 15 : lief.klick10 ? 10 : lief.klick5 ? 5 : lief.klick3 ? 3 : lief.klick2 ? 2 : 1; }
 let autoAcc = 0;
 function autoClickTick(dt) {
   if (!lief.auto || !lief.klick || apo.on) return;
   const id = activeList()[0]; if (!id) return;
-  const iv = lief.auto7 ? 0.6 : lief.auto6 ? 0.8 : lief.auto5 ? 1 : lief.auto4 ? 2 : lief.auto3 ? 3 : lief.auto2 ? 4 : 5; autoAcc += dt; if (autoAcc < iv) return; autoAcc -= iv;
+  const iv = lief.auto8 ? 0.4 : lief.auto7 ? 0.6 : lief.auto6 ? 0.8 : lief.auto5 ? 1 : lief.auto4 ? 2 : lief.auto3 ? 3 : lief.auto2 ? 4 : 5; autoAcc += dt; if (autoAcc < iv) return; autoAcc -= iv;
   clickEarn(clickVal()); const p = petFor(id); if (p.room === cur) petClicks.push({ x: p.x, y: p.y - PETS[id].w * scaleAt(p.y) * 0.9, t: 0.9, auto: true });
 }
 cv.addEventListener('contextmenu', e => { if (!lief.klick) return; e.preventDefault(); const [x, y] = toCanvas(e); const pt = petAt(x, y); if (pt && !menu.open && !phone.open) openPetPanel(pt.id); });
@@ -5269,7 +5269,7 @@ const ADMIN = {
     ['Untergrund-Basis', '#5a5e66', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.keller = true; saveLief(); gartenSetup(); }],
     ['Tierhaus 2. Stock', '#c97a3a', () => { lief.garten = true; lief.hundehaus = true; lief.tierhaus = true; lief.tierhaus2 = true; saveLief(); gartenSetup(); }],
     ['Autoklicker 5 + ×5', '#ff8a1a', () => { lief.klick = true; lief.auto = true; lief.auto2 = true; lief.klick2 = true; lief.auto3 = true; lief.klick3 = true; lief.auto4 = true; lief.auto5 = true; lief.klick5 = true; saveLief(); }],
-    ['Klicker max (0,6 s, 15 €)', '#7a1fa8', () => { for (const k of ['klick', 'auto', 'auto2', 'klick2', 'auto3', 'klick3', 'auto4', 'auto5', 'klick5', 'auto6', 'auto7', 'klick10', 'klick15']) lief[k] = true; saveLief(); }],
+    ['Klicker max (0,4 s, 250 €)', '#7a1fa8', () => { for (const k of ['klick', 'auto', 'auto2', 'klick2', 'auto3', 'klick3', 'auto4', 'auto5', 'klick5', 'auto6', 'auto7', 'klick10', 'klick15', 'klick25', 'auto8', 'klick40', 'klick60', 'klick100', 'klick150', 'klick250']) lief[k] = true; saveLief(); }],
     ['Klick-Konto', '#1f3a6e', () => { lief.klick = true; lief.klickbank = true; saveLief(); }],
     ['Autoklicker 4 + ×3', '#ffaa1a', () => { lief.klick = true; lief.auto = true; lief.auto2 = true; lief.klick2 = true; lief.auto3 = true; lief.klick3 = true; lief.auto4 = true; saveLief(); }],
     ['Autoklicker 2 + ×2', '#ffcc1a', () => { lief.klick = true; lief.auto = true; lief.auto2 = true; lief.klick2 = true; saveLief(); }],
@@ -5816,6 +5816,13 @@ const WEB_ITEMS = [
   { id: 'auto7', cat: 'haus', name: 'Autoklicker 7', price: 180000, desc: ['Klickt alle 0,6 statt', '0,8 Sekunden'], once: true, needs: 'auto6' },
   { id: 'klick10', cat: 'haus', name: 'Zehnfach-Klick', price: 230000, desc: ['Jeder Klick aufs Tier', 'bringt 10 € statt 5 €'], once: true, needs: 'auto7' },
   { id: 'klick15', cat: 'haus', name: 'Fünfzehnfach-Klick', price: 350000, desc: ['Jeder Klick aufs Tier', 'bringt 15 € statt 10 €'], once: true, needs: 'klick10' },
+  { id: 'klick25', cat: 'haus', name: '25-fach-Klick', price: 450000, desc: ['Jeder Klick aufs Tier', 'bringt 25 € statt 15 €'], once: true, needs: 'klick15' },
+  { id: 'auto8', cat: 'haus', name: 'Autoklicker 8', price: 600000, desc: ['Klickt alle 0,4 statt', '0,6 Sekunden'], once: true, needs: 'klick25' },
+  { id: 'klick40', cat: 'haus', name: '40-fach-Klick', price: 750000, desc: ['Jeder Klick aufs Tier', 'bringt 40 € statt 25 €'], once: true, needs: 'auto8' },
+  { id: 'klick60', cat: 'haus', name: '60-fach-Klick', price: 1000000, desc: ['Jeder Klick aufs Tier', 'bringt 60 € statt 40 €'], once: true, needs: 'klick40' },
+  { id: 'klick100', cat: 'haus', name: '100-fach-Klick', price: 1400000, desc: ['Jeder Klick aufs Tier', 'bringt 100 € statt 60 €'], once: true, needs: 'klick60' },
+  { id: 'klick150', cat: 'haus', name: '150-fach-Klick', price: 2000000, desc: ['Jeder Klick aufs Tier', 'bringt 150 € statt 100 €'], once: true, needs: 'klick100' },
+  { id: 'klick250', cat: 'haus', name: '250-fach-Klick', price: 3000000, desc: ['Jeder Klick aufs Tier', 'bringt 250 € statt 150 €'], once: true, needs: 'klick150' },
   { id: 'klickbank', cat: 'haus', name: 'Klick-Konto', price: 90000, desc: ['Klick-Geld kommt direkt', 'aufs Konto statt bar'], once: true, needs: 'klick5' },
   { id: 'tierhaus', cat: 'haus', name: 'Tierhaus', price: 15000, desc: ['Neues Haus im Garten: Tierbett,', 'Napf, Klo, Maid & Kalender'], once: true, needs: 'hundehaus' },
   { id: 'kralarm', cat: 'haus', name: 'Profit-Alarm', price: 20000, desc: ['Krypto: Ziel-Plus', 'wird direkt angezeigt'], once: true },
@@ -5986,8 +5993,8 @@ function webPic(id, cx, cy, sz) {
   if (id === 'gartengross') { g.fillStyle = '#45c43a'; g.fillRect(-46, -40, 92, 84); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(-46, -40, 92, 84); g.fillStyle = '#2f8fd8'; g.beginPath(); g.ellipse(14, 18, 22, 8, 0, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(-20, -30); g.lineTo(-20, 26); g.moveTo(-32, 12); g.lineTo(-20, 28); g.lineTo(-8, 12); g.stroke(); g.restore(); return; }
   if (id === 'botanik') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 30, 100, 14); g.fillStyle = 'rgba(160,220,250,.8)'; g.fillRect(-40, -6, 80, 38); g.strokeRect(-40, -6, 80, 38); g.beginPath(); g.moveTo(-40, -6); g.quadraticCurveTo(0, -50, 40, -6); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#2fa84f'; for (const px of [-24, 0, 24]) { g.beginPath(); g.ellipse(px, 14, 8, 14, 0, 0, 7); g.fill(); } g.restore(); return; }
   if (id === 'toepfe') { g.lineWidth = 3; g.strokeStyle = '#111'; for (const px of [-34, 0, 34]) { g.fillStyle = '#c4663a'; g.fillRect(px - 16, 4, 32, 36); g.strokeRect(px - 16, 4, 32, 36); g.fillStyle = '#4a2a14'; g.fillRect(px - 13, 4, 26, 6); g.fillStyle = '#2fa84f'; g.beginPath(); g.ellipse(px - 6, -6, 7, 12, -0.4, 0, 7); g.ellipse(px + 6, -8, 7, 12, 0.4, 0, 7); g.fill(); g.stroke(); } g.restore(); return; }
-  if (id === 'auto6' || id === 'auto7') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-40, -30, 80, 60, 12); g.fill(); g.stroke(); g.fillStyle = id === 'auto6' ? '#26c6ff' : '#c48aff'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'auto6' ? '0,8s' : '0,6s', 0, 2); g.restore(); return; }
-  if (id === 'klick10' || id === 'klick15') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-40, -30, 80, 64, 10); g.fill(); g.stroke(); g.fillStyle = id === 'klick10' ? '#c0392b' : '#7a1fa8'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'klick10' ? '×10' : '×15', 0, 3); g.restore(); return; }
+  if (id === 'auto6' || id === 'auto7' || id === 'auto8') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-40, -30, 80, 60, 12); g.fill(); g.stroke(); g.fillStyle = id === 'auto6' ? '#26c6ff' : '#c48aff'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(id === 'auto6' ? '0,8s' : '0,6s', 0, 2); g.restore(); return; }
+  if (/^klick\d{2,3}$/.test(id)) { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-40, -30, 80, 64, 10); g.fill(); g.stroke(); g.fillStyle = id === 'klick10' ? '#c0392b' : '#7a1fa8'; g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; const nn = id.slice(5); g.font = (nn.length > 2 ? '900 22px' : '900 28px') + ' system-ui'; g.fillText('×' + nn, 0, 3); g.restore(); return; }
   if (id === 'klickbank') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1f3a6e'; g.beginPath(); g.roundRect(-40, -28, 80, 56, 10); g.fill(); g.stroke(); g.fillStyle = '#ffcc1a'; g.fillRect(-40, -14, 80, 10); g.fillStyle = '#fff'; g.font = '900 22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('€ → 🏦', 0, 14); g.restore(); return; }
   if (id === 'auto5') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#3a4152'; g.beginPath(); g.roundRect(-36, -30, 72, 60, 12); g.fill(); g.stroke(); g.fillStyle = '#3cffe0'; g.font = '900 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1s', 0, 2); g.restore(); return; }
   if (id === 'klick5') { g.fillStyle = '#ffcc1a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.roundRect(-36, -30, 72, 64, 10); g.fill(); g.stroke(); g.fillStyle = '#c0392b'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×5', 0, 3); g.restore(); return; }
