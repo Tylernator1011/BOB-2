@@ -5626,6 +5626,7 @@ const WEB_ITEMS = [
   { id: 'zmmulti3', cat: 'haus', name: 'Dreifachform', price: 200000, desc: ['Jede Maschine macht', '3 Ziegel auf einmal'], once: true, needs: 'zmmulti2' },
   { id: 'zmspeed4', cat: 'haus', name: 'Turbo-Brennofen IV', price: 220000, desc: ['Ziegel alle 4 Minuten'], once: true, needs: 'zmspeed3' },
   { id: 'zmspeed5', cat: 'haus', name: 'Turbo-Brennofen V', price: 300000, desc: ['Ziegel alle 3 Minuten'], once: true, needs: 'zmspeed4' },
+  { id: 'zmspeed6', cat: 'haus', name: 'Turbo-Brennofen VI', price: 420000, desc: ['Ziegel alle 2 Minuten'], once: true, needs: 'zmspeed5' },
   { id: 'bigbobo', cat: 'haus', name: 'Big Bobo', price: 100000, desc: ['Der Mafiaboss bezieht ein Büro', 'und verkauft deine Ziegel'], once: true, needs: 'ziegelmaschine' },
   { id: 'haendler', cat: 'haus', name: 'Krypto-Händler', price: 40000, desc: ['Verkauft deine Krypto', 'beim Profit-Ziel'], once: true, needs: 'tierhaus2', needs2: 'kralarm' },
   { id: 'investor', cat: 'haus', name: 'Krypto-Investor', price: 50000, desc: ['Kauft ausgewählte Krypto', 'günstig nach einem Absturz'], once: true, needs: 'haendler' },
@@ -6402,7 +6403,7 @@ const ZMS = [
   { k: 'ziegelmaschine', tr: 'zmTray', x: 120, y: 820 }, { k: 'ziegelmaschine2', tr: 'zmTray2', x: 900, y: 820 }, { k: 'ziegelmaschine3', tr: 'zmTray3', x: 1680, y: 820 },
   { k: 'ziegelmaschine4', tr: 'zmTray4', x: -60, y: 620 }, { k: 'ziegelmaschine5', tr: 'zmTray5', x: 1760, y: 620 }, { k: 'ziegelmaschine6', tr: 'zmTray6', x: 2400, y: 620 }].map(m => ({ ...m, say: '', sayT: 0 }));
 const ZM = ZMS[0]; let zmT = null;
-function zmInt() { return lief.zmspeed5 ? 3 : lief.zmspeed4 ? 4 : lief.zmspeed3 ? 5 : lief.zmspeed2 ? 6 : lief.zmspeed1 ? 8 : 10; }
+function zmInt() { return lief.zmspeed6 ? 2 : lief.zmspeed5 ? 3 : lief.zmspeed4 ? 4 : lief.zmspeed3 ? 5 : lief.zmspeed2 ? 6 : lief.zmspeed1 ? 8 : 10; }
 function zmMul() { return lief.zmmulti3 ? 3 : lief.zmmulti2 ? 2 : 1; }
 function zmMax() { return lief.zmlimit ? 150 : 60; }
 function zmAll() { return ZMS.reduce((a, m) => a + (garden[m.tr] || 0), 0); }
