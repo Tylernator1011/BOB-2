@@ -3741,7 +3741,7 @@ function wrItems() {
   if (wr.mode === 'pet') { const p = wrPet(); return p ? petWearOf(p).owned.filter(k => PET_OUTFITS[k]) : []; }
   if (wr.mode === 'shop') return Object.keys(MARKT_KLEIDER);
   if (wr.mode === 'acc') return (wear.accOwned || []).filter(k => ACC[k]);
-  if (wr.mode === 'waffen') return Object.keys(WEAPONS);
+  if (wr.mode === 'waffen') return Object.keys(WEAPONS).filter(k => !WEAPONS[k].unlock || WEAPONS[k].unlock());
   return wear.owned.filter(k => OUTFITS[k]);
 }
 function wrOn() { if (wr.mode === 'waffen') return weap.sel; if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
@@ -3762,7 +3762,7 @@ const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CL
 function wrEquip(i) {
   const k = wrItems()[i]; if (!k) return; wr.sel = i; wr.msg = '';
   if (wr.mode === 'shop' && !wear.owned.includes(k)) return;
-  if (wr.mode === 'waffen') { if (weap.sel === k) { weap.sel = null; weap.out = false; } else { weap.sel = k; weap.out = false; } weapAnim = null; saveWeap(); return; }
+  if (wr.mode === 'waffen') { if (weap.sel === k) { weap.sel = null; weap.out = false; } else { weap.sel = k; weap.out = false; } weapAnim = null; MM.drawn = false; MM.sheath = null; saveWeap(); return; }
   if (wr.mode === 'acc') { wear.acc = wear.acc || {}; const sl = ACC[k].slot; if (wear.acc[sl] === k) delete wear.acc[sl]; else wear.acc[sl] = k; saveWear(); return; }
   if (wr.mode === 'pet') { petWearOf(wrPet()).on = k; savePetWear(); } else { wear.on = k; saveWear(); }
 }
@@ -3869,7 +3869,7 @@ function drawWardrobe() {
     if (k) {
       if (wr.mode === 'pet') drawPetCube(wrPet(), x + WR.cw / 2, y + WR.ch - 14, 96, 1, 0);
       else if (wr.mode === 'acc') drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [k]);
-      else if (wr.mode === 'waffen') drawBobFig(x + WR.cw / 2 - 20, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [WEAPONS[k].acc]);
+      else if (wr.mode === 'waffen') { drawBobFig(x + WR.cw / 2 - 20, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, WEAPONS[k].acc ? [WEAPONS[k].acc] : []); if (WEAPONS[k].sword) swordIcon(x + WR.cw / 2 + 40, y + WR.ch - 40, 0.45, 0.35); }
       else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false, accWorn());
       if (wr.mode === 'acc' && accWorn().includes(k)) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
       if (k === wrOn()) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
@@ -3890,7 +3890,7 @@ function drawWardrobe() {
   // Vorschau
   const b1 = Math.sin(t * 1.7) * 3, px = (WR_TRACK.x + 40 + XR) / 2;
   if (wr.mode === 'acc') { drawBobFig(px, 770, 1.3, 1, b1, 1, wear.on, true, accWorn()); const k = items[wr.sel]; if (k) { marker(ACC[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(ACC_SLOTS[ACC[k].slot] + (accWorn().includes(k) ? ' · angezogen (nochmal klicken = ausziehen)' : ' · klicken zum Anziehen'), px, 196); } else marker('Noch keine Accessoires', px, 420, 34, '#fff'); }
-  else if (wr.mode === 'waffen') { const k = items[wr.sel]; drawBobFig(px - 60, 770, 1.3, 1, b1, 1, wear.on, true, accWorn().filter(a => ACC[a].slot !== 'hand').concat(k ? [WEAPONS[k].acc] : [])); if (k) { marker(WEAPONS[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(weap.sel === k ? 'Ausgewählt · mit ' + 'Q' + ' in die Hand nehmen' : 'Klicken zum Auswählen', px, 196); g.fillText(WEAPONS[k].desc, px, 228); } }
+  else if (wr.mode === 'waffen') { const k = items[wr.sel]; drawBobFig(px - 60, 770, 1.3, 1, b1, 1, wear.on, true, accWorn().filter(a => ACC[a].slot !== 'hand').concat(k && WEAPONS[k].acc ? [WEAPONS[k].acc] : [])); if (k && WEAPONS[k].sword) swordIcon(px + 150, 640, 1.6, 0.35); if (k) { marker(WEAPONS[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(weap.sel === k ? 'Ausgewählt · mit Q ' + (WEAPONS[k].sword ? 'vom Rücken ziehen' : 'in die Hand nehmen') : 'Klicken zum Auswählen', px, 196); g.fillText(WEAPONS[k].desc, px, 228); } }
   else if (wr.mode !== 'pet') drawBobFig(px, 770, 1.3, 1, b1, 1, items[wr.sel] || wear.on, true, accWorn());
   else if (!wrPet()) { marker('Du hast noch kein Tier', px, 420, 40, '#fff'); wr.ui = null; }
   else {
@@ -4372,7 +4372,7 @@ cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, 
   if (isTouch() && canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
   if (canBag() && hotbarVisible() && !hbHidden) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
   if (menu.open) { const i = menuHit(x, y); if (i >= 0) { menu.sel = i; choose(i); } return; }
-  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) { weapSwing(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
+  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) { if (swordOn()) { const [wx] = toWorld(x, y); if (!MM.atk && !MM.sheath) MM.face = wx < bob.x ? -1 : 1; mmoSlash(); } else weapSwing(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => { if (!joy.on) return; const [x, y] = toCanvas(e); let dx = x - joy.ox, dy = y - joy.oy; const m = Math.hypot(dx, dy), R = 90; if (m > R) { dx = dx / m * R; dy = dy / m * R; } joy.dx = dx / R; joy.dy = dy / R; });
 const stop = () => { joy.on = false; joy.dx = joy.dy = 0; };
 cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
@@ -6132,20 +6132,21 @@ function drawWueste(R) {
 
 // ---------- Waffen aus der Kiste ----------
 let weap = { sel: null, out: false }; try { weap = Object.assign(weap, JSON.parse(localStorage.getItem('bob-waffe') || '{}')); if (weap.on) { weap.sel = weap.on; delete weap.on; } } catch (e) {}
-const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', desc: 'Linksklick: zuschlagen' } };
+const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', desc: 'Linksklick: zuschlagen' }, mmoschwert: { name: 'Schwert der Schwert-Welt', sword: true, desc: 'Q ziehen · Klick · F Wirbelschlag · G Sternenstoß', unlock: () => mmo.clear && mmo.clear.f1 } };
+function swordOn() { return !mmo.on && !apo.on && weap.sel === 'mmoschwert' && WEAPONS.mmoschwert.unlock(); }
 let weapT0 = -9, weapAnim = null;
 function saveWeap() { try { localStorage.setItem('bob-waffe', JSON.stringify({ sel: weap.sel, out: weap.out })); } catch (e) {} }
 function nearKiste() { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) { const f = nearFurn(k); if (f) return f; } return null; }
 function kisteMenu() { openWardrobe('waffen'); }
 function weapAnimP() { if (!weapAnim) return null; const p = (performance.now() / 1000 - weapAnim.t0) / 0.75; if (p >= 1) { if (weapAnim.dir < 0) weap.out = false; weapAnim = null; saveWeap(); return null; } return { p, dir: weapAnim.dir }; }
-function weapActive() { return weap.sel && WEAPONS[weap.sel] && (weap.out || weapAnim) && !mmo.on && !apo.on; }
+function weapActive() { return weap.sel && WEAPONS[weap.sel] && !WEAPONS[weap.sel].sword && (weap.out || weapAnim) && !mmo.on && !apo.on; }
 function weapToggle() {
   if (!weap.sel || !WEAPONS[weap.sel] || mmo.on || apo.on || weapAnim) return;
   if (weap.out) weapAnim = { t0: performance.now() / 1000, dir: -1 }; else { weap.out = true; weapAnim = { t0: performance.now() / 1000, dir: 1 }; }
 }
 function weapSwingAng() { const e = (performance.now() / 1000 - weapT0) / 0.38; return e >= 0 && e < 1 ? Math.sin(e * Math.PI) * 1.5 : 0; }
 function weapSwing() { if (!weapActive() || weapAnim || build.on || menu.open || phone.open || wr.open || web.open || bag.open) return false; if (performance.now() / 1000 - weapT0 < 0.38) return true; weapT0 = performance.now() / 1000; return true; }
-addEventListener('keydown', e => { if (e.code !== 'KeyQ' || e.repeat || mmo.on || apo.on || menu.open || phone.open || wr.open || web.open || bag.open || shopCat.open || build.on || kb.open || kal.open) return; if (!weap.sel) return; e.preventDefault(); weapToggle(); });
+addEventListener('keydown', e => { if (e.code !== 'KeyQ' || e.repeat || mmo.on || apo.on || menu.open || phone.open || wr.open || web.open || bag.open || shopCat.open || build.on || kb.open || kal.open) return; if (!weap.sel) return; e.preventDefault(); if (swordOn()) mmoDrawToggle(); else weapToggle(); });
 // ---------- Einzahlungsautomat im Gartenhaus + Geldwäsche ----------
 const ATM = { room: 'tierhaus', x: 1430 }; let wascheT = null;
 function nearAtm() { return cur === ATM.room && lief.einzahlautomat && !fade.dir && !build.on && Math.abs(bob.x - ATM.x) < 150 && bob.y < FLOOR + 190; }
@@ -9710,7 +9711,7 @@ function mmoHitMob(e, mult) {
   const crit = Math.random() < 0.12 || MM.counter > 0, d = Math.round(mmoDmg() * mult * (crit ? 2 : 1) * (MM.counter > 0 ? 1.4 : 1) * (0.9 + Math.random() * 0.2)) * (e.intro > 0 || (e.act && e.act.k === 'phase') ? 0 : 1); if (e.act && e.act.k === 'phase') return; e.hp -= d; e.hit = 0.18; e.st = 'chase';
   const T = MOB[e.type], s = scaleAt(e.y) * T.k; MM.nums.push({ x: e.x + (Math.random() - 0.5) * 40, y: e.y - 150 * s, t: 0.9, txt: (crit ? 'KRIT ' : '') + d, col: crit ? '#ffd23a' : '#fff' }); mmoParts(e.x, e.y - 70 * s, '#7fe8ff', 5);
   if (e.hp <= 0) { mmo.col += T.col; mmoGainXp(T.xp); MM.nums.push({ x: e.x, y: e.y - 190 * s, t: 1.3, txt: '+' + T.xp + ' EP  +' + T.col + ' Col', col: '#9cffb0' }); mmoParts(e.x, e.y - 60 * s, '#bff4ff', 22);
-    if (T.boss) { const first = !mmo.clear[T.unlock]; mmo.clear[T.unlock] = true; if (first) earn(T.euro); MM.banner = { t: 5, a: T.name + ' besiegt!', b: first ? 'Preisgeld ' + money(T.euro) + (T.unlock === 'f1' ? ' · Feenflügel freigeschaltet' : T.unlock === 'alf' ? ' · Inkarnation freigeschaltet' : '') : '+' + T.col + ' Col' }; }
+    if (T.boss) { const first = !mmo.clear[T.unlock]; mmo.clear[T.unlock] = true; if (first) earn(T.euro); MM.banner = { t: 5, a: T.name + ' besiegt!', b: first ? 'Preisgeld ' + money(T.euro) + (T.unlock === 'f1' ? ' · Schwert jetzt auch in der Waffenkiste!' : T.unlock === 'alf' ? ' · Inkarnation freigeschaltet' : '') : '+' + T.col + ' Col' }; }
     saveMmo(); }
 }
 function mmoTargets() { return MM.boss ? MM.mobs.concat([MM.boss]) : MM.mobs; }
@@ -10112,17 +10113,23 @@ function drawMmoSword() {
   if (MM.dash) { g.save(); g.fillStyle = 'rgba(176,122,255,.45)'; g.beginPath(); g.ellipse(bob.x - f * 120 * s, bob.y - 90 * s, 180 * s, 40 * s, 0, 0, 7); g.fill(); g.restore(); }
   if (MM.ink > 0) { g.save(); const r = (1.2 - MM.ink) * 700; g.strokeStyle = `rgba(255,220,80,${MM.ink / 1.2})`; g.lineWidth = 30; g.beginPath(); g.ellipse(bob.x, bob.y - 60, r, r * 0.35, 0, 0, 7); g.stroke(); g.fillStyle = `rgba(255,250,200,${MM.ink * 0.5})`; g.fillRect(bob.x - 20, 0, 40, bob.y); g.restore(); }
 }
+function swordIcon(x, y, s, ang) { g.save(); g.translate(x, y); g.rotate(ang); g.lineWidth = 3; g.strokeStyle = LINE; const L = (90 + mmo.sword * 6) * s, bc = ['#c8a070', '#d8a050', '#c8ccd8', '#2a2a3a', '#9af0ff', '#e8f4ff', '#ffe08a', '#fffbe0'][Math.min(7, mmo.sword - 1)];
+  g.fillStyle = '#2a1a10'; g.beginPath(); g.roundRect(-5 * s, -4 * s, 10 * s, 32 * s, 4 * s); g.fill(); g.stroke(); g.fillStyle = '#ffd23a'; g.beginPath(); g.roundRect(-20 * s, -10 * s, 40 * s, 9 * s, 4 * s); g.fill(); g.stroke();
+  const bg = g.createLinearGradient(-8 * s, 0, 8 * s, 0); bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, bc); g.fillStyle = bg; g.beginPath(); g.moveTo(-8 * s, -10 * s); g.lineTo(-8 * s, -L); g.lineTo(0, -L - 18 * s); g.lineTo(8 * s, -L); g.lineTo(8 * s, -10 * s); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+function swordItems(list) {
+  list.push({ y: bob.y + 0.03, f: drawMmoSword });
+  list.push({ y: bob.y - 0.03, f: () => { if (MM.dead) return; const s = scaleAt(bob.y), f = MM.face, lift = waveLift(), x = bob.x - f * 34 * s, y = bob.y - lift - 232 * s; g.save(); g.translate(x, y); g.rotate(f * 2.6); g.lineWidth = 3; g.strokeStyle = LINE;
+    const L = (90 + mmo.sword * 6) * s; g.fillStyle = '#1a1a22'; g.beginPath(); g.roundRect(-11 * s, -L - 22 * s, 22 * s, L + 12 * s, 8 * s); g.fill(); g.stroke(); g.fillStyle = '#c8ccd8'; g.fillRect(-11 * s, -26 * s, 22 * s, 8 * s); g.strokeRect(-11 * s, -26 * s, 22 * s, 8 * s);
+    if (mmoDrawP() <= 0) { g.fillStyle = '#ffd23a'; g.beginPath(); g.roundRect(-20 * s, -10 * s, 40 * s, 9 * s, 4 * s); g.fill(); g.stroke(); g.fillStyle = '#2a1a10'; g.beginPath(); g.roundRect(-5 * s, -1 * s, 10 * s, 32 * s, 4 * s); g.fill(); g.stroke(); }
+    g.restore(); } });
+}
 function mmoListItems(list) {
   if (!mmo.on || !ROOMS[cur].mmo) return;
   for (const e of mmoTargets()) list.push({ y: e.y, f: () => drawMob(e) });
   for (const n of MM.npcs) list.push({ y: n.y, f: () => drawMmoNpc(n) });
   if (cur === 'mmo_stadt') { list.push({ y: MMO_HAENDLER.y, f: () => drawMmoNpcStand(MMO_HAENDLER.x, MMO_HAENDLER.y, 'haendler') }); list.push({ y: MMO_SCHMIED.y, f: () => drawMmoNpcStand(MMO_SCHMIED.x, MMO_SCHMIED.y, 'schmied') }); }
   if (cur === 'mmo_under') list.push({ y: MMO_ZEDER.y, f: drawZeder });
-  list.push({ y: bob.y + 0.03, f: drawMmoSword });
-  list.push({ y: bob.y - 0.03, f: () => { if (MM.dead) return; const s = scaleAt(bob.y), f = MM.face, lift = waveLift(), x = bob.x - f * 34 * s, y = bob.y - lift - 232 * s; g.save(); g.translate(x, y); g.rotate(f * 2.6); g.lineWidth = 3; g.strokeStyle = LINE;
-    const L = (90 + mmo.sword * 6) * s; g.fillStyle = '#1a1a22'; g.beginPath(); g.roundRect(-11 * s, -L - 22 * s, 22 * s, L + 12 * s, 8 * s); g.fill(); g.stroke(); g.fillStyle = '#c8ccd8'; g.fillRect(-11 * s, -26 * s, 22 * s, 8 * s); g.strokeRect(-11 * s, -26 * s, 22 * s, 8 * s);
-    if (mmoDrawP() <= 0) { g.fillStyle = '#ffd23a'; g.beginPath(); g.roundRect(-20 * s, -10 * s, 40 * s, 9 * s, 4 * s); g.fill(); g.stroke(); g.fillStyle = '#2a1a10'; g.beginPath(); g.roundRect(-5 * s, -1 * s, 10 * s, 32 * s, 4 * s); g.fill(); g.stroke(); }
-    g.restore(); } });
+  swordItems(list);
   for (const r of MM.rings) list.push({ y: r.y - 1, f: () => { const k = 1 - r.t / 0.5, R = 330 * scaleAt(r.y) * (0.3 + k * 0.8); g.save(); g.strokeStyle = `rgba(255,200,120,${r.t * 2})`; g.lineWidth = 14; g.beginPath(); g.ellipse(r.x, r.y, R, R * 0.35, 0, 0, 7); g.stroke(); g.restore(); } });
   list.push({ y: 99997, f: () => { for (const p of MM.fx) { g.fillStyle = p.c; g.globalAlpha = Math.max(0, p.l / 0.7); g.beginPath(); g.moveTo(p.x, p.y - 7); g.lineTo(p.x + 5, p.y); g.lineTo(p.x, p.y + 7); g.lineTo(p.x - 5, p.y); g.closePath(); g.fill(); } g.globalAlpha = 1; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; for (const n of MM.nums) { g.globalAlpha = Math.min(1, n.t * 2); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(n.txt, n.x, n.y); g.fillStyle = n.col; g.fillText(n.txt, n.x, n.y); } g.globalAlpha = 1; } });
 }
@@ -10213,7 +10220,7 @@ OUTFITS.mmo_spieler = mmoCoat('Spieler', '#2f6fe0', '#e8ecf4');
 OUTFITS.mmo_haendler = { name: 'Händler', color: '#8a5a30', apron: 'paw', noText: true };
 OUTFITS.mmo_schmied = { name: 'Schmied', color: '#4a4a52', noText: true, bodyFront: (x, y, w, h) => { g.fillStyle = '#6a4a2a'; g.beginPath(); g.roundRect(x + 40, y + 10, w - 80, h - 10, 20); g.fill(); g.lineWidth = 4; g.strokeStyle = '#111'; g.stroke(); } };
 function abilOf(o) { return (o && o.abil) || []; }
-function activeAbils() { const L = [...abilOf(OUTFITS[wear.on])]; for (const a of accWorn()) L.push(...abilOf(ACC[a])); return [...new Set(L)].filter(id => ABIL[id]).slice(0, 5); }
+function activeAbils() { const L = [...abilOf(OUTFITS[wear.on])]; if (swordOn()) L.push('mmo_wirbel', 'mmo_stoss'); for (const a of accWorn()) L.push(...abilOf(ACC[a])); return [...new Set(L)].filter(id => ABIL[id]).slice(0, 5); }
 const abCd = {};
 function abilFree() { return !((apo.on && (AP.act || AP.inside)) || tres.on || chase.on || stz.on || fade.dir || menu.open || bus || build.on || wr.open || phone.open || shopCat.open || web.open || kal.open || wk.on || sleepFx || pp.open || bag.open || !device || kb.open || bob.hidden); }
 function useAbil(i) {
@@ -10697,7 +10704,9 @@ function frameBody(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); fishTick(dt); mbAutoTick(); zmTick(); bbTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); mmoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); fishTick(dt); mbAutoTick(); zmTick(); bbTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); mmoTick(dt);
+  if (swordOn()) { for (const k of ['atk', 'swing', 'spin']) if (MM[k] > 0) MM[k] = Math.max(0, MM[k] - dt); if (!MM.atk && !MM.dash) { if (keys.has('l')) MM.face = -1; else if (keys.has('r')) MM.face = 1; }
+    if (MM.dash) { MM.dash.t -= dt; const R0 = ROOMS[cur], nx = bob.x + MM.face * 1400 * dt; if (!blocked(nx, bob.y)) bob.x = Math.max((R0.wide ? R0.wide[0] : XL) + 40, Math.min((R0.wide ? R0.wide[1] : XR) - 40, nx)); MM.swing = 0.2; if (MM.dash.t <= 0) MM.dash = null; } } spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
@@ -10739,7 +10748,7 @@ function frameBody(t) {
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else { if (wave.t > 0 || wave.parts.length) list.push({ y: bob.y + 0.005, f: drawWave }); list.push({ y: bob.y + 0.01, f: drawBob }); } }
-  apoListItems(list); mmoListItems(list);
+  apoListItems(list); mmoListItems(list); if (swordOn() && !bob.hidden && !build.on) swordItems(list);
   if (cur === GEAR.room && lief.bobgear && !mmo.on) list.push({ y: FLOOR + 90, f: drawGearStand });
   if (cur === ATM.room && lief.einzahlautomat) list.push({ y: FLOOR + 86, f: drawAtm });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
