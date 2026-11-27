@@ -4667,7 +4667,6 @@ function solids(room) {
   if (room === 'garten' && lief.toepfe && lief.tierhaus) { list.push({ x: TH.x - 225, w: 95, base: TH.y + 46, depth: 40 }); list.push({ x: TH.x + 130, w: 95, base: TH.y + 46, depth: 40 }); }
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'orange' && lief.mitbewohner) list.push({ x: MB.x - 60, w: 120, base: MB.y, depth: 30 });
-  if (room === 'keller') list.push({ x: 860 + (lief.bigbobo ? -380 : 0), w: 290, base: 720, depth: 90 });
   if (room === 'keller' && lief.bigbobo) list.push({ x: BB.x - 240, w: 480, base: BB.y + 120, depth: 100 }); list.push({ x: BB.x - 330 - 130, w: 260, base: BB.y + 170, depth: 60 });
   if (room === 'keller' && lief.ziegelmaschine) list.push({ x: ZM.x - 175, w: 430, base: ZM.y, depth: 60 });
   if (room === 'tierhaus2') for (const o of SRV) if (lief[o.id]) list.push({ x: o.x - 55, w: 110, base: SRV_Y, depth: 50 });
@@ -6515,10 +6514,6 @@ function drawKeller(R) {
   for (let x = Math.floor(XL / 60) * 60; x < XR; x += 60) { g.fillStyle = '#ffcc1a'; g.beginPath(); g.moveTo(x, FLOOR); g.lineTo(x + 30, FLOOR); g.lineTo(x + 20, FLOOR + 16); g.lineTo(x - 10, FLOOR + 16); g.closePath(); g.fill(); }
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   // Kartentisch in der Mitte
-  const HX = lief.bigbobo ? -380 : 0; g.lineWidth = 4; g.strokeStyle = LINE; cube(880 + HX, 650, 260, 26, 90, mkPal('#2a2d33', '#3a3e46'), true, 0.3);
-  g.fillStyle = 'rgba(60,200,255,.55)'; g.beginPath(); g.moveTo(880 + HX, 650); g.lineTo(1140 + HX, 650); g.lineTo(1140 + HX - 27, 650 - 50); g.lineTo(880 + HX - 27, 650 - 50); g.closePath(); g.fill();
-  g.strokeStyle = 'rgba(60,200,255,.8)'; g.lineWidth = 2; for (let k = 0; k < 3; k++) { g.beginPath(); g.ellipse(1000 + HX, 600 - k * 30 - Math.sin(t * 2) * 4, 60 - k * 14, 16 - k * 4, 0, 0, 7); g.stroke(); }
-  cube(900 + HX, 676, 20, 100, 20, mkPal('#2a2d33'), false, 0.3); cube(1100 + HX, 676, 20, 100, 20, mkPal('#2a2d33'), false, 0.3);
 }
 function drawTierhaus2Room(R) {
   const t = performance.now() / 1000;
@@ -8234,7 +8229,7 @@ const BIG_UPDATES = [
   ['1.68', 'Angeln', 'Angel für den Teich im großen Garten – der Fischer daneben kauft deine Fische'],
   ['1.79', 'Big Bobo', 'Der Mafiaboss aus den alten Bob-Spielen hat ein Büro im Keller und verkauft deine Ziegel'],
   ['1.78', 'Ziegelstein-Maschine', 'Eine Maschine im Keller produziert Ziegelsteine'],
-  ['1.77', 'Untergrund-Basis', 'Ein Keller unter dem Tierhaus: Betonwände, Monitore, Tresor und ein Hologramm-Tisch'],
+  ['1.77', 'Untergrund-Basis', 'Ein Keller unter dem Tierhaus: Betonwände, Monitore und ein Tresor'],
   ['1.76', 'Darkweb-Connection', 'Jedes Einkommen ist 1,5× so viel'],
   ['1.75', 'Stollen-Arbeiter', '6 Arbeiter für den Tiefen Stollen – alle Minenarbeiter laufen jetzt wirklich zu den Erzen'],
   ['1.74', 'Tiefer Stollen & Lore', 'Ein langer Gang tief in die Mine mit Edelsteinen – und eine Lore, die Erze automatisch verkauft'],
