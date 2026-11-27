@@ -193,6 +193,8 @@ const ROOMS = {
               arches: [{ x: -150, to: 'mine', ax: 1050, label: 'Mine' }] },
   keller: { name: 'Untergrund-Basis', kind: 'keller', exits: {}, wide: [-300, 1550], maxY: H - 30,
               arches: [{ x: 600, to: 'tierhaus', ax: 860, label: 'Hoch' }] },
+  bbbuero: { name: 'Big Bobos Büro', kind: 'bbbuero', exits: {}, wide: [-300, 1500], maxY: H - 30,
+              arches: [{ x: -90, to: 'keller', ax: 1250, label: 'Basis' }] },
   tierhaus2: { name: 'Tierhaus oben', kind: 'tierhaus2', exits: {}, wide: [-300, 1550], maxY: H - 30,
               arches: [{ x: -120, to: 'tierhaus', ax: -120, label: 'Runter' }] },
   garten: { name: 'Garten', outside: true, kind: 'garten', exits: {}, wide: [-450, 1650], maxY: H - 30,
@@ -2520,6 +2522,7 @@ function room() {
   else if (R.kind === 'wueste') drawWueste(R);
   else if (R.kind === 'mine') drawMineRoom(R);
   else if (R.kind === 'keller') drawKeller(R);
+  else if (R.kind === 'bbbuero') drawBBRoom(R);
   else if (R.kind === 'street') drawStreet(R);
   else if (R.openTop) {
     // Laden geht nach oben einfach weiter: nur Boden
@@ -4082,8 +4085,8 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
-  if (nearBB()) return { x: BB.x - 330, y: BB.y - 270, label: 'Big Bobo' };
-  if (nearZM()) return { x: ZM.x - 70, y: ZM.y - 380, label: 'Ziegel nehmen (' + (garden.zmTray || 0) + ')' };
+  if (nearBB()) return { x: BB.x, y: 120, label: 'Big Bobo' };
+  if (nearZM()) { const m = nearZM(); return { x: m.x - 70, y: m.y - 380, label: 'Ziegel nehmen (' + (garden[m.tr] || 0) + ')' }; }
   if (nearErz()) return { x: ERZ.x, y: ERZ.y - 380, label: 'Erzhändler' };
   { const n = nearOre(); if (n) return { x: n.x, y: n.y - 150, label: 'Abbauen (' + n.hp + ')' }; }
   if (nearMitbewohner()) return { x: MB.x, y: MB.y - 400 * scaleAt(MB.y), label: gWd() === 0 && lief.mbWeek !== Math.floor(gDay() / 7) ? 'Miete abholen' : 'Mitbewohner' };
@@ -4667,8 +4670,8 @@ function solids(room) {
   if (room === 'garten' && lief.toepfe && lief.tierhaus) { list.push({ x: TH.x - 225, w: 95, base: TH.y + 46, depth: 40 }); list.push({ x: TH.x + 130, w: 95, base: TH.y + 46, depth: 40 }); }
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'orange' && lief.mitbewohner) list.push({ x: MB.x - 60, w: 120, base: MB.y, depth: 30 });
-  if (room === 'keller' && lief.bigbobo) list.push({ x: BB.x - 250, w: 500, base: BB.y + 125, depth: 260 }); list.push({ x: BB.x - 330 - 130, w: 260, base: BB.y + 170, depth: 60 });
-  if (room === 'keller' && lief.ziegelmaschine) list.push({ x: ZM.x - 175, w: 620, base: ZM.y + 10, depth: 70 });
+  if (room === 'bbbuero') { list.push({ x: 300, w: 600, base: 660, depth: 260 }); list.push({ x: 950, w: 150, base: 615, depth: 80 }); list.push({ x: 80, w: 240, base: 615, depth: 80 }); }
+  if (room === 'keller') for (const m of ZMS) if (lief[m.k]) list.push({ x: m.x - 175, w: 620, base: m.y + 10, depth: 70 });
   if (room === 'tierhaus2') for (const o of SRV) if (lief[o.id]) list.push({ x: o.x - 55, w: 110, base: SRV_Y, depth: 50 });
   if (room === 'tierhaus2' && lief.investor) list.push({ x: TR2.x - 220, w: 440, base: TR2.y, depth: 70 });
   if (room === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ x: BH.x - 260 - 54, w: 520 + 54, base: BH.y, depth: 90 });
@@ -5610,6 +5613,17 @@ const WEB_ITEMS = [
   { id: 'tierhaus2', cat: 'haus', name: 'Tierhaus 2. Stock', price: 30000, desc: ['Das Tierhaus wird', 'zweistöckig'], once: true, needs: 'tierhaus' },
   { id: 'keller', cat: 'haus', name: 'Untergrund-Basis', price: 75000, desc: ['Ein Keller unter dem', 'Tierhaus – deine Basis'], once: true, needs: 'tierhaus' },
   { id: 'ziegelmaschine', cat: 'haus', name: 'Ziegelstein-Maschine', price: 45000, desc: ['Steht im Keller und', 'produziert Ziegelsteine'], once: true, needs: 'keller' },
+  { id: 'ziegelmaschine2', cat: 'haus', name: 'Ziegelstein-Maschine 2', price: 60000, desc: ['Eine zweite Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine' },
+  { id: 'zmspeed1', cat: 'haus', name: 'Turbo-Brennofen I', price: 70000, desc: ['Ziegel alle 8 statt', '10 Minuten'], once: true, needs: 'ziegelmaschine' },
+  { id: 'ziegelmaschine3', cat: 'haus', name: 'Ziegelstein-Maschine 3', price: 80000, desc: ['Eine dritte Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine2' },
+  { id: 'zmspeed2', cat: 'haus', name: 'Turbo-Brennofen II', price: 95000, desc: ['Ziegel alle 6 Minuten'], once: true, needs: 'zmspeed1' },
+  { id: 'ziegelmaschine4', cat: 'haus', name: 'Ziegelstein-Maschine 4', price: 105000, desc: ['Noch eine Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine3' },
+  { id: 'zmlimit', cat: 'haus', name: 'Große Paletten', price: 120000, desc: ['Jede Maschine stapelt', '150 statt 60 Ziegel'], once: true, needs: 'ziegelmaschine' },
+  { id: 'ziegelmaschine5', cat: 'haus', name: 'Ziegelstein-Maschine 5', price: 135000, desc: ['Noch eine Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine4' },
+  { id: 'zmspeed3', cat: 'haus', name: 'Turbo-Brennofen III', price: 150000, desc: ['Ziegel alle 5 Minuten'], once: true, needs: 'zmspeed2' },
+  { id: 'ziegelmaschine6', cat: 'haus', name: 'Ziegelstein-Maschine 6', price: 170000, desc: ['Die sechste Maschine', 'für den Keller'], once: true, needs: 'ziegelmaschine5' },
+  { id: 'zmspeed4', cat: 'haus', name: 'Turbo-Brennofen IV', price: 220000, desc: ['Ziegel alle 4 Minuten'], once: true, needs: 'zmspeed3' },
+  { id: 'zmspeed5', cat: 'haus', name: 'Turbo-Brennofen V', price: 300000, desc: ['Ziegel alle 3 Minuten'], once: true, needs: 'zmspeed4' },
   { id: 'bigbobo', cat: 'haus', name: 'Big Bobo', price: 100000, desc: ['Der Mafiaboss bezieht ein Büro', 'und verkauft deine Ziegel'], once: true, needs: 'ziegelmaschine' },
   { id: 'haendler', cat: 'haus', name: 'Krypto-Händler', price: 40000, desc: ['Verkauft deine Krypto', 'beim Profit-Ziel'], once: true, needs: 'tierhaus2', needs2: 'kralarm' },
   { id: 'investor', cat: 'haus', name: 'Krypto-Investor', price: 50000, desc: ['Kauft ausgewählte Krypto', 'günstig nach einem Absturz'], once: true, needs: 'haendler' },
@@ -5669,7 +5683,7 @@ function webOrder(it) {
     for (const nd of [it.needs, it.needs2]) if (nd && !lief[nd]) { web.msg = 'Dafür brauchst du zuerst: ' + WEB_ITEMS.find(w => w.id === nd).name; web.msgT = 2.5; return; }
     if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
     webPay(it); lief[it.id] = true; saveLief(); gartenSetup();
-    web.msg = it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'dwconn' ? 'Darkweb-Connection steht: Ab jetzt ist jedes Einkommen 1,5× so viel!' : it.id === 'lohn5' ? 'Ab jetzt bekommst du bei jedem Job den 5-fachen Stundenlohn!' : it.id === 'minetief' ? 'In der Mine geht es jetzt rechts tiefer – in einen langen Stollen voller Edelsteine!' : it.id === 'lore' ? 'Die Lore fährt jetzt durch die Mine und verkauft regelmäßig all deine Erze!' : it.id === 'gartenxl' ? 'Dein Garten ist jetzt riesig – nach unten, links und rechts!' : it.id === 'mine' ? 'Die Mine ist offen! Ganz unten links im Garten.' : /^mwt?\d$/.test(it.id) ? 'Ein neuer Minenarbeiter baut jetzt Erze für dich ab!' : it.id === 'mbdiener' ? 'Dein Angestellter holt ab jetzt jeden Montag die Miete für dich ab!' : it.id === 'mbkarte' ? 'Mit dem Kartengerät kommt die Miete jetzt direkt aufs Konto!' : it.id === 'mitbewohner' ? 'Dein Mitbewohner wohnt jetzt im orangen Raum! Hol jeden Montag die Miete ab.' : it.id === 'eisenangel' ? 'Deine Eisen-Angel zieht jetzt auch Geldsäcke aus dem Teich!' : it.id.startsWith('fluck') ? 'Dein Fischglück ist gestiegen!' : it.id === 'angel' ? 'Du hast jetzt eine Angel! Geh im großen Garten zum Teich und drück E.' : it.id === 'fischer' ? 'Der Fischer steht jetzt rechts neben dem Teich und kauft deine Fische!' : it.id === 'geldchance' ? 'Ab jetzt tauchen im Garten Samen auf – mit viel höherer Chance auf Geldsamen!' : it.id === 'gold5' ? 'Ab jetzt ist jede Goldkacke 5× so viel wert!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'abot' ? 'Dein Gärtner ist im Garten! Sprich ihn an und erlaube ihm Samen.' : it.id === 'abot2' ? 'Der Meister-Gärtner erntet jetzt im Garten – die Pflanzen wachsen ab 25 % weiter!' : it.id === 'tagliefer' ? 'Der Pflanzen-Lieferant kommt ab jetzt jeden Tag um 18 Uhr und kauft alle deine Pflanzen – bar auf die Hand!' : it.id === 'botaniker2' ? 'Der Meister-Botaniker erntet jetzt im Botanik-Haus – die Pflanzen wachsen ab 25 % einfach weiter!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'auto6' || it.id === 'auto7' ? 'Der Autoklicker ist jetzt noch schneller!' : it.id === 'klick10' || it.id === 'klick15' ? 'Jeder Klick aufs Tier bringt jetzt ' + (it.id === 'klick10' ? 10 : 15) + ' €!' : it.id === 'klickbank' ? 'Ab jetzt geht das Klick-Geld direkt aufs Konto!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id.startsWith('cz_') ? it.name + ' gehört jetzt zu deinem Clipz-Team!' : it.id.startsWith('server') ? 'Dein Server läuft oben im Tierhaus! Er mint BitBob und bottet deine Clipz-Videos.' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'bigbobo' ? 'Big Bobo hat sein Büro im Keller bezogen. Er kümmert sich jetzt um deine Ziegel …' : it.id === 'ziegelmaschine' ? 'Die Ziegelstein-Maschine läuft jetzt im Keller!' : it.id === 'keller' ? 'Unter dem Tierhaus gibt es jetzt deine Untergrund-Basis! Die Treppe ist drinnen.' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
+    web.msg = /^ziegelmaschine\d/.test(it.id) ? 'Eine weitere Ziegelstein-Maschine steht jetzt im Keller!' : it.id.startsWith('zmspeed') ? 'Die Brennöfen laufen jetzt schneller!' : it.id === 'zmlimit' ? 'Die Paletten fassen jetzt 150 Ziegel!' : it.id === 'garten' ? 'Der Garten gehört dir! Geh im Haus ganz nach unten (unter den pinken Raum).' : it.id === 'maid' ? 'Deine Maid wartet im Garten beim Haustier-Haus!' : it.id === 'maid2' ? 'Die Maid sammelt jetzt auch die Goldkacke ein!' : it.id === 'feld' ? 'Dein Gemüsefeld ist links im Garten!' : it.id === 'lv3gold' ? 'Ab jetzt macht auch Futter Lv3 Goldkacke!' : it.id === 'kalender' ? 'Der Kalender hängt jetzt im Garten an der Hauswand!' : it.id === 'paesse' ? 'Pässe freigeschaltet! Schau in den Kalender im Garten – der Bob-Pass ist dabei.' : it.id === 'auto' ? 'Der Autoklicker läuft: alle 5 Sekunden +1 €!' : it.id === 'dwconn' ? 'Darkweb-Connection steht: Ab jetzt ist jedes Einkommen 1,5× so viel!' : it.id === 'lohn5' ? 'Ab jetzt bekommst du bei jedem Job den 5-fachen Stundenlohn!' : it.id === 'minetief' ? 'In der Mine geht es jetzt rechts tiefer – in einen langen Stollen voller Edelsteine!' : it.id === 'lore' ? 'Die Lore fährt jetzt durch die Mine und verkauft regelmäßig all deine Erze!' : it.id === 'gartenxl' ? 'Dein Garten ist jetzt riesig – nach unten, links und rechts!' : it.id === 'mine' ? 'Die Mine ist offen! Ganz unten links im Garten.' : /^mwt?\d$/.test(it.id) ? 'Ein neuer Minenarbeiter baut jetzt Erze für dich ab!' : it.id === 'mbdiener' ? 'Dein Angestellter holt ab jetzt jeden Montag die Miete für dich ab!' : it.id === 'mbkarte' ? 'Mit dem Kartengerät kommt die Miete jetzt direkt aufs Konto!' : it.id === 'mitbewohner' ? 'Dein Mitbewohner wohnt jetzt im orangen Raum! Hol jeden Montag die Miete ab.' : it.id === 'eisenangel' ? 'Deine Eisen-Angel zieht jetzt auch Geldsäcke aus dem Teich!' : it.id.startsWith('fluck') ? 'Dein Fischglück ist gestiegen!' : it.id === 'angel' ? 'Du hast jetzt eine Angel! Geh im großen Garten zum Teich und drück E.' : it.id === 'fischer' ? 'Der Fischer steht jetzt rechts neben dem Teich und kauft deine Fische!' : it.id === 'geldchance' ? 'Ab jetzt tauchen im Garten Samen auf – mit viel höherer Chance auf Geldsamen!' : it.id === 'gold5' ? 'Ab jetzt ist jede Goldkacke 5× so viel wert!' : it.id === 'goldvoll' ? 'Alle Gold-Rezepte halten jetzt so lang wie Lv4!' : it.id === 'lv1gold' ? 'Jetzt macht sogar Futter Lv1 Goldkacke!' : it.id === 'lv2gold' ? 'Jetzt macht auch Futter Lv2 Goldkacke!' : it.id === 'sprinkler' ? 'Die Sprinkler gießen jetzt Feld und Töpfe – gegossene Pflanzen wachsen doppelt so schnell!' : it.id === 'abot' ? 'Dein Gärtner ist im Garten! Sprich ihn an und erlaube ihm Samen.' : it.id === 'abot2' ? 'Der Meister-Gärtner erntet jetzt im Garten – die Pflanzen wachsen ab 25 % weiter!' : it.id === 'tagliefer' ? 'Der Pflanzen-Lieferant kommt ab jetzt jeden Tag um 18 Uhr und kauft alle deine Pflanzen – bar auf die Hand!' : it.id === 'botaniker2' ? 'Der Meister-Botaniker erntet jetzt im Botanik-Haus – die Pflanzen wachsen ab 25 % einfach weiter!' : it.id === 'botaniker' ? 'Der Botaniker ist im Botanik-Haus! Sprich ihn an und erlaube ihm Samen.' : it.id === 'gartengross' ? 'Dein Garten ist jetzt viel größer – lauf mal ganz nach unten!' : it.id === 'botanik' ? 'Das Botanik-Haus steht unten im Garten!' : it.id === 'toepfe' ? 'Vorne am Tierhaus stehen jetzt 6 große Pflanztöpfe!' : it.id === 'auto6' || it.id === 'auto7' ? 'Der Autoklicker ist jetzt noch schneller!' : it.id === 'klick10' || it.id === 'klick15' ? 'Jeder Klick aufs Tier bringt jetzt ' + (it.id === 'klick10' ? 10 : 15) + ' €!' : it.id === 'klickbank' ? 'Ab jetzt geht das Klick-Geld direkt aufs Konto!' : it.id === 'auto5' ? 'Der Autoklicker klickt jetzt jede Sekunde!' : it.id === 'klick5' ? 'Jeder Klick aufs Tier bringt jetzt 5 €!' : it.id === 'klick3' ? 'Jeder Klick aufs Tier bringt jetzt 3 €!' : it.id === 'auto4' ? 'Der Autoklicker klickt jetzt alle 2 Sekunden!' : it.id === 'auto3' ? 'Der Autoklicker klickt jetzt alle 3 Sekunden!' : it.id === 'pet2' ? 'Du kannst jetzt 2 Tiere gleichzeitig haben! Wähl Tier 2 am Tierbett.' : it.id === 'maidb' ? 'Deine zweite Maid ist da – zusammen sind sie doppelt so schnell!' : it.id.startsWith('cz_') ? it.name + ' gehört jetzt zu deinem Clipz-Team!' : it.id.startsWith('server') ? 'Dein Server läuft oben im Tierhaus! Er mint BitBob und bottet deine Clipz-Videos.' : it.id === 'investor' ? 'Dein Investor sitzt oben im Tierhaus! Wähl in der Krypto-App bei jeder Währung „Investor: an“.' : it.id === 'haendler' ? 'Dein Krypto-Händler sitzt oben im Tierhaus am PC!' : it.id === 'bigbobo' ? 'Big Bobo hat sein Büro hinter dem Tresor im Keller bezogen. Er kümmert sich jetzt um deine Ziegel …' : it.id === 'ziegelmaschine' ? 'Die Ziegelstein-Maschine läuft jetzt im Keller!' : it.id === 'keller' ? 'Unter dem Tierhaus gibt es jetzt deine Untergrund-Basis! Die Treppe ist drinnen.' : it.id === 'tierhaus2' ? 'Das Tierhaus hat jetzt einen 2. Stock! Die Treppe ist drinnen links.' : it.id === 'kralarm' ? 'Profit-Alarm freigeschaltet! Stell dein Ziel in der Krypto-App bei jeder Währung ein.' : it.id === 'tierhaus' ? 'Das Tierhaus steht im Garten! Tiere, Napf, Klo, Maid und Kalender sind umgezogen.' : it.id === 'auto2' ? 'Der Autoklicker klickt jetzt alle 4 Sekunden!' : it.id === 'klick2' ? 'Jeder Klick bringt jetzt 2 €!' : it.id === 'klick' ? 'Klick dein Tier an: +1 € pro Klick! Infos jetzt mit Rechtsklick.' : it.id === 'klo' ? 'Das goldene Klo steht neben dem Haustier-Haus – jede Goldkacke +10 €!' : it.name + ' steht jetzt in deinem Garten!'; web.msgT = 5; return;
   }
   if (webHave(it) < it.price) { web.msg = webCur(it) === 'bar' ? 'Zu wenig Bargeld' : 'Zu wenig Geld auf dem Konto'; web.msgT = 2; return; }
   webPay(it);
@@ -5746,7 +5760,7 @@ function webPic(id, cx, cy, sz) {
   if (id === 'investor') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'investor', false, ['fliege']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#4f8bff'; g.beginPath(); g.moveTo(18, -4); g.lineTo(28, 10); g.lineTo(36, 4); g.lineTo(50, 14); g.stroke(); g.fillStyle = '#4f8bff'; g.beginPath(); g.arc(28, 10, 4, 0, 7); g.fill(); g.restore(); return; }
   if (id === 'haendler') { g.restore(); g.save(); drawBobFig(cx - sz * 0.12, cy + sz * 0.45, sz / 620, 0.4, 0, 1, 'broker', false, ['kopfhoerer']); g.translate(cx, cy); g.scale(sz / 100, sz / 100); g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#1b1d22'; g.fillRect(14, -10, 40, 30); g.strokeRect(14, -10, 40, 30); g.strokeStyle = '#16c784'; g.beginPath(); g.moveTo(18, 14); g.lineTo(28, 4); g.lineTo(36, 9); g.lineTo(50, -4); g.stroke(); g.restore(); return; }
   if (id === 'bigbobo') { g.restore(); g.save(); drawBigBobo(cx, cy + sz * 0.48, sz / 760, performance.now() / 1000, 0.3); g.restore(); return; }
-  if (id === 'ziegelmaschine') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#5a5f6a'; g.fillRect(-46, -36, 50, 66); g.strokeRect(-46, -36, 50, 66); g.fillStyle = '#ff8a2a'; g.fillRect(-40, -24, 38, 18); g.fillStyle = '#5a5f6a'; g.fillRect(-30, -54, 14, 18); g.strokeRect(-30, -54, 14, 18); g.fillStyle = '#c4663a'; for (const [a, b] of [[8, 14], [28, 14], [18, 0]]) { g.fillRect(a, b, 18, 12); g.strokeRect(a, b, 18, 12); } g.restore(); return; }
+  if (id.startsWith('ziegelmaschine') || id.startsWith('zm')) { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#5a5f6a'; g.fillRect(-46, -36, 50, 66); g.strokeRect(-46, -36, 50, 66); g.fillStyle = '#ff8a2a'; g.fillRect(-40, -24, 38, 18); g.fillStyle = '#5a5f6a'; g.fillRect(-30, -54, 14, 18); g.strokeRect(-30, -54, 14, 18); g.fillStyle = '#c4663a'; for (const [a, b] of [[8, 14], [28, 14], [18, 0]]) { g.fillRect(a, b, 18, 12); g.strokeRect(a, b, 18, 12); } g.restore(); return; }
   if (id === 'keller') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, -40, 100, 20); g.fillStyle = '#5a5e66'; g.fillRect(-50, -20, 100, 64); g.strokeRect(-50, -20, 100, 64); g.fillStyle = '#9aa0ab'; g.beginPath(); g.arc(16, 12, 20, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#1b1d22'; g.fillRect(-42, -10, 34, 24); g.fillStyle = '#3cff5a'; g.fillRect(-38, -6, 26, 16); g.fillStyle = '#ffcc1a'; for (let i = 0; i < 5; i++) g.fillRect(-50 + i * 22, 36, 11, 8); g.restore(); return; }
   if (id === 'tierhaus2') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#45c43a'; g.fillRect(-50, 36, 100, 14); g.fillStyle = '#e8a25a'; g.fillRect(-30, -24, 60, 62); g.strokeRect(-30, -24, 60, 62); g.beginPath(); g.moveTo(-30, 8); g.lineTo(30, 8); g.stroke(); g.fillStyle = '#7a4020'; g.beginPath(); g.moveTo(-40, -22); g.lineTo(0, -50); g.lineTo(40, -22); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#c8ecff'; for (const [a, b] of [[-22, -16], [8, -16], [-22, 14], [8, 14]]) { g.fillRect(a, b, 14, 14); g.strokeRect(a, b, 14, 14); } g.fillStyle = '#ffd23a'; g.font = '900 20px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('2', 34, -40); g.restore(); return; }
   if (id === 'kralarm') { g.lineWidth = 3; g.strokeStyle = '#111'; g.fillStyle = '#f0b90b'; g.beginPath(); g.moveTo(-30, 20); g.quadraticCurveTo(-26, -34, 0, -36); g.quadraticCurveTo(26, -34, 30, 20); g.lineTo(38, 28); g.lineTo(-38, 28); g.closePath(); g.fill(); g.stroke(); circ(0, 36, 8, '#f0b90b'); g.stroke(); circ(0, -40, 6, '#f0b90b'); g.stroke(); g.fillStyle = '#16c784'; g.beginPath(); g.arc(30, -26, 18, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('+', 30, -25); g.restore(); return; }
@@ -6382,12 +6396,19 @@ function drawKellerTuer(cx) {
   g.restore();
 }
 // Ziegelstein-Maschine im Keller: macht alle 10 Spielminuten einen Ziegel (Ablage max. 60)
-const ZM = { x: 120, y: 820, say: '', sayT: 0 }; let zmT = null;
-function zmTick() { if (!lief.ziegelmaschine) { zmT = gt.T; return; } if (zmT === null) { zmT = gt.T; return; } const d = gt.T - zmT; if (d < 10) return; const n = Math.floor(d / 10); zmT += n * 10; garden.zmTray = Math.min(60, (garden.zmTray || 0) + n); saveGarden(); }
-function nearZM() { return cur === 'keller' && lief.ziegelmaschine && !fade.dir && !build.on && Math.abs(bob.x - ZM.x) < 220 && Math.abs(bob.y - ZM.y) < 140; }
-function zmTake() { const n = garden.zmTray || 0; if (!n) { ZM.say = 'Noch kein Ziegel fertig …'; ZM.sayT = 2; return; } garden.ziegel = (garden.ziegel || 0) + n; garden.zmTray = 0; saveGarden(); ZM.say = '+' + n + ' Ziegelstein' + (n > 1 ? 'e' : ''); ZM.sayT = 2; }
-function drawZM() {
-  const x = ZM.x, y = ZM.y, t = performance.now() / 1000, on = lief.ziegelmaschine; g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
+const ZMS = [
+  { k: 'ziegelmaschine', tr: 'zmTray', x: 120, y: 820 }, { k: 'ziegelmaschine2', tr: 'zmTray2', x: 900, y: 820 }, { k: 'ziegelmaschine3', tr: 'zmTray3', x: 1680, y: 820 },
+  { k: 'ziegelmaschine4', tr: 'zmTray4', x: -60, y: 620 }, { k: 'ziegelmaschine5', tr: 'zmTray5', x: 1760, y: 620 }, { k: 'ziegelmaschine6', tr: 'zmTray6', x: 2400, y: 620 }].map(m => ({ ...m, say: '', sayT: 0 }));
+const ZM = ZMS[0]; let zmT = null;
+function zmInt() { return lief.zmspeed5 ? 3 : lief.zmspeed4 ? 4 : lief.zmspeed3 ? 5 : lief.zmspeed2 ? 6 : lief.zmspeed1 ? 8 : 10; }
+function zmMax() { return lief.zmlimit ? 150 : 60; }
+function zmAll() { return ZMS.reduce((a, m) => a + (garden[m.tr] || 0), 0); }
+function zmClear() { for (const m of ZMS) garden[m.tr] = 0; }
+function zmTick() { if (!lief.ziegelmaschine) { zmT = gt.T; return; } if (zmT === null) { zmT = gt.T; return; } const I = zmInt(), d = gt.T - zmT; if (d < I) return; const n = Math.floor(d / I); zmT += n * I; for (const m of ZMS) if (lief[m.k]) garden[m.tr] = Math.min(zmMax(), (garden[m.tr] || 0) + n); saveGarden(); }
+function nearZM() { if (cur !== 'keller' || fade.dir || build.on) return null; return ZMS.find(m => lief[m.k] && Math.abs(bob.x - m.x) < 220 && Math.abs(bob.y - m.y) < 140) || null; }
+function zmTake() { const m = nearZM(); if (!m) return; const n = garden[m.tr] || 0; if (!n) { m.say = 'Noch kein Ziegel fertig …'; m.sayT = 2; return; } garden.ziegel = (garden.ziegel || 0) + n; garden[m.tr] = 0; saveGarden(); m.say = '+' + n + ' Ziegelstein' + (n > 1 ? 'e' : ''); m.sayT = 2; }
+function drawZM(m) {
+  const ZM = m, x = m.x, y = m.y, t = performance.now() / 1000, on = true; g.save(); g.lineWidth = 4; g.strokeStyle = LINE;
   const MP = mkPal('#b0552e', '#c4663a'), GP = mkPal('#4a4e56', '#5a5f6a');
   cube(x - 170, y - 230, 200, 230, 60, GP, true, 0.3);
   g.fillStyle = '#ffcc1a'; for (let i = 0; i < 5; i++) g.fillRect(x - 170 + i * 40, y - 236, 20, 8);
@@ -6399,30 +6420,30 @@ function drawZM() {
   // Förderband
   cube(x + 30, y - 70, 220, 24, 50, mkPal('#2a2d33', '#3a3e46'), true, 0.3);
   g.fillStyle = '#555'; for (let k = 0; k < 8; k++) { const bx = x + 34 + ((k * 28 + t * 40) % 210); g.fillRect(bx, y - 70, 4, 24); }
-  const n = garden.zmTray || 0;
+  const n = garden[m.tr] || 0;
   if (on) { const q = (t * 0.33) % 1, bx = x + 40 + q * 200; if (q < 0.93) cube(bx, y - 94, 40, 18, 24, MP, true, 0.3); }
   // Palette am Ende vom Band: dort stapeln sich die Ziegel
   const px = x + 280, py = y + 10, WP = mkPal('#8a6234', '#a87a44');
   cube(px, py - 16, 156, 16, 56, WP, true, 0.3);
   g.fillStyle = '#5a3c1a'; for (const k of [0, 66, 132]) g.fillRect(px + k + 4, py - 12, 16, 8);
-  const shown = Math.min(36, Math.ceil(n * 36 / 60));
+  const shown = Math.min(36, Math.ceil(n * 36 / zmMax()));
   for (let L = 0; L < 6; L++) for (const row of [1, 0]) for (let c = 0; c < 3; c++) { const i = L * 6 + (1 - row) * 3 + c; if (i >= shown) continue; cube(px + 8 + c * 48 - row * 8, py - 16 - 20 - L * 20 - row * 14, 46, 20, 26, MP, true, 0.3); }
-  g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(x - 140, y - 120, 140, 30, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ziegel: ' + n + '/60', x - 70, y - 104);
+  g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(x - 140, y - 120, 140, 30, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ziegel: ' + n + '/' + zmMax(), x - 70, y - 104);
   g.restore();
   if (ZM.sayT > 0) { ZM.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(ZM.say).width + 28, bx = x - tw / 2, by = y - 420; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#b0552e'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ZM.say, x, by + 20); }
 }
 // ---------- Big Bobo: Mafiaboss mit Büro im Keller, verkauft deine Ziegel ----------
-const BB = { x: 1360, y: 600, say: '', sayT: 0 }, BB_CARDS = []; let bbT = null;
+const BB = { x: 600, y: 560, say: '', sayT: 0 }, BB_CARDS = []; let bbT = null;
 const BB_PREIS = 35;
 const BB_SAYS = ['Ziegel unter Tacos. Frag nicht, warum.', 'Der Ziegel aus dem Museum? Nie gesehen.', 'Jeder Ziegel findet seinen Taco.', 'Du lieferst, ich verteile. So läuft das.', 'Big Bobo vergisst nichts.'];
 function bbTick() {
   for (let i = BB_CARDS.length - 1; i >= 0; i--) if (performance.now() - BB_CARDS[i].t > 6000) BB_CARDS.splice(i, 1);
   if (!lief.bigbobo) { bbT = gt.T; return; } if (bbT === null) { bbT = gt.T; return; } if (gt.T - bbT < 60) return; bbT = gt.T;
-  const n = (garden.ziegel || 0) + (garden.zmTray || 0); if (!n) return;
-  garden.ziegel = 0; garden.zmTray = 0; saveGarden(); const v = n * BB_PREIS; earn(v); BB_CARDS.push({ n, v: Math.round(v * incM()), t: performance.now() });
+  const n = (garden.ziegel || 0) + zmAll(); if (!n) return;
+  garden.ziegel = 0; zmClear(); saveGarden(); const v = n * BB_PREIS; earn(v); BB_CARDS.push({ n, v: Math.round(v * incM()), t: performance.now() });
 }
-function nearBB() { return cur === 'keller' && lief.bigbobo && !fade.dir && !build.on && Math.abs(bob.x - (BB.x - 330)) < 260 && Math.abs(bob.y - (BB.y + 170)) < 160; }
-function bbTalk() { const n = (garden.ziegel || 0) + (garden.zmTray || 0); BB.say = n ? n + ' Ziegel? Die verteile ich bald. ' + money(BB_PREIS) + ' das Stück.' : BB_SAYS[Math.floor(Math.random() * BB_SAYS.length)]; BB.sayT = 3.2; }
+function nearBB() { return cur === 'bbbuero' && !fade.dir && !build.on && Math.abs(bob.x - BB.x) < 340 && bob.y > 640 && bob.y < 790; }
+function bbTalk() { const n = (garden.ziegel || 0) + zmAll(); BB.say = n ? n + ' Ziegel? Die verteile ich bald. ' + money(BB_PREIS) + ' das Stück.' : BB_SAYS[Math.floor(Math.random() * BB_SAYS.length)]; BB.sayT = 3.2; }
 function drawBigBobo(x, y, k, t, look) {
   // y = Fußpunkt. Mafiaboss: dicker runder Körper, gelb-oranger Anzug, weißes Hemd, rote Krawatte, Glatze, goldenes Auge
   const S = v => v * k, tt = look ?? Math.sin(t * 0.6) * 0.25, br = Math.sin(t * 1.8) * S(3), lx = -0.4 - tt * 0.3;
@@ -6484,27 +6505,88 @@ function drawBigBobo(x, y, k, t, look) {
   g.restore(); g.lineWidth = Math.max(2, S(5)); g.strokeStyle = LINE;
   g.restore();
 }
-function drawBBBuero() {
-  const t = performance.now() / 1000, x = BB.x, y = BB.y; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
-  // Teppich + Schild an der Wand
-  g.fillStyle = '#7a1a2a'; g.beginPath(); g.ellipse(x, y + 140, 260, 60, 0, 0, 7); g.fill(); g.strokeStyle = '#e0b030'; g.lineWidth = 4; g.beginPath(); g.ellipse(x, y + 140, 236, 50, 0, 0, 7); g.stroke(); g.strokeStyle = LINE; g.lineWidth = 5;
-  // Sessel hinter ihm
-  cube(x - 80, y - 230, 240, 200, 40, mkPal('#5a1a1a', '#7a2a2a'), true, 0.25);
-  // Schreibtisch
-  const WD = mkPal('#4a2a14', '#5e3a1e');
-  cube(x - 230, y - 20, 460, 30, 80, WD, true, 0.25); cube(x - 220, y + 10, 120, 110, 60, WD, false, 0.25); cube(x + 100, y + 10, 120, 110, 60, WD, false, 0.25);
-  g.fillStyle = '#e0b030'; g.beginPath(); g.roundRect(x - 80, y + 30, 160, 30, 6); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '900 17px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BIG BOBO', x, y + 45);
-  // Taco + Ziegel auf dem Tisch
-  g.fillStyle = '#f2c14e'; g.beginPath(); g.arc(x - 150, y - 26, 24, Math.PI, 0); g.closePath(); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3cb043'; g.fillRect(x - 168, y - 38, 36, 6); g.fillStyle = '#b0552e'; g.fillRect(x - 160, y - 44, 22, 8);
-  // Legendärer Ziegel in Glasvitrine
-  const gx = x + 150, gy = y - 20, glow = 0.5 + 0.5 * Math.sin(t * 3);
-  const lg = g.createRadialGradient(gx, gy - 40, 4, gx, gy - 40, 80); lg.addColorStop(0, `rgba(255,220,80,${0.55 * glow})`); lg.addColorStop(1, 'rgba(255,220,80,0)'); g.fillStyle = lg; g.fillRect(gx - 90, gy - 130, 180, 130);
-  cube(gx - 30, gy - 56, 60, 26, 30, mkPal('#e0a020', '#ffd23a'), true, 0.25);
-  g.fillStyle = 'rgba(190,235,255,.3)'; g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 2; g.fillRect(gx - 44, gy - 96, 88, 96); g.strokeRect(gx - 44, gy - 96, 88, 96);
-  for (let i = 0; i < 4; i++) { const a = t * 2 + i * 1.6; g.fillStyle = `rgba(255,250,200,${0.5 + 0.5 * Math.sin(a * 2)})`; g.beginPath(); g.arc(gx + Math.cos(a) * 28, gy - 46 + Math.sin(a) * 18, 2.5, 0, 7); g.fill(); }
+function drawBBRoom(R) {
+  const t = performance.now() / 1000;
+  // Tapete: dunkelrot mit goldenem Rautenmuster
+  g.fillStyle = '#5a1420'; g.fillRect(XL, 0, VW, FLOOR);
+  g.strokeStyle = 'rgba(224,176,48,.16)'; g.lineWidth = 2; for (let x = Math.floor(XL / 80) * 80; x < XR + 80; x += 80) for (let y = 0; y < FLOOR - 150; y += 80) { g.beginPath(); g.moveTo(x, y + 40); g.lineTo(x + 40, y); g.lineTo(x + 80, y + 40); g.lineTo(x + 40, y + 80); g.closePath(); g.stroke(); }
+  // Holzvertäfelung unten
+  g.fillStyle = '#3a2010'; g.fillRect(XL, FLOOR - 150, VW, 150); g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.35)';
+  for (let x = Math.floor(XL / 160) * 160 + 14; x < XR; x += 160) { g.strokeRect(x, FLOOR - 134, 132, 118); }
+  g.fillStyle = '#e0b030'; g.fillRect(XL, FLOOR - 158, VW, 10); g.fillRect(XL, 0, VW, 12);
+  // Goldener Kronleuchter
+  const lx = 600, lg = g.createRadialGradient(lx, 120, 10, lx, 120, 420); lg.addColorStop(0, 'rgba(255,220,140,.35)'); lg.addColorStop(1, 'rgba(255,220,140,0)'); g.fillStyle = lg; g.fillRect(lx - 420, 0, 840, 560);
+  g.strokeStyle = LINE; g.lineWidth = 4; g.beginPath(); g.moveTo(lx, 12); g.lineTo(lx, 60); g.stroke();
+  { const gr = g.createRadialGradient(lx - 10, 66, 2, lx, 72, 50); gr.addColorStop(0, '#fff2a0'); gr.addColorStop(1, '#b8860b'); g.fillStyle = gr; } g.beginPath(); g.ellipse(lx, 74, 70, 16, 0, 0, 7); g.fill(); g.stroke();
+  for (let k = -2; k <= 2; k++) { const cx = lx + k * 30; g.fillStyle = '#fffbe0'; g.fillRect(cx - 4, 46, 8, 20); g.fillStyle = `rgba(255,200,60,${0.7 + 0.3 * Math.sin(t * 9 + k)})`; g.beginPath(); g.ellipse(cx, 40, 5, 9, 0, 0, 7); g.fill(); }
+  // Gemälde: der legendäre Ziegel
+  g.fillStyle = '#e0b030'; g.lineWidth = 5; g.strokeStyle = LINE; g.fillRect(860, 70, 220, 160); g.strokeRect(860, 70, 220, 160); g.fillStyle = '#1e2a3a'; g.fillRect(876, 86, 188, 128);
+  { const gr = g.createRadialGradient(970, 150, 4, 970, 150, 80); gr.addColorStop(0, 'rgba(255,230,120,.6)'); gr.addColorStop(1, 'rgba(255,230,120,0)'); g.fillStyle = gr; g.fillRect(876, 86, 188, 128); }
+  cube(930, 140, 80, 30, 30, mkPal('#e0a020', '#ffd23a'), true, 0.3);
+  // Bild links: Taco
+  g.fillStyle = '#e0b030'; g.fillRect(120, 90, 170, 130); g.strokeRect(120, 90, 170, 130); g.fillStyle = '#f6e6c4'; g.fillRect(134, 104, 142, 102);
+  g.fillStyle = '#f2c14e'; g.beginPath(); g.arc(205, 175, 50, Math.PI, 0); g.closePath(); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3cb043'; g.fillRect(168, 150, 74, 8); g.fillStyle = '#b0552e'; g.fillRect(186, 140, 38, 12); g.lineWidth = 5;
+  // Stahltür zurück zur Basis
+  const dx = -90; g.fillStyle = '#4a4e56'; g.beginPath(); g.roundRect(dx - 90, FLOOR - 270, 180, 270, [70, 70, 0, 0]); g.fill(); g.stroke();
+  g.fillStyle = '#7a7f8a'; g.beginPath(); g.roundRect(dx - 70, FLOOR - 250, 140, 250, [56, 56, 0, 0]); g.fill(); g.stroke();
+  g.fillStyle = '#3a3e46'; g.beginPath(); g.arc(dx + 40, FLOOR - 120, 12, 0, 7); g.fill();
+  g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(dx - 60, FLOOR - 320, 120, 34, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 17px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('↑ Basis', dx, FLOOR - 303);
+  // Boden: Parkett + Teppich
+  g.fillStyle = '#6a3e1e'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 3;
+  for (let y = FLOOR + 36; y < H; y += 40) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); const off = (y / 40 % 2) * 60; for (let x = Math.floor(XL / 120) * 120 + off; x < XR; x += 120) { g.beginPath(); g.moveTo(x, y - 40); g.lineTo(x, y); g.stroke(); } }
+  g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
+  g.fillStyle = '#8a1a2a'; g.beginPath(); g.ellipse(600, 700, 440, 110, 0, 0, 7); g.fill(); g.strokeStyle = '#e0b030'; g.lineWidth = 5; g.beginPath(); g.ellipse(600, 700, 410, 96, 0, 0, 7); g.stroke();
+}
+function drawBBStuhl() {
+  // runder Chefsessel aus Leder hinter Bobo
+  const x = 600, y = 520; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  const gr = g.createRadialGradient(x - 50, y - 260, 10, x, y - 180, 190); gr.addColorStop(0, '#b0303a'); gr.addColorStop(0.6, '#7a1a22'); gr.addColorStop(1, '#3a080c'); g.fillStyle = gr;
+  g.beginPath(); g.moveTo(x - 140, y - 40); g.lineTo(x - 150, y - 250); g.bezierCurveTo(x - 150, y - 380, x + 150, y - 380, x + 150, y - 250); g.lineTo(x + 140, y - 40); g.quadraticCurveTo(x, y - 10, x - 140, y - 40); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#e0b030'; for (let r = 0; r < 3; r++) for (let c = -2; c <= 2; c++) { g.beginPath(); g.arc(x + c * 50 + (r % 2) * 25 - 12, y - 290 + r * 60, 5, 0, 7); g.fill(); }
   g.restore();
-  drawBigBobo(x - 330, y + 170, 0.5, t, 0.3);
-  if (BB.sayT > 0) { BB.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(BB.say).width + 28, bx = x - 330 - tw / 2, by = y - 300; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#7a1a2a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BB.say, x - 330, by + 20); }
+}
+function drawBBFigur() {
+  const t = performance.now() / 1000; drawBigBobo(BB.x, BB.y, 0.45, t, 0.2);
+  if (BB.sayT > 0) { BB.sayT -= 1 / 60; g.save(); g.font = '700 18px system-ui'; const tw = g.measureText(BB.say).width + 28, bx = BB.x + 120, by = 170; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.beginPath(); g.moveTo(bx + 8, by + 26); g.lineTo(bx - 18, by + 40); g.lineTo(bx + 20, by + 34); g.fill(); g.fillStyle = '#7a1a2a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BB.say, bx + tw / 2, by + 20); g.restore(); }
+}
+function drawBBTisch() {
+  const t = performance.now() / 1000; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  const WD = mkPal('#4a2a14', '#6a3e1e');
+  cube(320, 540, 560, 110, 70, WD, true, 0.3);
+  // Gold-Zierleisten vorne
+  g.strokeStyle = '#e0b030'; g.lineWidth = 3; g.strokeRect(340, 560, 160, 74); g.strokeRect(700, 560, 160, 74); g.strokeStyle = LINE; g.lineWidth = 5;
+  { const gr = g.createLinearGradient(520, 0, 680, 0); gr.addColorStop(0, '#8a5a2a'); gr.addColorStop(1, '#5a3418'); g.fillStyle = gr; g.fillRect(520, 556, 160, 82); g.strokeRect(520, 556, 160, 82); }
+  // Namensschild steht auf dem Tisch
+  cube(530, 516, 140, 26, 14, mkPal('#b8860b', '#e0b030'), true, 0.3);
+  g.fillStyle = '#3a2814'; g.font = '900 17px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BIG BOBO', 600, 530);
+  // Taco auf Teller
+  g.fillStyle = '#f4f4f0'; g.beginPath(); g.ellipse(390, 528, 46, 12, 0, 0, 7); g.fill(); g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#f2c14e'; g.beginPath(); g.arc(390, 524, 30, Math.PI, 0); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#3cb043'; g.fillRect(366, 510, 48, 6); g.fillStyle = '#b0552e'; g.fillRect(376, 502, 28, 9);
+  // Geldbündel
+  for (let i = 0; i < 3; i++) cube(760 + i * 8, 520 - i * 10, 60, 10, 26, mkPal('#2e8a3a', '#3cb043'), true, 0.3);
+  g.fillStyle = '#e0b030'; g.fillRect(790, 491, 8, 10);
+  g.restore();
+}
+function drawBBVitrine() {
+  const t = performance.now() / 1000, x = 1025, y = 610, glow = 0.5 + 0.5 * Math.sin(t * 3); g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  cube(x - 60, y - 110, 120, 110, 40, mkPal('#2a1a10', '#4a2a14'), true, 0.3);
+  const lg = g.createRadialGradient(x, y - 170, 4, x, y - 170, 110); lg.addColorStop(0, `rgba(255,220,80,${0.6 * glow})`); lg.addColorStop(1, 'rgba(255,220,80,0)'); g.fillStyle = lg; g.fillRect(x - 120, y - 290, 240, 200);
+  cube(x - 34, y - 148, 68, 28, 30, mkPal('#e0a020', '#ffd23a'), true, 0.3);
+  // Glashaube
+  g.fillStyle = 'rgba(190,235,255,.22)'; g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(x - 52, y - 110); g.lineTo(x - 52, y - 220); g.lineTo(x - 64, y - 232); g.lineTo(x + 40, y - 232); g.lineTo(x + 52, y - 220); g.lineTo(x + 52, y - 110); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(x - 52, y - 220); g.lineTo(x + 52, y - 220); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(x - 42, y - 210, 8, 90);
+  for (let i = 0; i < 4; i++) { const a = t * 2 + i * 1.6; g.fillStyle = `rgba(255,250,200,${0.5 + 0.5 * Math.sin(a * 2)})`; g.beginPath(); g.arc(x + Math.cos(a) * 32, y - 140 + Math.sin(a) * 20, 2.5, 0, 7); g.fill(); }
+  g.restore();
+}
+function drawBBKisten() {
+  // Holzkisten mit Ziegeln und Tacos
+  g.save(); g.lineWidth = 5; g.strokeStyle = LINE; const WP = mkPal('#8a6234', '#a87a44'), MP = mkPal('#b0552e', '#c4663a');
+  cube(90, 530, 110, 80, 50, WP, true, 0.3); cube(205, 540, 100, 70, 50, WP, true, 0.3); cube(110, 450, 100, 80, 50, WP, true, 0.3);
+  g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; for (const [cx, cy, w, h] of [[90, 530, 110, 80], [205, 540, 100, 70], [110, 450, 100, 80]]) { g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + w, cy + h); g.moveTo(cx + w, cy); g.lineTo(cx, cy + h); g.stroke(); }
+  g.strokeStyle = LINE; g.lineWidth = 4; cube(220, 520, 40, 18, 22, MP, true, 0.3); cube(140, 432, 40, 18, 22, MP, true, 0.3);
+  g.restore();
 }
 function drawKeller(R) {
   const t = performance.now() / 1000;
@@ -6524,9 +6606,19 @@ function drawKeller(R) {
   for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) { const mx = -240 + c * 150, my = 130 + r * 110; g.fillStyle = '#1b1d22'; g.fillRect(mx, my, 136, 96); g.strokeRect(mx, my, 136, 96); g.fillStyle = '#0a1a12'; g.fillRect(mx + 8, my + 8, 120, 80);
     g.strokeStyle = '#3cff5a'; g.lineWidth = 2; g.beginPath(); for (let k = 0; k <= 20; k++) { const px = mx + 10 + k * 5.8, py = my + 48 + Math.sin(t * (2 + c) + k * 0.6 + r) * 22 * Math.sin(k * 0.3 + c); k ? g.lineTo(px, py) : g.moveTo(px, py); } g.stroke(); g.lineWidth = 4; g.strokeStyle = LINE; }
   // Tresor rechts
-  const vx = 1250, vy = 250; g.fillStyle = '#7a7f8a'; g.beginPath(); g.arc(vx, vy, 140, 0, 7); g.fill(); g.lineWidth = 6; g.stroke(); g.fillStyle = '#9aa0ab'; g.beginPath(); g.arc(vx, vy, 112, 0, 7); g.fill(); g.stroke();
+  const vx = 1250, vy = FLOOR - 150;
+  if (!lief.bigbobo) {
+  g.fillStyle = '#7a7f8a'; g.beginPath(); g.arc(vx, vy, 140, 0, 7); g.fill(); g.lineWidth = 6; g.stroke(); g.fillStyle = '#9aa0ab'; g.beginPath(); g.arc(vx, vy, 112, 0, 7); g.fill(); g.stroke();
   g.save(); g.translate(vx, vy); g.rotate(Math.sin(t * 0.4) * 0.3); g.lineWidth = 10; g.strokeStyle = '#3a3e46'; for (let k = 0; k < 3; k++) { const a = k * Math.PI * 2 / 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 70, Math.sin(a) * 70); g.stroke(); } g.fillStyle = '#3a3e46'; g.beginPath(); g.arc(0, 0, 22, 0, 7); g.fill(); g.restore();
   for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.fillStyle = '#4a4e56'; g.beginPath(); g.arc(vx + Math.cos(a) * 126, vy + Math.sin(a) * 126, 7, 0, 7); g.fill(); }
+  } else {
+    g.lineWidth = 6; g.strokeStyle = LINE; g.fillStyle = '#7a7f8a'; g.beginPath(); g.arc(vx, vy, 140, 0, 7); g.fill(); g.stroke();
+    const ig = g.createRadialGradient(vx, vy + 40, 10, vx, vy, 115); ig.addColorStop(0, '#ffcf7a'); ig.addColorStop(0.5, '#a0402a'); ig.addColorStop(1, '#3a0e10'); g.fillStyle = ig; g.beginPath(); g.arc(vx, vy, 112, 0, 7); g.fill(); g.stroke();
+    // aufgeschwungene Tresortür
+    const dg = g.createLinearGradient(vx + 120, 0, vx + 200, 0); dg.addColorStop(0, '#5a5f6a'); dg.addColorStop(1, '#9aa0ab'); g.fillStyle = dg; g.beginPath(); g.ellipse(vx + 165, vy, 42, 140, 0, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = '#3a3e46'; g.lineWidth = 8; g.beginPath(); g.moveTo(vx + 165, vy - 60); g.lineTo(vx + 165, vy + 60); g.stroke();
+    g.fillStyle = '#e0b030'; g.strokeStyle = LINE; g.lineWidth = 4; g.beginPath(); g.roundRect(vx - 95, vy - 200, 190, 40, 8); g.fill(); g.stroke(); g.fillStyle = '#3a2814'; g.font = '900 19px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BIG BOBO', vx, vy - 179);
+  }
   // Boden (Metallplatten)
   g.fillStyle = '#3a3e46'; g.fillRect(XL, FLOOR, VW, H - FLOOR); g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 3;
   for (let y = FLOOR + 60; y < H; y += 70) { g.beginPath(); g.moveTo(XL, y); g.lineTo(XR, y); g.stroke(); } for (let x = Math.floor(XL / 140) * 140; x < XR; x += 140) { g.beginPath(); g.moveTo(x, FLOOR); g.lineTo(x + (x - 600) * 0.5, H); g.stroke(); }
@@ -6687,6 +6779,8 @@ function drawKlo() {
   g.restore();
 }
 function gartenSetup() {
+  ROOMS.keller.arches = ROOMS.keller.arches.filter(a => a.to !== 'bbbuero'); if (lief.bigbobo) ROOMS.keller.arches.push({ x: 1250, to: 'bbbuero', ax: -90, label: 'Büro' });
+  ROOMS.keller.wide = [-300, Math.max(1550, ...ZMS.filter(m => lief[m.k]).map(m => m.x + 500))];
   ROOMS.mine.arches = ROOMS.mine.arches.filter(a => a.to !== 'mine2'); if (lief.minetief) ROOMS.mine.arches.push({ x: 1050, to: 'mine2', ax: -150, label: 'Tiefer' });
   ROOMS.garten.tall = lief.gartenxl ? 1300 : lief.gartengross ? 620 : 0; ROOMS.garten.maxY = H - 30 + ROOMS.garten.tall; ROOMS.garten.wide = lief.gartenxl ? [-1600, 2800] : [-450, 1650];
   if (lief.botanik) { furn.botanik = furn.botanik || []; if (!furn.botanik.some(f => f.gtopf)) { for (const [x, y] of BOT_SLOTS) furn.botanik.push({ t: 'topf', x, y, r: 0, feld: true, gtopf: true }); saveFurn(); } }
@@ -9717,8 +9811,8 @@ function frameBody(t) {
   if (cur === 'garten' && lief.tierhaus) list.push({ y: TH.y, f: drawTierhausAussen });
   if (cur === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ y: BH.y, f: drawBotanikAussen });
   if (cur === 'orange' && lief.mitbewohner) list.push({ y: MB.y, f: drawMitbewohner });
-  if (cur === 'keller' && lief.ziegelmaschine) list.push({ y: ZM.y, f: drawZM });
-  if (cur === 'keller' && lief.bigbobo) list.push({ y: BB.y + 170, f: drawBBBuero });
+  if (cur === 'keller') for (const m of ZMS) if (lief[m.k]) list.push({ y: m.y, f: () => drawZM(m) });
+  if (cur === 'bbbuero') { list.push({ y: 520, f: drawBBStuhl }); list.push({ y: BB.y, f: drawBBFigur }); list.push({ y: 655, f: drawBBTisch }); list.push({ y: 610, f: drawBBVitrine }); list.push({ y: 612, f: drawBBKisten }); }
   if (cur === 'garten' && lief.gartenxl) list.push({ y: MI.y, f: drawMineEingang });
   if (cur === 'mine' || cur === 'mine2') { for (const n of mineNodes()) list.push({ y: n.y, f: () => drawOreNode(n) }); if (lief.lore) list.push({ y: 700, f: drawLore }); }
   if (cur === 'mine') { list.push({ y: ERZ.y, f: drawErzhaendler }); }
