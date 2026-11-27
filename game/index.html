@@ -10797,7 +10797,7 @@ function serverTick() {
   const n = srvCount(); if (!n) { srvT = gt.T; return; } if (srvT === null) { srvT = gt.T; return; }
   const d = gt.T - srvT; if (d < 10) return; srvT = gt.T; const h = d / 60;
   const eur = 150 * n * h; kr.hold.btb = (kr.hold.btb || 0) + eur / kr.p.btb;
-  cz.f += 15 * n * h; const v = cz.vids[cz.vids.length - 1]; if (v) { const add = 180 * n * h; v.views += add; v.target += add; cz.pend += add * 0.03; }
+  cz.f += 15 * n * h; const v = cz.vids[cz.vids.length - 1]; if (v) { const add = 180 * n * h; v.views += add; v.target += add; cz.pend += add * 0.02; }
   lief.srvMined = (lief.srvMined || 0) + eur;
 }
 function drawServer(o) {
@@ -10825,7 +10825,7 @@ function czTick() {
   for (const v of cz.vids) { const add = (v.target - v.views) * (1 - Math.exp(-d / 600)); if (add > 0) { v.views += add; nv += add; v.likes = Math.floor(v.views * (0.04 + v.q * 0.1)); } }
   const q = cz.vids.length ? cz.vids.slice(-5).reduce((a, v) => a + v.q, 0) / Math.min(5, cz.vids.length) : 0;
   cz.f += nv * 0.012 * (0.4 + q);
-  cz.pend += nv * 0.03 + cz.f * 0.004 * d / 60;
+  cz.pend += nv * 0.02 + cz.f * 0.003 * d / 60;
   if (cz.pend >= 1) { let v = Math.floor(cz.pend); cz.pend -= v; v = Math.round(v * incM()); bank.money += v; cz.earned += v; const L = bank.log[bank.log.length - 1]; if (L && L.t === 'Clipz') L.v += v; else bank.log.push({ t: 'Clipz', v }); saveBank(); saveCz(); }
 }
 function drawClipzApp(s) {
