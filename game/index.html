@@ -6418,49 +6418,63 @@ function bbTick() {
 function nearBB() { return cur === 'keller' && lief.bigbobo && !fade.dir && !build.on && Math.abs(bob.x - (BB.x - 330)) < 260 && Math.abs(bob.y - (BB.y + 170)) < 160; }
 function bbTalk() { const n = (garden.ziegel || 0) + (garden.zmTray || 0); BB.say = n ? n + ' Ziegel? Die verteile ich bald. ' + money(BB_PREIS) + ' das Stück.' : BB_SAYS[Math.floor(Math.random() * BB_SAYS.length)]; BB.sayT = 3.2; }
 function drawBigBobo(x, y, k, t, look) {
-  // y = Fußpunkt; echte 3D-Kugeln mit Licht von oben links
-  const S = v => v * k, tt = look ?? Math.sin(t * 0.6) * 0.25, b2 = Math.sin(t * 2) * S(3), lx = -0.35 - tt * 0.25, ly = -0.45;
-  g.save(); g.lineWidth = Math.max(2, S(5)); g.strokeStyle = LINE; g.lineJoin = 'round';
-  const ball = (cx, cy, rx, ry, base, light, dark) => {
-    const gr = g.createRadialGradient(cx + rx * lx, cy + ry * ly, Math.min(rx, ry) * 0.08, cx, cy, Math.max(rx, ry) * 1.05);
-    gr.addColorStop(0, light); gr.addColorStop(0.45, base); gr.addColorStop(1, dark);
-    g.fillStyle = gr; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 7); g.fill(); g.stroke();
-    g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(cx + rx * (lx - 0.05), cy + ry * (ly - 0.05), rx * 0.18, ry * 0.12, -0.6, 0, 7); g.fill();
-  };
-  const OR = ['#ffb732', '#ffe08a', '#b86e0a'];
-  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y + S(4), S(230), S(30), 0, 0, 7); g.fill();
-  // Beine, Arme hinten, Bauch, Kopf
-  const limb = (x1, y1, x2, y2, r, base, light, dark) => {
-    const ang = Math.atan2(y2 - y1, x2 - x1), len = Math.hypot(x2 - x1, y2 - y1);
-    g.save(); g.translate(x1, y1); g.rotate(ang);
-    const gr = g.createLinearGradient(0, -r, 0, r); gr.addColorStop(0, light); gr.addColorStop(0.45, base); gr.addColorStop(1, dark);
-    g.fillStyle = gr; g.beginPath(); g.roundRect(-r, -r, len + 2 * r, 2 * r, r); g.fill(); g.stroke(); g.restore();
-  };
-  const sw = Math.sin(t * 1.6) * 0.12;
-  // Beine mit Schuhen
-  limb(x - S(80), y - S(150), x - S(90), y - S(40), S(46), ...OR); limb(x + S(80), y - S(150), x + S(90), y - S(40), S(46), ...OR);
-  ball(x - S(100), y - S(22), S(68), S(30), '#2a2a30', '#5a5a66', '#0e0e12'); ball(x + S(100), y - S(22), S(68), S(30), '#2a2a30', '#5a5a66', '#0e0e12');
-  // Arme hinter dem Bauch: Oberarm + Unterarm, runde Hände
-  const sh = y - S(420) + b2;
-  const arm = (side) => { const ax = x + side * S(190) - S(15) * tt, ex = x + side * S(285), ey = sh + S(150), hx2 = x + side * S(270) + side * S(40) * sw, hy2 = sh + S(290);
-    limb(ax, sh, ex, ey, S(48), ...OR); limb(ex, ey, hx2, hy2, S(44), ...OR); ball(hx2, hy2 + S(14), S(46), S(42), '#f0d098', '#fff0cc', '#b89058'); };
-  arm(-1); arm(1);
-  ball(x, y - S(300) + b2, S(235), S(230), ...OR);
-  // Krawatte folgt der Bauchwölbung
-  const tx = x + S(60) * tt;
-  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(tx - S(55), y - S(440) + b2); g.lineTo(tx, y - S(380) + b2); g.lineTo(tx + S(55), y - S(440) + b2); g.lineTo(tx + S(40), y - S(452) + b2); g.lineTo(tx, y - S(412) + b2); g.lineTo(tx - S(40), y - S(452) + b2); g.closePath(); g.fill(); g.stroke();
-  { const gr = g.createLinearGradient(tx - S(30), 0, tx + S(30), 0); gr.addColorStop(0, '#ff3a3a'); gr.addColorStop(1, '#b00000'); g.fillStyle = gr; }
-  g.beginPath(); g.moveTo(tx - S(12), y - S(412) + b2); g.lineTo(tx + S(12), y - S(412) + b2); g.quadraticCurveTo(tx + S(34), y - S(300) + b2, tx + S(28) - S(20) * tt, y - S(220) + b2); g.lineTo(tx - S(4) * tt, y - S(110) + b2); g.lineTo(tx - S(28) - S(20) * tt, y - S(220) + b2); g.quadraticCurveTo(tx - S(34), y - S(300) + b2, tx - S(12), y - S(412) + b2); g.closePath(); g.fill(); g.stroke();
-  // Kopf: abgerundeter Block mit Rundung (Kissenform)
-  const hx = x - S(100) + S(18) * tt, hy = y - S(620) + b2, hw = S(200), hh = S(195);
-  { const gr = g.createRadialGradient(hx + hw * (0.5 + lx * 0.6), hy + hh * (0.5 + ly * 0.6), S(10), hx + hw / 2, hy + hh / 2, S(150)); gr.addColorStop(0, '#fff0cc'); gr.addColorStop(0.5, '#f0d098'); gr.addColorStop(1, '#b89058'); g.fillStyle = gr; }
-  g.beginPath(); g.roundRect(hx, hy, hw, hh, S(70)); g.fill(); g.stroke();
-  const fx = S(40) * tt;
-  g.fillStyle = '#e8d80a'; g.beginPath(); g.arc(hx + S(60) + fx, hy + S(66), S(11), 0, 7); g.fill();
-  g.fillStyle = 'rgba(255,240,120,.45)'; g.beginPath(); g.arc(hx + S(60) + fx, hy + S(66), S(19), 0, 7); g.fill();
-  g.fillStyle = '#111'; g.beginPath(); g.arc(hx + S(140) + fx, hy + S(66), S(10), 0, 7); g.fill();
-  g.strokeStyle = '#111'; g.lineWidth = S(14); g.lineCap = 'round'; g.beginPath(); g.moveTo(hx + S(82) + fx, hy + S(124)); g.quadraticCurveTo(hx + S(72) + fx, hy + S(150), hx + S(96) + fx, hy + S(144)); g.lineTo(hx + S(128) + fx, hy + S(142)); g.stroke();
-  g.beginPath(); g.moveTo(hx + S(82) + fx, hy + S(124)); g.lineTo(hx + S(90) + fx, hy + S(116)); g.stroke(); g.lineCap = 'butt';
+  // y = Fußpunkt. Mafiaboss: dicker runder Körper, gelb-oranger Anzug, weißes Hemd, rote Krawatte, Glatze, goldenes Auge
+  const S = v => v * k, tt = look ?? Math.sin(t * 0.6) * 0.25, br = Math.sin(t * 1.8) * S(3), lx = -0.4 - tt * 0.3;
+  g.save(); g.lineWidth = Math.max(2, S(5)); g.strokeStyle = LINE; g.lineJoin = 'round'; g.lineCap = 'round';
+  const SUIT = ['#ffd66a', '#f2a82a', '#b86a10'], PANT = ['#e8a030', '#c47c18', '#7a4808'];
+  const shade = (x0, x1, c) => { const gr = g.createLinearGradient(x0, 0, x1, 0); const L = tt > 0 ? [c[2], c[1], c[0]] : [c[0], c[1], c[2]]; gr.addColorStop(0, tt > 0 ? c[2] : c[0]); gr.addColorStop(0.35 - tt * 0.15, c[1]); gr.addColorStop(1, c[2]); return gr; };
+  // Schatten
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(x, y + S(6), S(250), S(34), 0, 0, 7); g.fill();
+  // Beine (Hose, leicht gespreizt) + Schuhe
+  for (const sd of [-1, 1]) {
+    const hx = x + sd * S(70), fx = x + sd * S(120);
+    g.fillStyle = shade(hx - S(80), hx + S(80), PANT);
+    const o = sd * S(75), i2 = -sd * S(70); g.beginPath(); g.moveTo(hx + i2, y - S(270)); g.lineTo(hx + o, y - S(270)); g.quadraticCurveTo(fx + sd * S(62), y - S(150), fx + sd * S(48), y - S(36)); g.lineTo(fx - sd * S(46), y - S(36)); g.quadraticCurveTo(fx - sd * S(52), y - S(150), hx + i2, y - S(270)); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = S(3); g.beginPath(); g.moveTo(hx, y - S(260)); g.quadraticCurveTo(fx, y - S(140), fx, y - S(44)); g.stroke(); g.strokeStyle = LINE; g.lineWidth = Math.max(2, S(5));
+    const sg = g.createRadialGradient(fx + sd * S(10) - S(14), y - S(34), S(4), fx + sd * S(10), y - S(22), S(70)); sg.addColorStop(0, '#6a6a76'); sg.addColorStop(0.4, '#1e1e24'); sg.addColorStop(1, '#050507'); g.fillStyle = sg;
+    g.beginPath(); g.ellipse(fx + sd * S(14), y - S(22), S(64), S(26), 0, 0, 7); g.fill(); g.stroke();
+  }
+  // Arme (hängen seitlich) mit weißer Manschette und Faust
+  for (const sd of [-1, 1]) {
+    const ax = x + sd * S(238) - S(12) * tt, top = y - S(640) + br, bot = y - S(330) + br;
+    g.fillStyle = shade(ax - S(70), ax + S(70), SUIT);
+    g.beginPath(); g.moveTo(ax - sd * S(70), top + S(30)); g.quadraticCurveTo(ax + sd * S(85), top, ax + sd * S(80), top + S(140)); g.lineTo(ax + sd * S(64), bot); g.lineTo(ax - sd * S(40), bot); g.lineTo(ax - sd * S(60), top + S(120)); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#f4f4f0'; g.beginPath(); g.roundRect(ax - S(48) + sd * S(10), bot - S(6), S(96), S(22), S(6)); g.fill(); g.stroke();
+    const hg = g.createRadialGradient(ax + sd * S(12) - S(16), bot + S(40), S(4), ax + sd * S(12), bot + S(52), S(56)); hg.addColorStop(0, '#ffe4c0'); hg.addColorStop(0.5, '#e8b888'); hg.addColorStop(1, '#a87a50'); g.fillStyle = hg;
+    g.beginPath(); g.ellipse(ax + sd * S(12), bot + S(52), S(46), S(40), 0, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(80,40,20,.45)'; g.lineWidth = S(3); for (let f = 0; f < 3; f++) { g.beginPath(); g.moveTo(ax + sd * S(12) - S(26) + f * S(18), bot + S(66)); g.lineTo(ax + sd * S(12) - S(22) + f * S(18), bot + S(80)); g.stroke(); } g.strokeStyle = LINE; g.lineWidth = Math.max(2, S(5));
+  }
+  // Rumpf: riesig und rund, oben schmal
+  const ty = y - S(250), shY = y - S(660) + br;
+  { const gr = g.createRadialGradient(x + S(220) * lx, y - S(520) + br, S(20), x, y - S(430) + br, S(330)); gr.addColorStop(0, SUIT[0]); gr.addColorStop(0.5, SUIT[1]); gr.addColorStop(1, SUIT[2]); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(x - S(70), shY); g.bezierCurveTo(x - S(250), shY + S(20), x - S(275), y - S(420) + br, x - S(250), ty - S(20)); g.quadraticCurveTo(x, ty + S(30), x + S(250), ty - S(20)); g.bezierCurveTo(x + S(275), y - S(420) + br, x + S(250), shY + S(20), x + S(70), shY); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(x + S(150) * lx, y - S(540) + br, S(46), S(90), -0.35, 0, 7); g.fill();
+  // Hemd-V, Revers, Krawatte
+  const cx = x + S(40) * tt, vb = y - S(470) + br;
+  g.fillStyle = '#fafaf6'; g.beginPath(); g.moveTo(cx - S(62), shY + S(4)); g.lineTo(cx + S(62), shY + S(4)); g.lineTo(cx, vb); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(160,90,10,.45)'; for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(cx + sd * S(62), shY + S(4)); g.lineTo(cx + sd * S(92), shY + S(70)); g.lineTo(cx + sd * S(40), shY + S(80)); g.lineTo(cx, vb); g.closePath(); g.fill(); g.stroke(); }
+  g.fillStyle = '#e0141a'; g.beginPath(); g.moveTo(cx - S(16), shY + S(10)); g.lineTo(cx + S(16), shY + S(10)); g.lineTo(cx + S(10), shY + S(34)); g.lineTo(cx - S(10), shY + S(34)); g.closePath(); g.fill(); g.stroke();
+  { const gr = g.createLinearGradient(cx - S(26), 0, cx + S(26), 0); gr.addColorStop(0, '#ff4040'); gr.addColorStop(1, '#a00000'); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(cx - S(10), shY + S(34)); g.lineTo(cx + S(10), shY + S(34)); g.lineTo(cx + S(26), vb - S(30)); g.lineTo(cx, vb + S(10)); g.lineTo(cx - S(26), vb - S(30)); g.closePath(); g.fill(); g.stroke();
+  // Zweireihige Goldknöpfe + Einstecktuch
+  for (let r = 0; r < 3; r++) for (const sd of [-1, 1]) { const bx = cx + sd * S(48 - r * 2), by = vb + S(40) + r * S(55); const bg = g.createRadialGradient(bx - S(4), by - S(4), 1, bx, by, S(12)); bg.addColorStop(0, '#fff6b0'); bg.addColorStop(1, '#b8860b'); g.fillStyle = bg; g.beginPath(); g.arc(bx, by, S(11), 0, 7); g.fill(); g.lineWidth = S(3); g.stroke(); }
+  g.lineWidth = Math.max(2, S(5));
+  g.fillStyle = '#e0141a'; g.beginPath(); g.moveTo(cx - S(150), vb + S(10)); g.lineTo(cx - S(140), vb - S(20)); g.lineTo(cx - S(120), vb - S(4)); g.lineTo(cx - S(100), vb - S(22)); g.lineTo(cx - S(92), vb + S(10)); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(120,60,0,.6)'; g.lineWidth = S(4); g.beginPath(); g.moveTo(cx - S(160), vb + S(10)); g.lineTo(cx - S(86), vb + S(10)); g.stroke(); g.strokeStyle = LINE; g.lineWidth = Math.max(2, S(5));
+  // Kopf: Glatze, klein im Verhältnis
+  const hx = x + S(26) * tt, hy = shY - S(70);
+  { const gr = g.createRadialGradient(hx + S(70) * lx, hy - S(50), S(6), hx, hy, S(120)); gr.addColorStop(0, '#fff0d8'); gr.addColorStop(0.45, '#eac08a'); gr.addColorStop(1, '#a8784a'); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(hx - S(78), hy + S(10)); g.bezierCurveTo(hx - S(86), hy - S(110), hx + S(86), hy - S(110), hx + S(78), hy + S(10)); g.bezierCurveTo(hx + S(74), hy + S(80), hx - S(74), hy + S(80), hx - S(78), hy + S(10)); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(hx - S(26) + S(20) * lx, hy - S(62), S(24), S(10), -0.3, 0, 7); g.fill();
+  const fx = hx + S(22) * tt;
+  // Brauen (grimmig)
+  g.strokeStyle = '#3a2410'; g.lineWidth = S(8); g.beginPath(); g.moveTo(fx - S(46), hy - S(22)); g.lineTo(fx - S(12), hy - S(12)); g.moveTo(fx + S(46), hy - S(22)); g.lineTo(fx + S(12), hy - S(12)); g.stroke();
+  // Goldenes Auge + normales Auge
+  const ge = g.createRadialGradient(fx - S(30), hy + S(2), S(2), fx - S(28), hy + S(4), S(26)); ge.addColorStop(0, 'rgba(255,250,170,.95)'); ge.addColorStop(0.35, 'rgba(255,210,40,.8)'); ge.addColorStop(1, 'rgba(255,210,40,0)'); g.fillStyle = ge; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(26), 0, 7); g.fill();
+  g.fillStyle = '#ffd21a'; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(9), 0, 7); g.fill(); g.lineWidth = S(2.5); g.strokeStyle = '#8a6a00'; g.stroke();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(fx + S(28), hy + S(4), S(8), 0, 7); g.fill();
+  // Mund (schiefes Grinsen wie im Original)
+  g.strokeStyle = '#111'; g.lineWidth = S(10); g.beginPath(); g.moveTo(fx - S(16), hy + S(30)); g.quadraticCurveTo(fx - S(22), hy + S(48), fx - S(4), hy + S(46)); g.lineTo(fx + S(26), hy + S(44)); g.moveTo(fx - S(16), hy + S(30)); g.lineTo(fx - S(8), hy + S(24)); g.stroke();
   g.restore();
 }
 function drawBBBuero() {
@@ -6482,7 +6496,7 @@ function drawBBBuero() {
   g.fillStyle = 'rgba(190,235,255,.3)'; g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 2; g.fillRect(gx - 44, gy - 96, 88, 96); g.strokeRect(gx - 44, gy - 96, 88, 96);
   for (let i = 0; i < 4; i++) { const a = t * 2 + i * 1.6; g.fillStyle = `rgba(255,250,200,${0.5 + 0.5 * Math.sin(a * 2)})`; g.beginPath(); g.arc(gx + Math.cos(a) * 28, gy - 46 + Math.sin(a) * 18, 2.5, 0, 7); g.fill(); }
   g.restore();
-  drawBigBobo(x - 330, y + 170, 0.5, t, 0.35);
+  drawBigBobo(x - 330, y + 170, 0.5, t, 0.3);
   if (BB.sayT > 0) { BB.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(BB.say).width + 28, bx = x - 330 - tw / 2, by = y - 220; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#7a1a2a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BB.say, x - 330, by + 20); }
 }
 function drawKeller(R) {
