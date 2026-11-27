@@ -9432,7 +9432,14 @@ function fit() {
 }
 addEventListener('resize', fit); fit();
 let last = performance.now(), doorLock = false;
+let lastErr = null, errCount = 0;
 function frame(t) {
+  try { frameBody(t); }
+  catch (e) { errCount++; lastErr = { msg: String(e && e.message || e), at: String(e && e.stack || '').split('\n')[1] || '', t: performance.now() }; console.error(e);
+    try { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.fillStyle = 'rgba(160,20,20,.85)'; g.fillRect(10, H - 70, 760, 60); g.fillStyle = '#fff'; g.font = '700 15px system-ui'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText('Fehler (bitte Screenshot an Claude): ' + lastErr.msg.slice(0, 80), 20, H - 52); g.fillText(lastErr.at.trim().slice(0, 90), 20, H - 28); } catch (e2) {}
+    requestAnimationFrame(frame); }
+}
+function frameBody(t) {
   if (!FIT_DONE && t > 600) measureFits();
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   // große Räume: Kamera folgt Bob
