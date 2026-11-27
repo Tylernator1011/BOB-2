@@ -6504,7 +6504,7 @@ function drawBBBuero() {
   for (let i = 0; i < 4; i++) { const a = t * 2 + i * 1.6; g.fillStyle = `rgba(255,250,200,${0.5 + 0.5 * Math.sin(a * 2)})`; g.beginPath(); g.arc(gx + Math.cos(a) * 28, gy - 46 + Math.sin(a) * 18, 2.5, 0, 7); g.fill(); }
   g.restore();
   drawBigBobo(x - 330, y + 170, 0.5, t, 0.3);
-  if (BB.sayT > 0) { BB.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(BB.say).width + 28, bx = x - 330 - tw / 2, by = y - 220; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#7a1a2a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BB.say, x - 330, by + 20); }
+  if (BB.sayT > 0) { BB.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(BB.say).width + 28, bx = x - 330 - tw / 2, by = y - 300; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#7a1a2a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(BB.say, x - 330, by + 20); }
 }
 function drawKeller(R) {
   const t = performance.now() / 1000;
