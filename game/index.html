@@ -9632,7 +9632,7 @@ function mmoSpawn(type, x, y) { const T = MOB[type], R = ROOMS[cur]; x = x ?? (R
 function mmoEnter() {
   MM.room = cur; MM.mobs = []; MM.boss = null; MM.fx = []; MM.nums = []; MM.spawnT = 3; MM.npcs = [];
   const Z = MMO_ZONES[cur]; if (Z) { for (let i = 0; i < Math.ceil(Z.max * 0.7); i++) { let x; do { x = ROOMS[cur].wide[0] + 300 + Math.random() * (ROOMS[cur].wide[1] - ROOMS[cur].wide[0] - 600); } while (Math.abs(x - bob.x) < 600); mmoSpawn(mmoPick(Z.mobs), x); } if (Z.boss && cur === 'mmo_boss') { mmoSpawn(Z.boss, Z.bossX, 640); mmoSpawn('kobold', Z.bossX - 250, 560); mmoSpawn('kobold', Z.bossX - 250, 760); } }
-  if (cur === 'mmo_stadt') for (let i = 0; i < 7; i++) MM.npcs.push({ look: MMO_NPC_LOOKS[(i * 5 + Math.floor(gt.T / 60)) % MMO_NPC_LOOKS.length], n: '', x: -200 + Math.random() * 1800, y: FLOOR + 120 + Math.random() * 280, tx: 0, ty: 0, w: Math.random() * 3, col: ['#1a1a22', '#e8e8f0', '#c8303a', '#2f6fe0', '#3a9a32', '#8a3ad0'][i], say: '', sayT: 0, f: 1 });
+  if (false) for (let i = 0; i < 7; i++) MM.npcs.push({ look: MMO_NPC_LOOKS[(i * 5 + Math.floor(gt.T / 60)) % MMO_NPC_LOOKS.length], n: '', x: -200 + Math.random() * 1800, y: FLOOR + 120 + Math.random() * 280, tx: 0, ty: 0, w: Math.random() * 3, col: ['#1a1a22', '#e8e8f0', '#c8303a', '#2f6fe0', '#3a9a32', '#8a3ad0'][i], say: '', sayT: 0, f: 1 });
 }
 function mmoGainXp(v) { mmo.xp += v; while (mmo.xp >= mmoXpNeed()) { mmo.xp -= mmoXpNeed(); mmo.lv++; mmo.hp = mmoMaxHp(); MM.banner = { t: 3, a: 'LEVEL UP!', b: 'Du bist jetzt Level ' + mmo.lv }; } }
 function mmoParts(x, y, c, n) { for (let i = 0; i < n; i++) MM.fx.push({ x, y, vx: (Math.random() - 0.5) * 500, vy: -150 - Math.random() * 350, l: 0.7, c }); }
