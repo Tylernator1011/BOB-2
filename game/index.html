@@ -2653,6 +2653,11 @@ const GRN = { front: '#0fe000', front2: '#4dff3a', side: '#0bb000', side2: '#089
 // Kleidung: nur Farben vom Körper (gleiche Schrift und gleiches Gesicht)
 const OUTFITS = {
   gruen:  { name: 'Grün',   pal: GRN },
+  jeff:   { name: 'Jeff', color: '#1fc8d6', noText: true, label: 'JEFF' },
+  jeff_nacht: { name: 'Jeff Nacht', color: '#1e2a6a', noText: true, label: 'JEFF', labelCol: '#7fe8ff' },
+  jeff_gold: { name: 'Jeff Gold', color: '#e0b030', noText: true, label: 'JEFF' },
+  jeff_skater: { name: 'Jeff Skater', color: '#ff7a1a', noText: true, label: 'JEFF', labelCol: '#fff' },
+  jeff_pink: { name: 'Jeff Pink', color: '#ff7ac8', noText: true, label: 'JEFF' },
   beige:  { name: 'Beige',  color: '#f2c98a' },
   braun:  { name: 'Braun',  color: '#5a4320', textCol: '#f2e6c8' },
   lila:   { name: 'Lila',   color: '#9b5de5' },
@@ -3539,9 +3544,15 @@ function tinted2(img, col) {
   const x = c.getContext('2d'); x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
   return tintCache[key] = c;
 }
-let wear = { owned: ['gruen'], on: 'gruen' };
-try { const w = JSON.parse(localStorage.getItem('bob-kleidung') || 'null'); if (w && w.owned) wear = w; } catch (e) {}
-function saveWear() { try { localStorage.setItem('bob-kleidung', JSON.stringify(wear)); } catch (e) {} }
+let chars = { owned: ['bob'], on: 'bob' }; try { chars = Object.assign(chars, JSON.parse(localStorage.getItem('bob-chars') || '{}')); } catch (e) {}
+const CHARS = { bob: { name: 'Bob', outfit: 'gruen', desc: 'Der Original-Bob' }, jeff: { name: 'Jeff', outfit: 'jeff', desc: 'Bobs Sohn' } };
+function saveChars() { try { localStorage.setItem('bob-chars', JSON.stringify(chars)); } catch (e) {} }
+function wearKey(id) { return id === 'bob' ? 'bob-kleidung' : 'bob-kleidung-' + id; }
+function loadWear(id) { try { const w = JSON.parse(localStorage.getItem(wearKey(id)) || 'null'); if (w && w.owned) return w; } catch (e) {} const o = CHARS[id].outfit; return { owned: [o], on: o, acc: {}, accOwned: [] }; }
+let wear = loadWear(CHARS[chars.on] ? chars.on : (chars.on = 'bob'));
+function saveWear() { try { localStorage.setItem(wearKey(chars.on), JSON.stringify(wear)); } catch (e) {} }
+function wearOf(id) { return id === chars.on ? wear : loadWear(id); }
+function saveWearOf(id, w) { if (id === chars.on) { wear = w; saveWear(); } else try { localStorage.setItem(wearKey(id), JSON.stringify(w)); } catch (e) {} }
 
 // ---------- Accessoires: passen auf jedes Outfit (Maße werden pro Outfit automatisch gemessen) ----------
 const ACC_SLOTS = { kopf: 'Kopf', gesicht: 'Gesicht', hals: 'Hals', ruecken: 'Rücken', hand: 'Hand' };
@@ -3597,6 +3608,17 @@ const ACC = {
     g.lineCap = 'round'; g.strokeStyle = '#111'; g.lineWidth = 18; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -120); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 11; g.stroke();
     for (let i = 0; i < 7; i++) { const y = -130 - i * 30; g.fillStyle = i % 2 ? '#0aa0f0' : '#ffe11a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, y, 30 - i * 2.2, 20, (i % 2 ? 0.35 : -0.35), 0, 7); g.fill(); g.stroke(); }
     const cols = ['#e0262b', '#2fd060', '#ff3ad6', '#22e6e6', '#ffe11a']; for (let i = 0; i < 16; i++) { g.fillStyle = cols[i % 5]; g.beginPath(); g.arc(Math.sin(i * 2.3) * 18, -130 - (i * 13) % 190, 4, 0, 7); g.fill(); }
+    g.restore();
+  } },
+  schlaeger: { name: 'Baseballschläger', slot: 'hand', draw: (bx, by, hx, hy, t, f) => {
+    const tt = performance.now() / 1000, A = weapAnimP(), fl = t < -0.05 ? -1 : 1; let x0 = fl > 0 ? bx + BODY.w + 6 : bx - 6 - DEPTH * t, y0 = by + BODY.h - 30, rot = 0.55 + Math.sin(tt * 2) * 0.05 + weapSwingAng(), sc = 1;
+    if (A) { const q = A.dir > 0 ? A.p : 1 - A.p, e = 1 - Math.pow(1 - q, 3); const sx = bx + BODY.w * 0.2, sy = by - 40; x0 = sx + (x0 - sx) * e; y0 = sy + (y0 - sy) * e - Math.sin(q * Math.PI) * 120; rot = rot + (1 - e) * Math.PI * 2 * (A.dir > 0 ? -1 : 1); sc = 0.25 + 0.75 * e;
+      g.save(); g.globalAlpha = Math.sin(q * Math.PI); for (let i = 0; i < 8; i++) { const a = i * 0.785 + tt * 4, r = 60 + 40 * q; g.fillStyle = i % 2 ? '#ffe11a' : '#ffffff'; g.beginPath(); g.arc(x0 + Math.cos(a) * r, y0 - 120 * sc + Math.sin(a) * r, 7, 0, 7); g.fill(); } g.restore(); }
+    g.save(); g.translate(x0, y0); g.scale(fl, 1); g.rotate(rot); g.scale(sc, sc);
+    g.lineCap = 'round'; g.strokeStyle = '#111'; g.lineWidth = 4; const bg = g.createLinearGradient(-20, 0, 20, 0); bg.addColorStop(0, '#f0c890'); bg.addColorStop(1, '#a8743a'); g.fillStyle = bg;
+    g.beginPath(); g.moveTo(-7, 20); g.lineTo(-10, -60); g.quadraticCurveTo(-24, -200, -20, -250); g.quadraticCurveTo(0, -272, 20, -250); g.quadraticCurveTo(24, -200, 10, -60); g.lineTo(7, 20); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#1a1a22'; g.fillRect(-9, -10, 18, 30); g.strokeRect(-9, -10, 18, 30); g.beginPath(); g.ellipse(0, 22, 12, 6, 0, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(-10, -100); g.quadraticCurveTo(-16, -190, -12, -236); g.stroke();
     g.restore();
   } },
   cap: { name: 'Basecap', slot: 'kopf', price: 120, draw: (bx, by, hx, hy, t, f) => {
@@ -3684,6 +3706,7 @@ function drawBobFig(x, y, k, t, hop, sq, outfit, shadow, accs) {
   else if (!of.noFace && face.complete && face.width) g.drawImage(face, hx + 12, hy + 18);
   const tc = of.textCol, tx = of.noText ? null : tc ? tinted2(text, tc) : text;
   if (tx && text.complete && text.width) g.drawImage(tx, bx + 10, by + 3);
+  if (of.label) { g.save(); g.font = "86px 'Permanent Marker', cursive"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = of.labelCol || '#111'; g.fillText(of.label, bx + BODY.w / 2, by + BODY.h / 2 + 6); g.restore(); }
   if (of.front) { g.save(); of.front(bx, by, hx, hy, t); g.restore(); }
   for (const sl of ['ruecken', 'hals', 'gesicht', 'kopf', 'hand']) for (const a of AC) if (a.slot === sl && a.draw) { g.save(); reset(); a.draw(bx, by, hx, hy, t, F); g.restore(); }
   g.restore();
@@ -3731,7 +3754,7 @@ function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse');
 const JOB_SPOTS = { polizei: ['wache', 'theke'], anwalt: ['gerichtssaal', 'gtisch'], richter: ['gerichtssaal', 'richterbank'] };
 function nearRevier() { if (!(job && JOB_SPOTS[job.id] && onShift() && !fade.dir)) return null; const [rm, ty] = JOB_SPOTS[job.id]; if (cur !== rm) return null; const o = (ROOMS[rm].objs || []).find(o => o.type === ty && (ty !== 'gtisch' || o.vert)); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker() || nearAussenBot() || nearTeich() || nearFischer() || nearMitbewohner() || nearErz() || !!nearOre() || nearZM() || nearBB() || nearGear() || nearAtm() || !!nearKiste() || !!mmoNear()); }
+function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker() || nearAussenBot() || nearTeich() || nearFischer() || nearMitbewohner() || nearErz() || !!nearOre() || nearZM() || nearBB() || nearGear() || nearAtm() || !!nearKiste() || !!nearCharBox() || !!mmoNear()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3741,10 +3764,11 @@ function wrItems() {
   if (wr.mode === 'pet') { const p = wrPet(); return p ? petWearOf(p).owned.filter(k => PET_OUTFITS[k]) : []; }
   if (wr.mode === 'shop') return Object.keys(MARKT_KLEIDER);
   if (wr.mode === 'acc') return (wear.accOwned || []).filter(k => ACC[k]);
-  if (wr.mode === 'waffen') return Object.keys(WEAPONS).filter(k => !WEAPONS[k].unlock || WEAPONS[k].unlock());
+  if (wr.mode === 'waffen') return Object.keys(WEAPONS).filter(k => (!WEAPONS[k].char || WEAPONS[k].char === chars.on) && (!WEAPONS[k].unlock || WEAPONS[k].unlock()));
+  if (wr.mode === 'char') return chars.owned.filter(k => CHARS[k]);
   return wear.owned.filter(k => OUTFITS[k]);
 }
-function wrOn() { if (wr.mode === 'waffen') return weap.sel; if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
+function wrOn() { if (wr.mode === 'char') return chars.on; if (wr.mode === 'waffen') return weap.sel; if (wr.mode === 'acc') return null; return wr.mode === 'pet' ? (wrPet() ? petWearOf(wrPet()).on : null) : wear.on; }
 function wrMaxScroll() { return Math.max(0, Math.ceil(wrItems().length / WR.cols) - WR.rows); }
 function openWardrobe(mode) {
   wr.mode = mode || 'bob'; wr.open = true; wr.msg = ''; wr.slot = 1; wr.pi = Math.max(0, owned.indexOf(activePet));
@@ -3762,6 +3786,7 @@ const WR_TRACK = { x: 70 + 3 * 184 + 22, y: 175, w: 26, h: 4 * 162 - 12 }, WR_CL
 function wrEquip(i) {
   const k = wrItems()[i]; if (!k) return; wr.sel = i; wr.msg = '';
   if (wr.mode === 'shop' && !wear.owned.includes(k)) return;
+  if (wr.mode === 'char') { if (k !== chars.on) { setChar(k); CH.swap = true; } wr.open = false; return; }
   if (wr.mode === 'waffen') { if (weap.sel === k) { weap.sel = null; weap.out = false; } else { weap.sel = k; weap.out = false; } weapAnim = null; MM.drawn = false; MM.sheath = null; saveWeap(); return; }
   if (wr.mode === 'acc') { wear.acc = wear.acc || {}; const sl = ACC[k].slot; if (wear.acc[sl] === k) delete wear.acc[sl]; else wear.acc[sl] = k; saveWear(); return; }
   if (wr.mode === 'pet') { petWearOf(wrPet()).on = k; savePetWear(); } else { wear.on = k; saveWear(); }
@@ -3843,9 +3868,9 @@ function wrIcon(kind, x, y, sz, rot) {
 function drawWardrobe() {
   if (!wr.open) return;
   // ganzer Bildschirm, blau mit fliegenden Symbolen
-  g.fillStyle = '#4f9de8'; g.fillRect(XL, 0, VW, H);
+  g.fillStyle = wr.mode === 'char' ? '#7a4ad8' : '#4f9de8'; g.fillRect(XL, 0, VW, H);
   const t = performance.now() / 1000, sp = 150;
-  g.fillStyle = '#62abf0';
+  g.fillStyle = wr.mode === 'char' ? '#8a5ae8' : '#62abf0';
   for (let r = -1; r < H / sp + 2; r++) for (let c = Math.floor(XL / sp) - 2; c < XR / sp + 2; c++) {
     const ox = ((t * 22) % sp), oy = ((t * 14) % sp);
     const x = c * sp + (r % 2 ? sp / 2 : 0) + ox, y = r * sp + oy;
@@ -3855,7 +3880,7 @@ function drawWardrobe() {
   g.lineWidth = 6; g.strokeStyle = LINE; g.lineJoin = 'round';
   // Titel-Schild
   g.fillStyle = '#ffe066'; g.beginPath(); g.moveTo(XL + 60, 22); g.lineTo(XL + 560, 22); g.lineTo(XL + 540, 122); g.lineTo(XL + 80, 122); g.closePath(); g.fill(); g.stroke();
-  marker(wr.mode === 'pet' ? 'Haustiere' : wr.mode === 'shop' ? 'Klamotten' : wr.mode === 'waffen' ? 'Waffenkiste' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
+  marker(wr.mode === 'pet' ? 'Haustiere' : wr.mode === 'shop' ? 'Klamotten' : wr.mode === 'waffen' ? 'Waffenkiste' : wr.mode === 'char' ? 'Charaktere' : 'Kleiderschrank', XL + 310, 74, 58, '#111');
   if (wr.mode === 'bob' || wr.mode === 'acc') for (const [m, lab, i] of [['bob', 'Outfits', 0], ['acc', 'Accessoires', 1]]) { const b = wrTab(i), on = wr.mode === m; g.lineWidth = 5; g.strokeStyle = LINE; g.fillStyle = on ? '#13f000' : '#fff'; g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 16); g.fill(); g.stroke(); marker(lab, b.x + b.w / 2, b.y + b.h / 2 + 2, 28, '#111'); }
   if (wr.mode === 'shop') {
     const ct = 'Bargeld: ' + money(Math.floor(bank.cash || 0)); g.font = '800 26px system-ui'; const cw = g.measureText(ct).width + 70;
@@ -3873,6 +3898,7 @@ function drawWardrobe() {
     if (k) {
       if (wr.mode === 'pet') drawPetCube(wrPet(), x + WR.cw / 2, y + WR.ch - 14, 96, 1, 0);
       else if (wr.mode === 'acc') drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [k]);
+      else if (wr.mode === 'char') { const w = wearOf(k); drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 30, 0.34, 1, 0, 1, w.on, false, Object.values(w.acc || {}).filter(a => ACC[a])); g.font = '900 17px system-ui'; g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(CHARS[k].name, x + WR.cw / 2, y + WR.ch - 14); }
       else if (wr.mode === 'waffen') { drawBobFig(x + WR.cw / 2 - 20, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, WEAPONS[k].acc ? [WEAPONS[k].acc] : []); if (WEAPONS[k].sword) swordIcon(x + WR.cw / 2 + 40, y + WR.ch - 40, 0.45, 0.35); }
       else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false, accWorn());
       if (wr.mode === 'acc' && accWorn().includes(k)) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
@@ -3894,6 +3920,7 @@ function drawWardrobe() {
   // Vorschau
   const b1 = Math.sin(t * 1.7) * 3, px = (WR_TRACK.x + 40 + XR) / 2;
   if (wr.mode === 'acc') { drawBobFig(px, 770, 1.3, 1, b1, 1, wear.on, true, accWorn()); const k = items[wr.sel]; if (k) { marker(ACC[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(ACC_SLOTS[ACC[k].slot] + (accWorn().includes(k) ? ' · angezogen (nochmal klicken = ausziehen)' : ' · klicken zum Anziehen'), px, 196); } else marker('Noch keine Accessoires', px, 420, 34, '#fff'); }
+  else if (wr.mode === 'char') { const k = items[wr.sel]; if (k) { const w = wearOf(k); drawBobFig(px, 770, 1.3, 1, b1, 1, w.on, true, Object.values(w.acc || {}).filter(a => ACC[a])); marker(CHARS[k].name, px, 150, 48, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(CHARS[k].desc + ' · ' + (k === chars.on ? 'gerade gespielt' : 'Klicken zum Wechseln'), px, 200); g.fillText('Eigene Outfits, Accessoires und Waffen', px, 232); } }
   else if (wr.mode === 'waffen') { const k = items[wr.sel]; drawBobFig(px - 60, 770, 1.3, 1, b1, 1, wear.on, true, accWorn().filter(a => ACC[a].slot !== 'hand').concat(k && WEAPONS[k].acc ? [WEAPONS[k].acc] : [])); if (k && WEAPONS[k].sword) swordIcon(px + 150, 640, 1.6, 0.35); if (k) { marker(WEAPONS[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(weap.sel === k ? 'Ausgewählt · mit Q ' + (WEAPONS[k].sword ? 'vom Rücken ziehen' : 'in die Hand nehmen') : 'Klicken zum Auswählen', px, 196); g.fillText(WEAPONS[k].desc, px, 228); } }
   else if (wr.mode !== 'pet') drawBobFig(px, 770, 1.3, 1, b1, 1, items[wr.sel] || wear.on, true, accWorn());
   else if (!wrPet()) { marker('Du hast noch kein Tier', px, 420, 40, '#fff'); wr.ui = null; }
@@ -3982,6 +4009,7 @@ function openMenu() {
   if (nearGear()) { mmoLogin(); return; }
   if (nearAtm()) { atmUse(); return; }
   if (nearKiste()) { kisteMenu(); return; }
+  { const cb = nearCharBox(); if (cb) { charEnter(cb); return; } }
   if (mmoInteract()) return;
   if (nearZM()) { zmTake(); return; }
   if (nearErz()) { erzMenu(); return; }
@@ -4118,6 +4146,7 @@ function interactTarget() {
   if (nearBB()) return { x: BB.x, y: 120, label: 'Big Bobo' };
   if (nearGear()) return { x: GEAR.x, y: FLOOR - 120, label: 'Bobgear aufsetzen' };
   { const ki = nearKiste(); if (ki) return { x: ki.x, y: furnBox(ki).top - 16, label: 'Waffen' }; }
+  { const cb = nearCharBox(); if (cb) return { x: cb.x, y: furnBox(cb).top - 16, label: 'Charakter wechseln' }; }
   if (nearAtm()) return { x: ATM.x, y: FLOOR - 190, label: 'Bargeld einzahlen (' + money(Math.floor(bank.cash || 0)) + ')' };
   { const mn = mmoNear(); if (mn) return { x: mn.x, y: mn.y, label: mn.label }; }
   if (nearZM()) { const m = nearZM(); return { x: m.x - 70, y: m.y - 380, label: 'Ziegel nehmen (' + (garden[m.tr] || 0) + ')' }; }
@@ -4446,6 +4475,7 @@ const CATS = [
   { id: 'bad',      name: 'Bad' },
   { id: 'gaming',   name: 'Gaming' },
   { id: 'waffen',   name: 'Waffen' },
+  { id: 'charakter', name: 'Charakter' },
   { id: 'deko',     name: 'Deko' },
   { id: 'waende',   name: 'Wände' },
   { id: 'boeden',   name: 'Böden' },
@@ -4600,6 +4630,13 @@ FURN.transportbox.cat = 'deko';
 FURN.topf = { name: 'Blumentopf', cat: 'deko', price: 30, boxes: [ B(-30, 30, 0, 46, 0, 46, '#c8621a'), B(-35, 35, -3, 49, 46, 54, '#b0561a'), B(-28, 28, 5, 41, 54, 56, '#5a3a1a') ] };
 FURN.napf = { name: 'Napf', cat: 'deko', boxes: [ B(-42, 42, 0, 46, 0, 18, '#e0262b'), B(-33, 33, 7, 39, 18, 22, '#9a6a3a') ] };
 FURN.transportbox.name = 'Transportbox';
+// Charakter-Möbel (Telefonzelle, Umkleide, Klon-Kapsel): Charakter wechseln
+FURN.telefonzelle = { name: 'Telefonzelle', cat: 'charakter', price: 600, charbox: true, boxes: [
+  B(-62, 62, 0, 90, 0, 14, '#8a1218'), B(-58, -46, 4, 86, 14, 270, '#d0141c'), B(46, 58, 4, 86, 14, 270, '#d0141c'), B(-46, 46, 4, 86, 14, 270, '#b8e4f8', 'zelle'), B(-62, 62, 0, 90, 270, 300, '#d0141c', 'zellschild'), B(-40, 40, 14, 76, 300, 318, '#b0101a') ] };
+FURN.umkleide = { name: 'Umkleidekabine', cat: 'charakter', price: 450, charbox: true, boxes: [
+  B(-70, 70, 0, 90, 0, 10, '#6a4a2a'), B(-70, -60, 4, 86, 10, 280, '#8a6234'), B(60, 70, 4, 86, 10, 280, '#8a6234'), B(-60, 60, 4, 86, 10, 270, '#9b2a6a', 'vorhang'), B(-74, 74, 0, 90, 270, 290, '#a87a44') ] };
+FURN.klonkapsel = { name: 'Klon-Kapsel', cat: 'charakter', price: 900, charbox: true, boxes: [
+  B(-66, 66, 0, 90, 0, 26, '#2a2e38'), B(-56, 56, 8, 82, 26, 250, '#9af0ff', 'kapsel'), B(-66, 66, 0, 90, 250, 280, '#2a2e38'), B(-44, 44, 14, 76, 280, 292, '#3ae8ff') ] };
 // Waffenkisten (alle 3 haben dieselbe Funktion: Waffe auswählen)
 FURN.kiste_mil = { name: 'Militärkiste', cat: 'waffen', price: 250, kiste: true, boxes: [
   B(-80, 80, 0, 86, 0, 10, '#2a3018'), B(-76, 76, 4, 82, 10, 70, '#556b2f', 'kmil'), B(-82, 82, 0, 88, 70, 92, '#6b8238', 'kmildeckel') ] };
@@ -4776,7 +4813,11 @@ function drawFurn(t, x, y, s, alpha, r, extra) {
       const knob = (u, v, r, c) => { const [kx, ky] = at(u, v); g.fillStyle = c || '#ffee00'; g.beginPath(); g.arc(kx, ky, r || 8, 0, 7); g.fill(); g.stroke(); };
       g.lineWidth = 4; g.strokeStyle = LINE;
       const dc = b.deco;
-      if (dc === 'kmil') { quad(0, 0, 0.05, 1, '#3a4820'); quad(0.95, 0, 1, 1, '#3a4820'); quad(0.18, 0, 0.26, 1, '#2a2a22'); quad(0.74, 0, 0.82, 1, '#2a2a22'); quad(0.33, 0.35, 0.67, 0.62, '#e8e2c0'); const [cx, cy] = at(0.5, 0.49); g.fillStyle = '#2a3018'; g.font = '900 9px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BOB-ARMY', cx, cy + 1); }
+      if (dc === 'zelle') { g.strokeStyle = '#d0141c'; g.lineWidth = 7; for (let k = 1; k < 4; k++) line(0, k * 0.25, 1, k * 0.25); line(0.5, 0, 0.5, 1); g.strokeStyle = LINE; g.lineWidth = 4; quad(0.06, 0.04, 0.2, 0.96, 'rgba(255,255,255,.35)'); }
+      else if (dc === 'zellschild') { quad(0.12, 0.2, 0.88, 0.8, '#fff'); const [cx, cy] = at(0.5, 0.5); g.fillStyle = '#111'; g.font = '900 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('TELEFON', cx, cy + 1); }
+      else if (dc === 'vorhang') { g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; for (let k = 1; k < 8; k++) line(k / 8, 0, k / 8 + 0.02, 1); g.strokeStyle = LINE; g.lineWidth = 4; quad(0, 0, 1, 0.04, '#e0b030'); }
+      else if (dc === 'kapsel') { quad(0.15, 0.05, 0.28, 0.95, 'rgba(255,255,255,.5)'); const [cx, cy] = at(0.5, 0.5); const gl = g.createRadialGradient(cx, cy, 4, cx, cy, 60); gl.addColorStop(0, `rgba(160,255,255,${0.5 + 0.3 * Math.sin(performance.now() / 300)})`); gl.addColorStop(1, 'rgba(160,255,255,0)'); g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, 60, 0, 7); g.fill(); }
+      else if (dc === 'kmil') { quad(0, 0, 0.05, 1, '#3a4820'); quad(0.95, 0, 1, 1, '#3a4820'); quad(0.18, 0, 0.26, 1, '#2a2a22'); quad(0.74, 0, 0.82, 1, '#2a2a22'); quad(0.33, 0.35, 0.67, 0.62, '#e8e2c0'); const [cx, cy] = at(0.5, 0.49); g.fillStyle = '#2a3018'; g.font = '900 9px ui-monospace, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BOB-ARMY', cx, cy + 1); }
       else if (dc === 'kmildeckel') { quad(0.16, 0.15, 0.28, 1, '#2a2a22'); quad(0.72, 0.15, 0.84, 1, '#2a2a22'); }
       else if (dc === 'kfan') { quad(0.12, 0, 0.2, 1, '#e0b030'); quad(0.8, 0, 0.88, 1, '#e0b030'); quad(0, 0, 1, 0.1, '#e0b030'); for (let i = 0; i < 3; i++) line(0.2, 0.33 + i * 0.22, 0.8, 0.33 + i * 0.22); quad(0.42, 0.08, 0.58, 0.48, '#ffd23a'); const [kx, ky] = at(0.5, 0.3); g.fillStyle = '#2a1a0a'; g.beginPath(); g.arc(kx, ky - 2, 4, 0, 7); g.fill(); g.fillRect(kx - 2, ky, 4, 8); }
       else if (dc === 'kfandeckel') { quad(0.12, 0, 0.2, 1, '#e0b030'); quad(0.8, 0, 0.88, 1, '#e0b030'); }
@@ -5250,6 +5291,9 @@ const ADMIN = {
   ],
   neu: [
     ['Alle bobnet-Upgrades', '#ff3ad6', () => { for (let r = 0; r < 4; r++) for (const it of WEB_ITEMS) if (it.once && (!it.needs || lief[it.needs]) && (!it.needs2 || lief[it.needs2])) lief[it.id] = true; saveLief(); gartenSetup(); }],
+    ['Jeff freischalten', '#1fc8d6', () => { if (!chars.owned.includes('jeff')) chars.owned.push('jeff'); saveChars(); passes.jeff.bought = true; savePasses(); }],
+    ['Jeff-Pass +1000 XP', '#2fd8e0', () => { passes.jeff.bought = true; passes.jeff.xp += 1000; savePasses(); }],
+    ['Charakter-Möbel (je 1)', '#d0141c', () => { for (const k of ['telefonzelle', 'umkleide', 'klonkapsel']) inv[k] = (inv[k] || 0) + 1; saveFurn(); }],
     ['Waffenkisten (je 1)', '#556b2f', () => { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) inv[k] = (inv[k] || 0) + 1; saveFurn(); }],
     ['Waffe: Riesen-Lolli', '#ffe11a', () => { weap.sel = 'lolli'; weap.out = false; saveWeap(); }],
     ['Waffe: Schwert', '#c8ccd8', () => { mmo.clear.f1 = true; saveMmo(); weap.sel = 'mmoschwert'; saveWeap(); }],
@@ -6174,11 +6218,24 @@ function drawWueste(R) {
 }
 
 // ---------- Waffen aus der Kiste ----------
-let weap = { sel: null, out: false }; try { weap = Object.assign(weap, JSON.parse(localStorage.getItem('bob-waffe') || '{}')); if (weap.on) { weap.sel = weap.on; delete weap.on; } } catch (e) {}
-const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', desc: 'Linksklick: zuschlagen' }, mmoschwert: { name: 'Schwert der Schwert-Welt', sword: true, desc: 'Q ziehen · Klick · F Wirbelschlag · G Sternenstoß', unlock: () => mmo.clear && mmo.clear.f1 } };
-function swordOn() { return !mmo.on && !apo.on && weap.sel === 'mmoschwert' && WEAPONS.mmoschwert.unlock(); }
+function weapKey(id) { return id === 'bob' ? 'bob-waffe' : 'bob-waffe-' + id; }
+function loadWeap(id) { const w = { sel: null, out: false }; try { Object.assign(w, JSON.parse(localStorage.getItem(weapKey(id)) || '{}')); if (w.on) { w.sel = w.on; delete w.on; } } catch (e) {} return w; }
+let weap = loadWeap(chars.on);
+function setChar(id) { if (!CHARS[id] || !chars.owned.includes(id)) return; saveWear(); saveWeap(); chars.on = id; saveChars(); wear = loadWear(id); weap = loadWeap(id); weap.out = false; weapAnim = null; MM.drawn = false; MM.sheath = null; }
+const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', char: 'bob', desc: 'Linksklick: zuschlagen' }, schlaeger: { name: 'Baseballschläger', acc: 'schlaeger', char: 'jeff', desc: 'Linksklick: zuschlagen', unlock: () => passes.jeff.claimed.includes(15) }, mmoschwert: { name: 'Schwert der Schwert-Welt', sword: true, char: 'bob', desc: 'Q ziehen · Klick · F Wirbelschlag · G Sternenstoß', unlock: () => mmo.clear && mmo.clear.f1 } };
+function swordOn() { return !mmo.on && !apo.on && chars.on === 'bob' && weap.sel === 'mmoschwert' && WEAPONS.mmoschwert.unlock(); }
 let weapT0 = -9, weapAnim = null;
-function saveWeap() { try { localStorage.setItem('bob-waffe', JSON.stringify({ sel: weap.sel, out: weap.out })); } catch (e) {} }
+function saveWeap() { try { localStorage.setItem(weapKey(chars.on), JSON.stringify({ sel: weap.sel, out: weap.out })); } catch (e) {} }
+const CH = { f: null, t: 0, swap: false, fx: [] };
+function nearCharBox() { if (mmo.on || apo.on) return null; for (const k of ['telefonzelle', 'umkleide', 'klonkapsel']) { const f = nearFurn(k); if (f) return f; } return null; }
+function charEnter(f) { CH.f = f; CH.t = 0; CH.swap = false; bob.x = f.x; bob.hidden = true; keys.clear(); for (let i = 0; i < 18; i++) CH.fx.push({ x: f.x, y: f.y - 120, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 300, l: 0.6, c: '#fff' }); }
+function charTick(dt) {
+  for (const p of CH.fx) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 500 * dt; p.l -= dt; } CH.fx = CH.fx.filter(p => p.l > 0);
+  if (!CH.f) return; CH.t += dt;
+  if (CH.t > 0.35 && CH.t < 10 && !wr.open && !CH.opened) { CH.opened = true; openWardrobe('char'); }
+  if (CH.opened && !wr.open) { const f = CH.f; bob.hidden = false; bob.y = f.y + 70; bob.x = f.x; const col = CH.swap ? '#7fe8ff' : '#fff'; for (let i = 0; i < (CH.swap ? 40 : 14); i++) { const a = Math.random() * 6.283, v = 100 + Math.random() * 300; CH.fx.push({ x: f.x, y: f.y - 60, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 200, l: 0.8, c: i % 2 ? col : '#ffe85a' }); } if (CH.swap) toast = { text: 'Du spielst jetzt als ' + CHARS[chars.on].name + '!', t: 2.5 }; CH.f = null; CH.opened = false; }
+}
+function drawCharFx() { for (const p of CH.fx) { g.globalAlpha = Math.max(0, p.l / 0.8); g.fillStyle = p.c; g.beginPath(); g.moveTo(p.x, p.y - 8); g.lineTo(p.x + 5, p.y); g.lineTo(p.x, p.y + 8); g.lineTo(p.x - 5, p.y); g.closePath(); g.fill(); } g.globalAlpha = 1; }
 function nearKiste() { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) { const f = nearFurn(k); if (f) return f; } return null; }
 function kisteMenu() { openWardrobe('waffen'); }
 function weapAnimP() { if (!weapAnim) return null; const p = (performance.now() / 1000 - weapAnim.t0) / 0.75; if (p >= 1) { if (weapAnim.dir < 0) weap.out = false; weapAnim = null; saveWeap(); return null; } return { p, dir: weapAnim.dir }; }
@@ -8839,7 +8896,7 @@ function drawKal() {
 }
 const PASSES = [
   { id: 'bob', name: 'Bob-Pass', col: '#ffe14a', dark: '#2a2a2a', sub: '100 Level', open: true },
-  { id: 'x1', name: '???', col: '#666', dark: '#1e1e1e', sub: 'Gesperrt', open: false },
+  { id: 'jeff', name: 'Jeff-Pass', col: '#2fd8e0', dark: '#10262a', sub: '50 Level · Charakter Jeff', open: true, price: 250000 },
   { id: 'x2', name: '???', col: '#666', dark: '#1e1e1e', sub: 'Gesperrt', open: false },
 ];
 // Haare/Wolken als Puffs mit Tiefe (dreht sich mit Bob)
@@ -8868,17 +8925,32 @@ function passReward(i) {
   if (i % 3 === 0) return i < 40 ? { food: 2, n: 3 } : i < 75 ? { food: 3, n: 3 } : { food: 4, n: 1 };
   return { cash: 20 + i * 6 };
 }
-function passRewardName(r) { return r.o ? OUTFITS[r.o].name : r.a ? ACC[r.a].name : r.food ? r.n + '× ' + FOODS[r.food].name : money(r.cash) + ' Bargeld'; }
+function passRewardName(r) { return r.char ? 'Charakter: ' + CHARS[r.char].name : r.w ? WEAPONS[r.w].name : (r.o || r.jo) ? OUTFITS[r.o || r.jo].name : (r.a || r.ja) ? ACC[r.a || r.ja].name : r.food ? r.n + '× ' + FOODS[r.food].name : money(r.cash) + ' Bargeld'; }
 const PASS_REWARDS = {}; // (alt)
 const PASS_LV = 100, PASS_XP = 100;
 let bobpass = { xp: 0, claimed: [] };
 try { const d = JSON.parse(localStorage.getItem('bob-pass') || 'null'); if (d) bobpass = Object.assign(bobpass, d); } catch (e) {}
 function savePass() { try { localStorage.setItem('bob-pass', JSON.stringify(bobpass)); } catch (e) {} }
 function passLevel() { return Math.min(PASS_LV, Math.floor(bobpass.xp / PASS_XP)); }
-function passXp(v) { if (!lief.paesse) return; const b = passLevel(); bobpass.xp += v; savePass(); if (passLevel() > b) toast = { text: '🎟️ Bob-Pass Level ' + passLevel() + ' erreicht! Im Kalender freischalten.', t: 3.5 }; }
+let passes = { eq: 'bob', jeff: { bought: false, xp: 0, claimed: [] } }; try { const d = JSON.parse(localStorage.getItem('bob-paesse2') || 'null'); if (d) { passes.eq = d.eq || 'bob'; Object.assign(passes.jeff, d.jeff || {}); } } catch (e) {}
+function savePasses() { try { localStorage.setItem('bob-paesse2', JSON.stringify(passes)); } catch (e) {} savePass(); }
+const JEFF_FIXED = { 1: { char: 'jeff' }, 3: { ja: 'sonnenbrille' }, 5: { jo: 'jeff_nacht' }, 8: { ja: 'cap' }, 12: { ja: 'kopfhoerer' }, 15: { w: 'schlaeger' }, 20: { jo: 'jeff_gold' }, 25: { ja: 'rucksack' }, 30: { jo: 'jeff_skater' }, 35: { ja: 'goldkette' }, 40: { jo: 'jeff_pink' }, 45: { ja: 'umhang' }, 50: { ja: 'krone' } };
+function pState(id) { return id === 'jeff' ? passes.jeff : bobpass; }
+function pLV(id) { return id === 'jeff' ? 50 : PASS_LV; }
+function pLevel(id) { return Math.min(pLV(id), Math.floor(pState(id).xp / PASS_XP)); }
+function pReward(id, i) { if (id !== 'jeff') return passReward(i); if (JEFF_FIXED[i]) return JEFF_FIXED[i]; return i % 4 === 0 ? { food: 3, n: 2 } : { cash: 60 + i * 12 }; }
+function pName(id) { return id === 'jeff' ? 'Jeff-Pass' : 'Bob-Pass'; }
+function passXp(v) { if (!lief.paesse) return; const id = passes.eq; if (id === 'jeff' && !passes.jeff.bought) return; const b = pLevel(id); pState(id).xp += v; savePasses(); if (pLevel(id) > b) toast = { text: '🎟️ ' + pName(id) + ' Level ' + pLevel(id) + ' erreicht! Im Kalender freischalten.', t: 3.5 }; }
 const PP = { parts: [], burst: [] };
-function passGo(d) { kal.bpSel = Math.max(1, Math.min(PASS_LV, (kal.bpSel || 1) + d)); }
-function passUnlock() { const i = kal.bpSel; if (passLevel() < i || bobpass.claimed.includes(i)) return; bobpass.claimed.push(i); savePass(); const rw = passReward(i); if (rw.o && !wear.owned.includes(rw.o)) { wear.owned.push(rw.o); saveWear(); } if (rw.a) { wear.accOwned = wear.accOwned || []; if (!wear.accOwned.includes(rw.a)) wear.accOwned.push(rw.a); saveWear(); } if (rw.cash) earn(rw.cash); if (rw.food) { garden.food[rw.food] = (garden.food[rw.food] || 0) + rw.n; saveGarden(); } for (let k = 0; k < 40; k++) { const a = Math.random() * 6.283, v = 120 + Math.random() * 260; PP.burst.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 1 }); } toast = { text: 'Level ' + i + ': ' + passRewardName(passReward(i)) + (passReward(i).o || passReward(i).a ? ' – im Kleiderschrank!' : ''), t: 3 }; }
+function passGo(d) { kal.bpSel = Math.max(1, Math.min(pLV(kal.pass), (kal.bpSel || 1) + d)); }
+function giveReward(id, rw) {
+  const owner = id === 'jeff' ? 'jeff' : 'bob';
+  if (rw.char && !chars.owned.includes(rw.char)) { chars.owned.push(rw.char); saveChars(); }
+  const o = rw.o || rw.jo, ac = rw.a || rw.ja;
+  if (o || ac) { const w = wearOf(owner); if (o && !w.owned.includes(o)) w.owned.push(o); if (ac) { w.accOwned = w.accOwned || []; if (!w.accOwned.includes(ac)) w.accOwned.push(ac); } saveWearOf(owner, w); }
+  if (rw.cash) earn(rw.cash); if (rw.food) { garden.food[rw.food] = (garden.food[rw.food] || 0) + rw.n; saveGarden(); }
+}
+function passUnlock() { const id = kal.pass, st = pState(id), i = kal.bpSel; if (pLevel(id) < i || st.claimed.includes(i)) return; st.claimed.push(i); savePasses(); const rw = pReward(id, i); giveReward(id, rw); for (let k = 0; k < 40; k++) { const a = Math.random() * 6.283, v = 120 + Math.random() * 260; PP.burst.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 1 }); } toast = { text: 'Level ' + i + ': ' + passRewardName(rw) + (rw.char ? ' – geh in eine Telefonzelle!' : rw.o || rw.a || rw.jo || rw.ja ? ' – im Kleiderschrank' + (rw.jo || rw.ja ? ' von Jeff' : '') + '!' : rw.w ? ' – in der Waffenkiste von Jeff!' : ''), t: 3.5 }; }
 function drawPassTab(C, btns, txt) {
   const t = performance.now() / 1000, dt = 1 / 60;
   if (!kal.pass) {
@@ -8894,15 +8966,19 @@ function drawPassTab(C, btns, txt) {
       if (p.open) for (let k = 0; k < 6; k++) { const px = x + ((k * 53 + t * 18) % cw), py = y + ch - ((k * 97 + t * 40) % ch); const pg = g.createRadialGradient(px, py, 0, px, py, 12); pg.addColorStop(0, 'rgba(255,240,80,1)'); pg.addColorStop(1, 'rgba(255,240,80,0)'); g.fillStyle = pg; g.beginPath(); g.arc(px, py, 12, 0, 7); g.fill(); }
       g.restore();
       // Bild
-      if (p.id === 'bob') { g.lineWidth = 4; g.strokeStyle = '#111'; cube(x + cw / 2 - 55, y + 90, 110, 82, 18, YEL, true, 0.4); if (face.complete && face.width) g.drawImage(face, x + cw / 2 - 55 + 6, y + 98, 98, 70); cube(x + cw / 2 - 58, y + 172, 116, 70, 18, mkPal('#13c000', '#2fe01a'), true, 0.4); g.fillStyle = '#111'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.fillText('BoB', x + cw / 2, y + 210); }
+      if (p.id === 'jeff') drawBobFig(x + cw / 2, y + 262, 0.42, 0.4, Math.sin(t * 2) * 2, 1, 'jeff', false);
+      else if (p.id === 'bob') { g.lineWidth = 4; g.strokeStyle = '#111'; cube(x + cw / 2 - 55, y + 90, 110, 82, 18, YEL, true, 0.4); if (face.complete && face.width) g.drawImage(face, x + cw / 2 - 55 + 6, y + 98, 98, 70); cube(x + cw / 2 - 58, y + 172, 116, 70, 18, mkPal('#13c000', '#2fe01a'), true, 0.4); g.fillStyle = '#111'; g.font = '900 26px system-ui'; g.textAlign = 'center'; g.fillText('BoB', x + cw / 2, y + 210); }
       else { g.fillStyle = 'rgba(255,255,255,.06)'; g.beginPath(); g.arc(x + cw / 2, y + 190, 80, 0, 7); g.fill(); txt('🔒', x + cw / 2, y + 192, '400 70px system-ui', '#000', 'center'); }
       txt(p.open ? p.name : '???', x + cw / 2, y + 320, '900 26px system-ui', p.open ? p.col : '#666', 'center');
       txt(p.open ? p.sub : 'Gesperrt', x + cw / 2, y + 354, '600 16px system-ui', p.open ? '#ddd' : '#666', 'center');
       if (p.open) {
-        const lv = passLevel(); g.fillStyle = '#444'; g.beginPath(); g.roundRect(x + 20, y + 366, cw - 40, 14, 7); g.fill(); g.fillStyle = p.col; g.beginPath(); g.roundRect(x + 20, y + 366, (cw - 40) * lv / PASS_LV, 14, 7); g.fill();
-        txt('Level ' + lv + ' / ' + PASS_LV, x + cw / 2, y + 396, '700 15px system-ui', '#ddd', 'center');
-        g.fillStyle = p.col; g.beginPath(); g.roundRect(x + 30, y + ch - 62, cw - 60, 42, 12); g.fill(); txt('Öffnen', x + cw / 2, y + ch - 40, '900 20px system-ui', '#111', 'center');
-        btns.push({ b: { x, y, w: cw, h: ch }, act: () => { kal.pass = p.id; kal.bpSel = Math.max(1, Math.min(PASS_LV, passLevel() + 1)); kal.bpPos = kal.bpSel; } });
+        const lv = pLevel(p.id), LV = pLV(p.id), have = !p.price || passes.jeff.bought, eq = passes.eq === p.id; g.fillStyle = '#444'; g.beginPath(); g.roundRect(x + 20, y + 366, cw - 40, 14, 7); g.fill(); g.fillStyle = p.col; g.beginPath(); g.roundRect(x + 20, y + 366, (cw - 40) * lv / LV, 14, 7); g.fill();
+        txt(have ? 'Level ' + lv + ' / ' + LV : 'Noch nicht gekauft', x + cw / 2, y + 396, '700 15px system-ui', '#ddd', 'center');
+        const bb = { x: x + 30, y: y + ch - 62, w: cw - 60, h: 42 };
+        if (!have) { const ok = bank.money >= p.price; g.fillStyle = ok ? p.col : '#555'; g.beginPath(); g.roundRect(bb.x, bb.y, bb.w, bb.h, 12); g.fill(); txt('Kaufen ' + money(p.price), x + cw / 2, bb.y + 22, '900 16px system-ui', '#111', 'center'); btns.push({ b: bb, act: () => { if (bank.money < p.price) { kal.pmsg = 'Zu wenig Geld auf dem Konto!'; kal.pmsgT = performance.now(); return; } bank.money -= p.price; bank.log.push({ t: p.name, v: -p.price }); saveBank(); passes.jeff.bought = true; passes.eq = p.id; savePasses(); } }); }
+        else { g.fillStyle = eq ? '#3a6a3a' : p.col; g.beginPath(); g.roundRect(bb.x, bb.y, bb.w, bb.h, 12); g.fill(); txt(eq ? 'Ausgerüstet ✓' : 'Ausrüsten', x + cw / 2, bb.y + 22, '900 18px system-ui', eq ? '#fff' : '#111', 'center'); if (!eq) btns.push({ b: bb, act: () => { passes.eq = p.id; savePasses(); } }); }
+        if (kal.pmsg && performance.now() - kal.pmsgT < 2500 && p.price && !have) txt(kal.pmsg, x + cw / 2, y + ch - 82, '800 13px system-ui', '#ff6a6a', 'center');
+        btns.push({ b: { x, y, w: cw, h: ch - 72 }, act: () => { kal.pass = p.id; kal.bpSel = Math.max(1, Math.min(pLV(p.id), pLevel(p.id) + 1)); kal.bpPos = kal.bpSel; } });
       } else { g.fillStyle = '#3a3a3a'; g.beginPath(); g.roundRect(x + 30, y + ch - 62, cw - 60, 42, 12); g.fill(); txt('Gesperrt', x + cw / 2, y + ch - 40, '800 18px system-ui', '#888', 'center'); }
       g.restore();
     });
@@ -8923,36 +8999,41 @@ function drawPassTab(C, btns, txt) {
   // Rahmen
   g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.5; g.strokeRect(P.x + 70, P.y + 26, P.w - 140, P.h - 52);
   // XP-Leiste
-  const lv = passLevel(), into = lv >= PASS_LV ? PASS_XP : bobpass.xp - lv * PASS_XP, bx = P.x + 110, bw = P.w - 220, by = P.y + 56;
+  const lv = pLevel(kal.pass), into = lv >= pLV(kal.pass) ? PASS_XP : pState(kal.pass).xp - lv * PASS_XP, bx = P.x + 110, bw = P.w - 220, by = P.y + 56;
   g.fillStyle = '#3c3c3c'; g.fillRect(bx, by, bw, 46); g.lineWidth = 3; g.strokeStyle = '#111'; g.strokeRect(bx, by, bw, 46);
   const fg = g.createLinearGradient(bx, 0, bx + bw, 0); fg.addColorStop(0, '#ffe14a'); fg.addColorStop(1, '#ffb21a'); g.fillStyle = fg; g.fillRect(bx + 3, by + 3, (bw - 6) * into / PASS_XP, 40);
   g.fillStyle = `rgba(255,255,255,${0.25 + 0.2 * Math.sin(t * 3)})`; g.fillRect(bx + 3 + ((t * 160) % Math.max(1, (bw - 6) * into / PASS_XP)), by + 3, 18, 40);
-  txt('Level ' + lv + (lv >= PASS_LV ? ' – MAX' : '  ·  ' + into + ' / ' + PASS_XP + ' XP'), bx + bw / 2, by + 24, '900 20px system-ui', '#fff', 'center');
+  txt('Level ' + lv + (lv >= pLV(kal.pass) ? ' – MAX' : '  ·  ' + into + ' / ' + PASS_XP + ' XP'), bx + bw / 2, by + 24, '900 20px system-ui', '#fff', 'center');
   // Stufen-Kästen (nach links/rechts scrollen)
   const cx = P.x + P.w / 2, cy = P.y + 250, step = 320;
   g.fillStyle = '#b8b8b8'; g.fillRect(P.x + 60, cy - 28, P.w - 120, 56);
-  for (let i = Math.max(1, Math.floor(kal.bpPos) - 2); i <= Math.min(PASS_LV, Math.ceil(kal.bpPos) + 2); i++) {
-    const d = i - kal.bpPos, x = cx + d * step, sz = 230 - Math.min(1, Math.abs(d)) * 40, sel = i === kal.bpSel, reached = lv >= i, got = bobpass.claimed.includes(i);
+  for (let i = Math.max(1, Math.floor(kal.bpPos) - 2); i <= Math.min(pLV(kal.pass), Math.ceil(kal.bpPos) + 2); i++) {
+    const d = i - kal.bpPos, x = cx + d * step, sz = 230 - Math.min(1, Math.abs(d)) * 40, sel = i === kal.bpSel, reached = lv >= i, got = pState(kal.pass).claimed.includes(i);
     g.save(); g.globalAlpha = Math.max(0, 1 - Math.max(0, Math.abs(d) - 1.2) * 1.2);
     if (sel && reached && !got) { const hg = g.createRadialGradient(x, cy, sz * 0.3, x, cy, sz); hg.addColorStop(0, `rgba(255,236,60,${0.35 + 0.15 * Math.sin(t * 4)})`); hg.addColorStop(1, 'rgba(255,236,60,0)'); g.fillStyle = hg; g.beginPath(); g.arc(x, cy, sz, 0, 7); g.fill(); }
     g.fillStyle = got ? '#4a4a3a' : '#404040'; g.fillRect(x - sz / 2, cy - sz / 2, sz, sz); g.lineWidth = sel ? 9 : 3; g.strokeStyle = sel ? '#fff' : '#111'; g.strokeRect(x - sz / 2, cy - sz / 2, sz, sz);
     txt('LEVEL ' + i, x, cy - sz / 2 + 24, '900 ' + (sel ? 20 : 16) + 'px system-ui', reached ? '#ffe14a' : '#9a9a9a', 'center');
-    const rw = passReward(i), big = rw.o || rw.a;
+    const rw = pReward(kal.pass, i), big = rw.o || rw.a || rw.jo || rw.ja || rw.w || rw.char;
     g.save(); g.beginPath(); g.rect(x - sz / 2 + 4, cy - sz / 2 + 4, sz - 8, sz - 8); g.clip(); if (!reached) g.globalAlpha *= 0.55;
-    if (rw.o) drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, rw.o, false);
+    const base = kal.pass === 'jeff' ? 'jeff' : 'gruen';
+    if (rw.char) drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, CHARS[rw.char].outfit, false);
+    else if (rw.w) drawBobFig(x - 10, cy + sz / 2 - 40, sz / 760, 0.5, Math.sin(t * 2 + i) * 2, 1, base, false, [WEAPONS[rw.w].acc]);
+    else if (rw.jo) drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, rw.jo, false);
+    else if (rw.ja) drawBobFig(x, cy + sz / 2 - 40, sz / (rw.ja === 'umhang' || rw.ja === 'rucksack' ? 760 : 640), 0.5, Math.sin(t * 2 + i) * 2, 1, base, false, [rw.ja]);
+    else if (rw.o) drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, rw.o, false);
     else if (rw.a) drawBobFig(x, cy + sz / 2 - 40, sz / (rw.a === 'zylinder' || rw.a === 'lolli' || rw.a === 'blumenhut' ? 760 : 640), 0.5, Math.sin(t * 2 + i) * 2, 1, 'gruen', false, [rw.a]);
     else if (rw.food) webPic('tf' + Math.min(3, rw.food), x, cy, sz * 0.55);
     else { txt('💶', x, cy - 4, '400 ' + Math.round(sz * 0.3) + 'px system-ui', '#fff', 'center'); txt(money(rw.cash), x, cy + sz * 0.2, '900 ' + Math.round(sz * 0.11) + 'px system-ui', '#9aff9a', 'center'); }
     g.restore();
     if (got) txt('✓', x + sz / 2 - 24, cy - sz / 2 + 26, '900 26px system-ui', '#9aff9a', 'center'); else if (!reached) txt('🔒', x + sz / 2 - 24, cy - sz / 2 + 26, '400 20px system-ui', '#fff', 'center');
-    txt(passRewardName(rw), x, cy + sz / 2 - 22, '700 ' + (sel ? 16 : 13) + 'px system-ui', i === 100 ? '#5ff0ff' : big ? '#ffe14a' : '#cfcfcf', 'center');
+    txt(passRewardName(rw), x, cy + sz / 2 - 22, '700 ' + (sel ? 16 : 13) + 'px system-ui', (i === pLV(kal.pass) || rw.char) ? '#5ff0ff' : big ? '#ffe14a' : '#cfcfcf', 'center');
     if (!sel && Math.abs(d) < 1.5) btns.push({ b: { x: x - sz / 2, y: cy - sz / 2, w: sz, h: sz }, act: () => passGo(i > kal.bpSel ? 1 : -1) });
     g.restore();
   }
   // Pfeile
-  for (const [dir, ax] of [[-1, P.x + 30], [1, P.x + P.w - 30]]) { const can = dir < 0 ? kal.bpSel > 1 : kal.bpSel < PASS_LV; g.fillStyle = can ? '#ffe14a' : '#555'; g.beginPath(); g.moveTo(ax + dir * 16, cy); g.lineTo(ax - dir * 12, cy - 26); g.lineTo(ax - dir * 12, cy + 26); g.closePath(); g.fill(); if (can) btns.push({ b: { x: ax - 30, y: cy - 40, w: 60, h: 80 }, act: () => passGo(dir) }); }
+  for (const [dir, ax] of [[-1, P.x + 30], [1, P.x + P.w - 30]]) { const can = dir < 0 ? kal.bpSel > 1 : kal.bpSel < pLV(kal.pass); g.fillStyle = can ? '#ffe14a' : '#555'; g.beginPath(); g.moveTo(ax + dir * 16, cy); g.lineTo(ax - dir * 12, cy - 26); g.lineTo(ax - dir * 12, cy + 26); g.closePath(); g.fill(); if (can) btns.push({ b: { x: ax - 30, y: cy - 40, w: 60, h: 80 }, act: () => passGo(dir) }); }
   // Unlock
-  const sel = kal.bpSel, reached = lv >= sel, got = bobpass.claimed.includes(sel), ub = { x: cx - 170, y: P.y + P.h - 132, w: 340, h: 74 };
+  const sel = kal.bpSel, reached = lv >= sel, got = pState(kal.pass).claimed.includes(sel), ub = { x: cx - 170, y: P.y + P.h - 132, w: 340, h: 74 };
   g.fillStyle = '#000'; g.fillRect(ub.x, ub.y, ub.w, ub.h); g.fillStyle = got ? '#3a6a3a' : reached ? (0.5 + 0.5 * Math.sin(t * 4) > 0.5 ? '#ffe14a' : '#f2d23a') : '#8a8a8a'; g.fillRect(ub.x + 10, ub.y + 10, ub.w - 20, ub.h - 20);
   txt(got ? '✓ Freigeschaltet' : reached ? 'Freischalten' : '🔒 Level ' + sel + ' nötig', cx, ub.y + ub.h / 2 + 1, '900 30px system-ui', got ? '#fff' : '#111', 'center');
   if (reached && !got) btns.push({ b: ub, act: passUnlock });
@@ -8962,7 +9043,7 @@ function drawPassTab(C, btns, txt) {
   g.restore();
   // Zurück zur Auswahl
   const back = { x: P.x + 10, y: P.y + 10, w: 120, h: 34 }; g.fillStyle = 'rgba(0,0,0,.55)'; g.beginPath(); g.roundRect(back.x, back.y, back.w, back.h, 10); g.fill(); txt('◀ Pässe', back.x + back.w / 2, back.y + 18, '800 16px system-ui', '#fff', 'center'); btns.push({ b: back, act: () => { kal.pass = null; } });
-  txt(sel + ' / ' + PASS_LV, cx, P.y + P.h - 26, '700 15px system-ui', '#bbb', 'center');
+  txt(sel + ' / ' + pLV(kal.pass), cx, P.y + P.h - 26, '700 15px system-ui', '#bbb', 'center');
 }
 function kalClick(x, y) { const u = kal.ui; if (!u) return; for (const { b, act } of u.btns) if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) { act(); return; } const P = u.P; if (x < P.x || x > P.x + P.w || y < P.y - 20 || y > P.y + P.h) kal.open = false; }
 cv.addEventListener('wheel', e => { if (!kal.open) return; e.preventDefault(); if (kal.tab === 'battlepass' && kal.pass) { kal.wAcc = (kal.wAcc || 0) + (e.deltaX || e.deltaY); if (Math.abs(kal.wAcc) > 60) { passGo(Math.sign(kal.wAcc)); kal.wAcc = 0; } return; } kal.scroll += e.deltaY * 0.8; }, { passive: false });
@@ -10747,7 +10828,7 @@ function frameBody(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); fishTick(dt); mbAutoTick(); zmTick(); bbTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); mmoTick(dt);
+  tickTime(dt); fishTick(dt); mbAutoTick(); zmTick(); bbTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); mmoTick(dt); charTick(dt);
   if (swordOn()) { for (const k of ['atk', 'swing', 'spin']) if (MM[k] > 0) MM[k] = Math.max(0, MM[k] - dt); if (!MM.atk && !MM.dash) { if (keys.has('l')) MM.face = -1; else if (keys.has('r')) MM.face = 1; }
     if (MM.dash) { MM.dash.t -= dt; const R0 = ROOMS[cur], nx = bob.x + MM.face * 1400 * dt; if (!blocked(nx, bob.y)) bob.x = Math.max((R0.wide ? R0.wide[0] : XL) + 40, Math.min((R0.wide ? R0.wide[1] : XR) - 40, nx)); MM.swing = 0.2; if (MM.dash.t <= 0) MM.dash = null; } } spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
@@ -10791,7 +10872,7 @@ function frameBody(t) {
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else { if (wave.t > 0 || wave.parts.length) list.push({ y: bob.y + 0.005, f: drawWave }); list.push({ y: bob.y + 0.01, f: drawBob }); } }
-  apoListItems(list); mmoListItems(list); if (swordOn() && !bob.hidden && !build.on) swordItems(list);
+  apoListItems(list); mmoListItems(list); if (CH.fx.length) list.push({ y: 99996, f: drawCharFx }); if (swordOn() && !bob.hidden && !build.on) swordItems(list);
   if (cur === GEAR.room && lief.bobgear && !mmo.on) list.push({ y: FLOOR + 90, f: drawGearStand });
   if (cur === ATM.room && lief.einzahlautomat) list.push({ y: FLOOR + 86, f: drawAtm });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
