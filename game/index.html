@@ -3590,10 +3590,10 @@ const ACC = {
     cube(cx - 76 + 4 * t, top - 62, 152, 26, DEPTH * 0.95, mkPal('#e0101a', '#f02a30'), false, t);
   } },
   lolli: { name: 'Riesen-Lolli', slot: 'hand', draw: (bx, by, hx, hy, t, f) => {
-    const tt = performance.now() / 1000, A = weapAnimP(); let x0 = bx + BODY.w + 6, y0 = by + BODY.h - 30, rot = 0.55 + Math.sin(tt * 2) * 0.05 + weapSwingAng(), sc = 1;
+    const tt = performance.now() / 1000, A = weapAnimP(), fl = t < -0.05 ? -1 : 1; let x0 = fl > 0 ? bx + BODY.w + 6 : bx - 6 - DEPTH * t, y0 = by + BODY.h - 30, rot = 0.55 + Math.sin(tt * 2) * 0.05 + weapSwingAng(), sc = 1;
     if (A) { const q = A.dir > 0 ? A.p : 1 - A.p, e = 1 - Math.pow(1 - q, 3); const sx = bx + BODY.w * 0.2, sy = by - 40; x0 = sx + (x0 - sx) * e; y0 = sy + (y0 - sy) * e - Math.sin(q * Math.PI) * 120; rot = rot + (1 - e) * Math.PI * 2 * (A.dir > 0 ? -1 : 1); sc = 0.25 + 0.75 * e;
       g.save(); g.globalAlpha = Math.sin(q * Math.PI); for (let i = 0; i < 8; i++) { const a = i * 0.785 + tt * 4, r = 60 + 40 * q; g.fillStyle = i % 2 ? '#ffe11a' : '#ffffff'; g.beginPath(); g.arc(x0 + Math.cos(a) * r, y0 - 120 * sc + Math.sin(a) * r, 7, 0, 7); g.fill(); } g.restore(); }
-    g.save(); g.translate(x0, y0); g.rotate(rot); g.scale(sc, sc);
+    g.save(); g.translate(x0, y0); g.scale(fl, 1); g.rotate(rot); g.scale(sc, sc);
     g.lineCap = 'round'; g.strokeStyle = '#111'; g.lineWidth = 18; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -120); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 11; g.stroke();
     for (let i = 0; i < 7; i++) { const y = -130 - i * 30; g.fillStyle = i % 2 ? '#0aa0f0' : '#ffe11a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, y, 30 - i * 2.2, 20, (i % 2 ? 0.35 : -0.35), 0, 7); g.fill(); g.stroke(); }
     const cols = ['#e0262b', '#2fd060', '#ff3ad6', '#22e6e6', '#ffe11a']; for (let i = 0; i < 16; i++) { g.fillStyle = cols[i % 5]; g.beginPath(); g.arc(Math.sin(i * 2.3) * 18, -130 - (i * 13) % 190, 4, 0, 7); g.fill(); }
@@ -4372,7 +4372,7 @@ cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, 
   if (isTouch() && canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
   if (canBag() && hotbarVisible() && !hbHidden) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
   if (menu.open) { const i = menuHit(x, y); if (i >= 0) { menu.sel = i; choose(i); } return; }
-  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) { if (swordOn()) { const [wx] = toWorld(x, y); if (!MM.atk && !MM.sheath) MM.face = wx < bob.x ? -1 : 1; mmoSlash(); } else weapSwing(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
+  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) { if (swordOn()) { const [wx] = toWorld(x, y); if (!MM.atk && !MM.sheath) MM.face = wx < bob.x ? -1 : 1; mmoSlash(); } else { if (weapActive()) { const [wx] = toWorld(x, y); bob.face = wx < bob.x ? -1 : 1; } weapSwing(); } return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => { if (!joy.on) return; const [x, y] = toCanvas(e); let dx = x - joy.ox, dy = y - joy.oy; const m = Math.hypot(dx, dy), R = 90; if (m > R) { dx = dx / m * R; dy = dy / m * R; } joy.dx = dx / R; joy.dy = dy / R; });
 const stop = () => { joy.on = false; joy.dx = joy.dy = 0; };
 cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
