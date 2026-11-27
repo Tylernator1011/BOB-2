@@ -5653,8 +5653,7 @@ const WEB_ITEMS = [
   { id: 'zmspeed4', cat: 'haus', name: 'Turbo-Brennofen IV', price: 220000, desc: ['Ziegel alle 4 Minuten'], once: true, needs: 'zmspeed3' },
   { id: 'zmspeed5', cat: 'haus', name: 'Turbo-Brennofen V', price: 300000, desc: ['Ziegel alle 3 Minuten'], once: true, needs: 'zmspeed4' },
   { id: 'zmspeed6', cat: 'haus', name: 'Turbo-Brennofen VI', price: 420000, desc: ['Ziegel alle 2 Minuten'], once: true, needs: 'zmspeed5' },
-  { id: 'einzahlautomat', cat: 'haus', name: 'Einzahlungsautomat', price: 40000, desc: ['Bargeld direkt im Gartenhaus', 'aufs Konto einzahlen'], once: true, needs: 'tierhaus' },
-  { id: 'geldwaesche', cat: 'haus', name: 'Geldwäsche', price: 150000, desc: ['Wäscht dein Bargeld jede', 'Stunde aufs Konto (−10 %)'], once: true, needs: 'einzahlautomat' },
+  { id: 'einzahlautomat', cat: 'haus', name: 'Einzahlungsautomat', price: 120000, desc: ['Bargeld direkt im Gartenhaus', 'aufs Konto einzahlen'], once: true, needs: 'tierhaus' },
   { id: 'bobgear', cat: 'haus', name: 'Bobgear', price: 20000, desc: ['VR-Helm nur für Bob:', 'Schwert-MMO (offline)'], once: true },
   { id: 'bigbobo', cat: 'haus', name: 'Big Bobo', price: 100000, desc: ['Der Mafiaboss bezieht ein Büro', 'und verkauft deine Ziegel'], once: true, needs: 'ziegelmaschine' },
   { id: 'haendler', cat: 'haus', name: 'Krypto-Händler', price: 40000, desc: ['Verkauft deine Krypto', 'beim Profit-Ziel'], once: true, needs: 'tierhaus2', needs2: 'kralarm' },
@@ -6127,7 +6126,7 @@ function drawAtmBox(x, y, k, wash) {
   g.fillStyle = '#111'; g.fillRect(-36, -40, 72, 8); g.restore();
 }
 function drawAtm() {
-  drawAtmBox(ATM.x, FLOOR + 86, 1, !!lief.geldwaesche);
+  drawAtmBox(ATM.x, FLOOR + 86, 1, false);
   if (ATM.pop && ATM.pop.t > 0) { ATM.pop.t -= 1 / 60; g.save(); g.globalAlpha = Math.min(1, ATM.pop.t * 2); g.font = '900 24px system-ui'; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.6)'; const ty = FLOOR - 170 - (1.6 - ATM.pop.t) * 30; g.strokeText('+' + money(ATM.pop.v) + ' aufs Konto', ATM.x, ty); g.fillStyle = '#3cff7a'; g.fillText('+' + money(ATM.pop.v) + ' aufs Konto', ATM.x, ty); g.restore(); }
 }
 // ---------- Wildnis: riesiges Gebiet mit Wald, Wiesen, Wüste, Canyons und Bergen ----------
@@ -10646,7 +10645,7 @@ function frameBody(t) {
   const d = R.door;
   if (d && !doorLock && vy < -0.3 && bob.y <= FLOOR + 44 && Math.abs(bob.x - (d.x + d.w / 2)) < d.w / 2 + 10) { if (apo.on && d.to === 'draussen') go('apo_lager', [710, 600]); else go(d.to, d.at); doorLock = true; }
 
-  tickTime(dt); fishTick(dt); mbAutoTick(); zmTick(); bbTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); mmoTick(dt); wascheTick(); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
+  tickTime(dt); fishTick(dt); mbAutoTick(); zmTick(); bbTick(); mineTick(dt); czTick(); czManagerTick(); serverTick(); waterTick(); lieferantTick(); botanikerTick(dt); botaniker2Tick(dt); aussenBotTick(dt); tagesLieferTick(); abilTick(dt); kryptoTick(dt); traderTick(); investorTick(); liefTick(); maidTick(dt); maidCoinTick(); autoClickTick(dt); checkJobs(); bankInterest(); dwTick(); jailTick(dt); laborTick(); apoTick(dt); mmoTick(dt); spawnSeeds(); if (!bob.hidden && !fade.dir && !build.on) pickups(); updateBus(dt); updatePets(dt); checkAch(dt); if (toast.t > 0) toast.t -= dt;
   updateFade(dt);
   room();
   const st = ROOMS[cur].stop;
