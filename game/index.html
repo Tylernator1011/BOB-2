@@ -1415,10 +1415,13 @@ function startApo(id) {
   togglePhone(false); menu.open = false; go('apo_lager', [600, 640]);
 }
 function apoReset() {
+  const keepStorm = AP.storm;
   AP.inside = null; AP.fx = []; AP.rec = 0; AP.aim = 0;
   AP.storm = null; AP.drop = null; AP.act = null;
   AP.en = []; AP.bul = []; AP.shock = []; AP.room = cur; AP.patT = 40 + Math.random() * 40;
-  const R = ROOMS[cur]; if (!R.apo || apo.boss) return;
+  const R = ROOMS[cur];
+  if (keepStorm && R.apo && !apo.boss && !apo.won) { keepStorm.apes = []; if (keepStorm.st === 'run') { keepStorm.st = 'warn'; keepStorm.t = 4; } AP.storm = keepStorm; }
+  if (!R.apo || apo.boss) return;
   // beim Betreten: manchmal ist eine Patrouille da
   const chance = (R.danger || 0) * (0.35 + apoDay() * 0.08);
   for (let i = 0; i < (R.maxPat || 0); i++) if (Math.random() < chance) apoPatrol(true);
@@ -1492,6 +1495,7 @@ function drawApoAct() {
 function apoEventTick(dt) {
   const R = ROOMS[cur];
   if (AP.storm) {
+    if (!R.danger || R.theme === 'laden') return;
     const S = AP.storm; S.t += dt;
     if (S.st === 'warn' && S.t > 6) { S.st = 'run'; S.t = 0; const y0 = FLOOR + 80, y1 = (R.maxY || H - 20) - 20; for (let i = 0; i < 18; i++) S.apes.push({ x: S.dir > 0 ? XL - 100 - i * 90 - Math.random() * 60 : XR + 100 + i * 90 + Math.random() * 60, y: y0 + Math.random() * (y1 - y0), v: 520 + Math.random() * 220, hop: 0, hit: false, kind: Math.random() < 0.6 ? 'flitzer' : 'schimpanse' }); }
     if (S.st === 'run') {
@@ -2039,7 +2043,7 @@ function drawApoHud() {
   if (apo.won) {
     const t = performance.now() / 1000; g.fillStyle = `rgba(30,120,50,${0.85 + 0.1 * Math.sin(t * 3)})`; g.beginPath(); g.roundRect(W / 2 - 330, 150, 660, 66, 18); g.fill();
     g.fillStyle = '#fff'; g.font = '900 24px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Überlebt! 🏆', W / 2, 172);
-    g.font = '700 16px system-ui'; g.fillText(ROOMS[cur].apo ? 'Geh in dein Haus (Tür im Unterschlupf) und schlaf dich aus.' : 'Leg dich ins Bett und schlaf dich aus – dann ist alles wieder wie vorher.', W / 2, 198);
+    g.font = '700 16px system-ui'; g.fillText(ROOMS[cur].apo ? 'Geh durch eine Haustür nach Hause und schlaf dich aus.' : 'Leg dich ins Bett und schlaf dich aus – dann ist alles wieder wie vorher.', W / 2, 198);
     return;
   }
   if (apo.intro > 0) {
@@ -4028,7 +4032,7 @@ function openMenu() {
   { const pc = nearFurn('gamingtisch'); if (pc && !apo.on) { openWeb(); return; } }
   if (apoFloorSleep()) { sleepTo('morgen'); return; }
   if (apo.on && AP.inside) { toggleHaus(); return; }
-  { const hd = nearHausDoor(); if (hd) { if (apo.won && cur === 'apo_lager') { go('spawn', [970, FLOOR + 70]); return; } toggleHaus(hd); return; } }
+  { const hd = nearHausDoor(); if (hd) { if (apo.won && ROOMS[cur].apo) { AP.inside = null; go('spawn', [970, FLOOR + 70]); return; } toggleHaus(hd); return; } }
   { const db = nearDropBox(); if (db) { apoAct('loot', 1.4, () => { AP.drop = null; const a = 10 + Math.floor(Math.random() * 8); apo.ammo += a; apo.bag.dose += 2; apo.bag.wasser += 2; apo.bag.medi += 1; const of = apoFindOutfit(0.5); toast = { text: 'Abwurf: ' + a + ' Patronen, 2 Dosen, 2 Wasser, 1 Verband' + (of ? ', Outfit „' + of + '“' : ''), t: 4.5 }; saveApo(); }, { x: db.x, base: db.y }); return; } }
   { const lt = nearLoot(); if (lt) { doLoot(lt); return; } }
   if (nearPritsche()) { if (canSleepNow()) sleepTo('morgen'); else toast = { text: 'Du bist noch nicht müde – schlafen geht ab 18 Uhr. Arbeite doch an der Stanze!', t: 3.5 }; return; }
@@ -4228,7 +4232,7 @@ function interactTarget() {
   { const pc = nearFurn('gamingtisch'); if (pc && !apo.on) return { x: pc.x, y: pc.y - 300, label: 'Computer' }; }
   if (apoFloorSleep()) return { x: bob.x, y: bob.y - 260 * scaleAt(bob.y), label: 'Hinlegen & ausschlafen' };
   if (apo.on && AP.inside) return { x: AP.inside.x, y: FLOOR - 230, label: AP.inside.hinter ? 'Rauskommen' : 'Rausgehen' };
-  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: apo.won && cur === 'apo_lager' ? 'Nach Hause' : hd.hinter ? 'Hinters Haus' : 'Reingehen' }; }
+  { const hd = nearHausDoor(); if (hd) return { x: hd.x, y: FLOOR - 230, label: apo.won && ROOMS[cur].apo ? 'Nach Hause' : hd.hinter ? 'Hinters Haus' : 'Reingehen' }; }
   { const db = nearDropBox(); if (db) return { x: db.x, y: db.y - 150, label: 'Abwurf öffnen' }; }
   { const lt = nearLoot(); if (lt) return { x: lt.x, y: lt.base - 220, label: lt.k === 'fluss' ? 'Trinken' : lootEmpty(lt) ? 'Leer' : 'Durchsuchen' }; }
   if (nearPritsche()) return { x: 450, y: FLOOR - 50, label: canSleepNow() ? 'Schlafen' : 'Schlafen (ab 18 Uhr)' };
@@ -4820,6 +4824,7 @@ function solids(room) {
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'orange' && lief.mitbewohner) list.push({ x: MB.x - 60, w: 120, base: MB.y, depth: 30 });
   if (room === 'bbbuero') { list.push({ x: 300, w: 600, base: 660, depth: 260 }); list.push({ x: 950, w: 150, base: 615, depth: 80 }); list.push({ x: 80, w: 240, base: 615, depth: 80 }); }
+  if (room === 'garten' && lief.gartenxl) statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_XL[i % STATUE_XL.length]; list.push({ x: sx - 80, w: 160, base: sy + 4, depth: 50 }); });
   if (room === 'keller') for (const m of ZMS) if (lief[m.k]) list.push({ x: m.x - 175, w: 620, base: m.y + 10, depth: 70 });
   if (room === 'plantage') for (const i of ptTables()) list.push({ x: PT_X(i) - 10, w: 300, base: PT_Y + 6, depth: 80 });
   if (room === 'tierhaus2') for (const o of SRV) if (lief[o.id]) list.push({ x: o.x - 55, w: 110, base: SRV_Y, depth: 50 });
@@ -7517,6 +7522,7 @@ function drawGarten(R) {
   const GB = H + (R.tall || 0), gr = g.createLinearGradient(0, FLOOR, 0, GB); gr.addColorStop(0, '#45c43a'); gr.addColorStop(1, '#5fd64f'); g.fillStyle = gr; g.fillRect(XL, FLOOR, VW, GB - FLOOR + 60);
   g.fillStyle = 'rgba(255,255,255,.07)'; for (let x = Math.floor(XL / 160) * 160; x < XR; x += 160) g.fillRect(x, FLOOR, 80, GB - FLOOR + 60);
   if (R.tall) drawGartenUnten(R, t);
+  if (lief.gartenxl && statuesOwned().length) drawStatuePlatz();
   g.fillStyle = LINE; g.fillRect(XL, FLOOR - 3, VW, 6);
   if (lief.feld) drawFeld();
   if (lief.kalender && !lief.tierhaus) drawKalWall();
@@ -8660,7 +8666,7 @@ function newCustomer() {
 function shiftEndT() { return gDay() * 1440 + JOBS[job.id].to; }
 function workedMin() { const J = JOBS[job.id], s = Math.max(wk.start, gDay() * 1440 + J.from); return Math.max(0, Math.min(gt.T, shiftEndT()) - s); }
 function finishWork() {
-  const free = unpaid(), mins = workedMin(), lohn = free ? 0 : Math.round(mins / 60 * JOBS[job.id].wage * (lief.lohn5 ? 5 : 1)), sum = free ? 0 : lohn + wk.bonus;
+  const free = unpaid(), mins = workedMin(), lohn = free ? 0 : Math.round(mins / 60 * JOBS[job.id].wage * (lief.lohn5 ? 5 : 1)); let sum = free ? 0 : lohn + wk.bonus;
   if (sum > 0) { sum = Math.round(sum * incM()); bank.money += sum; bank.log.push({ t: 'Lohn: ' + JOBS[job.id].name, v: sum }); saveBank(); }
   job.earned = (job.earned || 0) + sum; saveJob();
   wk.on = false; toast = { text: sum > 0 ? '+' + money(sum) + ' Lohn – direkt aufs Konto überwiesen!' : 'Feierabend.', t: 3.5 };
@@ -8973,6 +8979,23 @@ for (const k in PETS) {
 function achVisible() { return ACH.filter(a => !a.pet || owned.includes(a.pet) || ach.done[a.id]); }
 // Statuen im Garten: feste Plätze
 const STATUE_SPOTS = [[-330, 560], [-120, 600], [90, 560], [1400, 560], [1560, 610], [1320, 690]];
+const STATUE_PLATZ = { x: 1950, y: 1760 }, STATUE_XL = [0, 1, 2, 3, 4, 5].map(i => { const dx = -600 + i * 240; return [1950 + dx, Math.round(1740 - 150 * Math.sqrt(1 - (dx / 650) ** 2))]; });
+function statueSpots() { return lief.gartenxl ? STATUE_XL : STATUE_SPOTS; }
+function drawStatuePlatz() {
+  const P = STATUE_PLATZ; g.save(); g.lineWidth = 5; g.strokeStyle = LINE;
+  g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(P.x, P.y + 14, 730, 245, 0, 0, 7); g.fill();
+  g.fillStyle = '#d8d0bc'; g.beginPath(); g.ellipse(P.x, P.y, 720, 235, 0, 0, 7); g.fill(); g.stroke();
+  g.save(); g.beginPath(); g.ellipse(P.x, P.y, 716, 231, 0, 0, 7); g.clip(); g.strokeStyle = 'rgba(120,100,70,.35)'; g.lineWidth = 2;
+  for (let r = 60; r < 740; r += 80) { g.beginPath(); g.ellipse(P.x, P.y, r, r * 0.326, 0, 0, 7); g.stroke(); }
+  for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8; g.beginPath(); g.moveTo(P.x + Math.cos(a) * 60, P.y + Math.sin(a) * 23); g.lineTo(P.x + Math.cos(a) * 740, P.y + Math.sin(a) * 241); g.stroke(); } g.restore();
+  g.strokeStyle = '#e0b030'; g.lineWidth = 7; g.beginPath(); g.ellipse(P.x, P.y, 696, 218, 0, 0, 7); g.stroke();
+  const t = performance.now() / 1000; g.fillStyle = '#e0b030'; g.strokeStyle = LINE; g.lineWidth = 3; g.beginPath(); g.ellipse(P.x, P.y, 46, 18, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = `rgba(255,240,160,${0.5 + 0.3 * Math.sin(t * 2)})`; g.beginPath(); g.ellipse(P.x, P.y - 2, 26, 9, 0, 0, 7); g.fill();
+  // Schild
+  const sx = P.x, sy = P.y + 120; g.lineWidth = 4; g.strokeStyle = LINE; g.fillStyle = '#6a4a22'; g.fillRect(sx - 6, sy, 12, 110); g.strokeRect(sx - 6, sy, 12, 110);
+  g.fillStyle = '#e0b030'; g.beginPath(); g.roundRect(sx - 110, sy - 50, 220, 56, 10); g.fill(); g.stroke(); g.fillStyle = '#3a2814'; g.font = '900 20px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ruhmeshalle', sx, sy - 31); g.font = '700 14px system-ui'; g.fillText('Level-100-Legenden', sx, sy - 11);
+  g.restore();
+}
 function statuesOwned() { return Object.keys(PETS).filter(k => ach.done['lv100_' + k]); }
 function drawStatue(k, x, y) {
   const s = scaleAt(y), t = performance.now() / 1000;
@@ -11158,7 +11181,7 @@ function frameBody(t) {
   if (petClicks.length) list.push({ y: 99997, f: () => { for (const c of petClicks) { c.t -= 1 / 60; c.y -= 1.2; g.globalAlpha = Math.max(0, Math.min(1, c.t * 2)); g.font = '900 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#fff'; g.strokeText('+' + clickVal() + ' €', c.x, c.y); g.fillStyle = c.auto ? '#e0a10f' : '#0a8a2f'; g.fillText('+' + clickVal() + ' €', c.x, c.y); g.globalAlpha = 1; } for (let i = petClicks.length - 1; i >= 0; i--) if (petClicks[i].t <= 0) petClicks.splice(i, 1); } });
   if (cur === petRoom() && lief.maid && lief.hundehaus) list.push({ y: MD.y, f: drawMaid });
   if (cur === petRoom() && lief.maid && lief.maidb && lief.hundehaus) list.push({ y: MD2.y, f: drawMaid2 });
-  if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
+  if (cur === 'garten') statuesOwned().forEach((k, i) => { const SP = statueSpots(), [sx, sy] = SP[i % SP.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else { if (wave.t > 0 || wave.parts.length) list.push({ y: bob.y + 0.005, f: drawWave }); list.push({ y: bob.y + 0.01, f: drawBob }); } }
   apoListItems(list); mmoListItems(list); if (bearOn() && !bob.hidden && !build.on) list.push({ y: bob.y + 0.05, f: drawBearWorld }); if (CH.fx.length) list.push({ y: 99996, f: drawCharFx }); if (swordOn() && !bob.hidden && !build.on) swordItems(list);
