@@ -3718,7 +3718,7 @@ function drawBob() {
   const hop = bob.moving ? -Math.abs(Math.sin(bob.phase)) * 9 * s : Math.sin(bob.phase * 0.5) * 1.2 * s;
   const sq = bob.moving ? 1 - Math.abs(Math.sin(bob.phase)) * 0.03 : 1;
   const lift = waveLift();
-  let accs = accWorn(); if (weapActive()) accs = accs.filter(a => ACC[a].slot !== 'hand').concat([WEAPONS[weap.sel].acc]); else if (weap.sel && accs.includes(WEAPONS[weap.sel] && WEAPONS[weap.sel].acc) && weapAnimP()) {}
+  let accs = accWorn(); if (weapActive() && WEAPONS[weap.sel].acc) accs = accs.filter(a => ACC[a].slot !== 'hand').concat([WEAPONS[weap.sel].acc]); else if (weap.sel && accs.includes(WEAPONS[weap.sel] && WEAPONS[weap.sel].acc) && weapAnimP()) {}
   drawBobFig(bob.x, bob.y - lift, k, bob.turn, lift > 0 ? Math.sin(performance.now() / 120) * 3 * s : hop, sq, wear.on, lift < 5, accs);
 }
 
@@ -3900,7 +3900,7 @@ function drawWardrobe() {
       if (wr.mode === 'pet') drawPetCube(wrPet(), x + WR.cw / 2, y + WR.ch - 14, 96, 1, 0);
       else if (wr.mode === 'acc') drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, [k]);
       else if (wr.mode === 'char') { const w = wearOf(k); drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 30, 0.34, 1, 0, 1, w.on, false, Object.values(w.acc || {}).filter(a => ACC[a])); g.font = '900 17px system-ui'; g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(CHARS[k].name, x + WR.cw / 2, y + WR.ch - 14); }
-      else if (wr.mode === 'waffen') { drawBobFig(x + WR.cw / 2 - 20, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, WEAPONS[k].acc ? [WEAPONS[k].acc] : []); if (WEAPONS[k].sword) swordIcon(x + WR.cw / 2 + 40, y + WR.ch - 40, 0.45, 0.35); }
+      else if (wr.mode === 'waffen') { drawBobFig(x + WR.cw / 2 - 20, y + WR.ch - 12, 0.37, 1, 0, 1, wear.on, false, WEAPONS[k].acc ? [WEAPONS[k].acc] : []); if (WEAPONS[k].sword) swordIcon(x + WR.cw / 2 + 40, y + WR.ch - 40, 0.45, 0.35); if (WEAPONS[k].bear) drawBear(x + WR.cw / 2 - 4, y + WR.ch - 10, 0.16, 1, performance.now() / 1000); }
       else drawBobFig(x + WR.cw / 2 - 4, y + WR.ch - 12, 0.37, 1, 0, 1, k, false, accWorn());
       if (wr.mode === 'acc' && accWorn().includes(k)) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
       if (k === wrOn()) { g.lineWidth = 6; g.strokeStyle = '#13a000'; g.strokeRect(x + 3, y + 3, WR.cw - 6, WR.ch - 6); }
@@ -3922,7 +3922,7 @@ function drawWardrobe() {
   const b1 = Math.sin(t * 1.7) * 3, px = (WR_TRACK.x + 40 + XR) / 2;
   if (wr.mode === 'acc') { drawBobFig(px, 770, 1.3, 1, b1, 1, wear.on, true, accWorn()); const k = items[wr.sel]; if (k) { marker(ACC[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(ACC_SLOTS[ACC[k].slot] + (accWorn().includes(k) ? ' · angezogen (nochmal klicken = ausziehen)' : ' · klicken zum Anziehen'), px, 196); } else marker('Noch keine Accessoires', px, 420, 34, '#fff'); }
   else if (wr.mode === 'char') { const k = items[wr.sel]; if (k) { const w = wearOf(k); drawBobFig(px, 770, 1.3, 1, b1, 1, w.on, true, Object.values(w.acc || {}).filter(a => ACC[a])); marker(CHARS[k].name, px, 150, 48, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(CHARS[k].desc + ' · ' + (k === chars.on ? 'gerade gespielt' : 'Klicken zum Wechseln'), px, 200); g.fillText('Eigene Outfits, Accessoires und Waffen', px, 232); } }
-  else if (wr.mode === 'waffen') { const k = items[wr.sel]; drawBobFig(px - 60, 770, 1.3, 1, b1, 1, wear.on, true, accWorn().filter(a => ACC[a].slot !== 'hand').concat(k && WEAPONS[k].acc ? [WEAPONS[k].acc] : [])); if (k && WEAPONS[k].sword) swordIcon(px + 150, 640, 1.6, 0.35); if (k) { marker(WEAPONS[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(weap.sel === k ? 'Ausgewählt · mit Q ' + (WEAPONS[k].sword ? 'vom Rücken ziehen' : 'in die Hand nehmen') : 'Klicken zum Auswählen', px, 196); g.fillText(WEAPONS[k].desc, px, 228); } }
+  else if (wr.mode === 'waffen') { const k = items[wr.sel]; drawBobFig(px - 60, 770, 1.3, 1, b1, 1, wear.on, true, accWorn().filter(a => ACC[a].slot !== 'hand').concat(k && WEAPONS[k].acc ? [WEAPONS[k].acc] : [])); if (k && WEAPONS[k].sword) swordIcon(px + 150, 640, 1.6, 0.35); if (k && WEAPONS[k].bear) drawBear(px - 60, 800, 0.62, 1, performance.now() / 1000, { fireT: (performance.now() / 1000) % 2.5 }); if (k) { marker(WEAPONS[k].name, px, 150, 40, '#fff'); g.font = '700 22px system-ui'; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(weap.sel === k ? 'Ausgewählt · mit Q ' + (WEAPONS[k].sword ? 'vom Rücken ziehen' : 'in die Hand nehmen') : 'Klicken zum Auswählen', px, 196); g.fillText(WEAPONS[k].desc, px, 228); } }
   else if (wr.mode !== 'pet') drawBobFig(px, 770, 1.3, 1, b1, 1, items[wr.sel] || wear.on, true, accWorn());
   else if (!wrPet()) { marker('Du hast noch kein Tier', px, 420, 40, '#fff'); wr.ui = null; }
   else {
@@ -5295,6 +5295,7 @@ const ADMIN = {
     ['Jeff freischalten', '#1fc8d6', () => { if (!chars.owned.includes('jeff')) chars.owned.push('jeff'); saveChars(); passes.jeff.bought = true; savePasses(); }],
     ['Jeff-Pass +1000 XP', '#2fd8e0', () => { passes.jeff.bought = true; passes.jeff.xp += 1000; savePasses(); }],
     ['Charakter-Möbel (je 1)', '#d0141c', () => { for (const k of ['telefonzelle', 'umkleide', 'klonkapsel']) inv[k] = (inv[k] || 0) + 1; saveFurn(); }],
+    ['Jeff: Eisbär (Lv 90)', '#e8e8ec', () => { if (!chars.owned.includes('jeff')) chars.owned.push('jeff'); saveChars(); passes.jeff.bought = true; if (!passes.jeff.claimed.includes(90)) passes.jeff.claimed.push(90); savePasses(); }],
     ['Waffenkisten (je 1)', '#556b2f', () => { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) inv[k] = (inv[k] || 0) + 1; saveFurn(); }],
     ['Waffe: Riesen-Lolli', '#ffe11a', () => { weap.sel = 'lolli'; weap.out = false; saveWeap(); }],
     ['Waffe: Schwert', '#c8ccd8', () => { mmo.clear.f1 = true; saveMmo(); weap.sel = 'mmoschwert'; saveWeap(); }],
@@ -6223,7 +6224,7 @@ function weapKey(id) { return id === 'bob' ? 'bob-waffe' : 'bob-waffe-' + id; }
 function loadWeap(id) { const w = { sel: null, out: false }; try { Object.assign(w, JSON.parse(localStorage.getItem(weapKey(id)) || '{}')); if (w.on) { w.sel = w.on; delete w.on; } } catch (e) {} return w; }
 let weap = loadWeap(chars.on);
 function setChar(id) { if (!CHARS[id] || !chars.owned.includes(id)) return; saveWear(); saveWeap(); chars.on = id; saveChars(); wear = loadWear(id); weap = loadWeap(id); weap.out = false; weapAnim = null; MM.drawn = false; MM.sheath = null; }
-const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', char: 'bob', desc: 'Linksklick: zuschlagen' }, schlaeger: { name: 'Baseballschläger', acc: 'schlaeger', char: 'jeff', desc: 'Linksklick: zuschlagen', unlock: () => passes.jeff.claimed.includes(15) }, mmoschwert: { name: 'Schwert der Schwert-Welt', sword: true, char: 'bob', desc: 'Q ziehen · Klick · F Wirbelschlag · G Sternenstoß', unlock: () => mmo.clear && mmo.clear.f1 } };
+const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli', char: 'bob', desc: 'Linksklick: zuschlagen' }, schlaeger: { name: 'Baseballschläger', acc: 'schlaeger', char: 'jeff', desc: 'Linksklick: zuschlagen', unlock: () => passes.jeff.claimed.includes(15) }, baer: { name: 'Eisbär mit Flinte', bear: true, char: 'jeff', desc: 'Q: Bär rufen · Linksklick: schießen', unlock: () => passes.jeff.claimed.includes(90) }, mmoschwert: { name: 'Schwert der Schwert-Welt', sword: true, char: 'bob', desc: 'Q ziehen · Klick · F Wirbelschlag · G Sternenstoß', unlock: () => mmo.clear && mmo.clear.f1 } };
 function swordOn() { return !mmo.on && !apo.on && chars.on === 'bob' && weap.sel === 'mmoschwert' && WEAPONS.mmoschwert.unlock(); }
 let weapT0 = -9, weapAnim = null;
 function saveWeap() { try { localStorage.setItem(weapKey(chars.on), JSON.stringify({ sel: weap.sel, out: weap.out })); } catch (e) {} }
@@ -6245,9 +6246,83 @@ function weapToggle() {
   if (!weap.sel || !WEAPONS[weap.sel] || mmo.on || apo.on || weapAnim) return;
   if (weap.out) weapAnim = { t0: performance.now() / 1000, dir: -1 }; else { weap.out = true; weapAnim = { t0: performance.now() / 1000, dir: 1 }; }
 }
-function weapSwingAng() { const e = (performance.now() / 1000 - weapT0) / 0.38; return e >= 0 && e < 1 ? Math.sin(e * Math.PI) * 1.5 : 0; }
-function weapSwing() { if (!weapActive() || weapAnim || build.on || menu.open || phone.open || wr.open || web.open || bag.open) return false; if (performance.now() / 1000 - weapT0 < 0.38) return true; weapT0 = performance.now() / 1000; return true; }
+function weapSwing() { if (!weapActive() || weapAnim || build.on || menu.open || phone.open || wr.open || web.open || bag.open) return false; const bear = WEAPONS[weap.sel].bear; if (performance.now() / 1000 - weapT0 < (bear ? 0.8 : 0.38)) return true; weapT0 = performance.now() / 1000; if (bear) bearShoot(); return true; }
+function weapSwingAng() { if (WEAPONS[weap.sel] && WEAPONS[weap.sel].bear) return 0; const e = (performance.now() / 1000 - weapT0) / 0.38; return e >= 0 && e < 1 ? Math.sin(e * Math.PI) * 1.5 : 0; }
 addEventListener('keydown', e => { if (e.code !== 'KeyQ' || e.repeat || mmo.on || apo.on || menu.open || phone.open || wr.open || web.open || bag.open || shopCat.open || build.on || kb.open || kal.open) return; if (!weap.sel) return; e.preventDefault(); if (swordOn()) mmoDrawToggle(); else weapToggle(); });
+// ---------- Jeffs Eisbär-Leibwächter mit Flinte (Jeff-Pass Level 90) ----------
+const BEAR = { shots: [], puffs: [], last: performance.now() };
+function bearOn() { return weap.sel === 'baer' && chars.on === 'jeff' && WEAPONS.baer && weapActive(); }
+function bearRise() { const A = weapAnimP(); if (!A) return weap.out ? 1 : 0; const q = A.dir > 0 ? A.p : 1 - A.p; return q; }
+function bearLift() { if (!bearOn()) return 0; const q = bearRise(), e = q < 1 ? 1 - Math.pow(1 - q, 3) : 1; return 245 * scaleAt(bob.y) * e; }
+function bearFireT() { return performance.now() / 1000 - weapT0; }
+function bearShoot() {
+  const s = scaleAt(bob.y), f = bob.face || 1, S = 0.6 * s, mx = bob.x + f * 300 * S, my = bob.y - 478 * S;
+  BEAR.shots.push({ x: mx, y: my, vx: f * 1900, l: 0.5 }); for (let i = 0; i < 10; i++) BEAR.puffs.push({ x: mx, y: my, vx: f * (80 + Math.random() * 220), vy: (Math.random() - 0.5) * 160, l: 0.5, r: 8 + Math.random() * 10, c: i < 4 ? '#ffd23a' : '#bbbbbb' });
+}
+function rifle(L, k) {
+  // Flinte entlang +x: Kolben bei 0, Mündung bei L
+  g.lineWidth = 3.5 * k; g.strokeStyle = LINE; g.lineJoin = 'round';
+  const wood = g.createLinearGradient(0, -14 * k, 0, 16 * k); wood.addColorStop(0, '#b8844a'); wood.addColorStop(0.5, '#8a5a2a'); wood.addColorStop(1, '#5a3a18');
+  g.fillStyle = '#2a2a30'; g.beginPath(); g.moveTo(-6 * k, -26 * k); g.lineTo(6 * k, -18 * k); g.lineTo(6 * k, 22 * k); g.lineTo(-6 * k, 36 * k); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = wood; g.beginPath(); g.moveTo(6 * k, -16 * k); g.quadraticCurveTo(0.22 * L, -18 * k, 0.32 * L, -8 * k); g.lineTo(L - 10 * k, -10 * k); g.lineTo(L - 10 * k, 8 * k); g.lineTo(0.36 * L, 8 * k); g.quadraticCurveTo(0.24 * L, 22 * k, 6 * k, 18 * k); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(40,20,5,.7)'; g.lineWidth = 2.5 * k; for (let i = 0; i < 5; i++) { const x = 0.4 * L + i * 0.1 * L; g.beginPath(); g.moveTo(x, -6 * k); g.lineTo(x - 5 * k, 5 * k); g.stroke(); } g.strokeStyle = LINE; g.lineWidth = 3.5 * k;
+  const met = g.createLinearGradient(0, -22 * k, 0, -8 * k); met.addColorStop(0, '#5a5a66'); met.addColorStop(1, '#1a1a20'); g.fillStyle = met; g.beginPath(); g.roundRect(0.3 * L, -22 * k, 0.7 * L, 12 * k, 5 * k); g.fill(); g.stroke();
+  g.fillStyle = '#1a1a20'; g.beginPath(); g.roundRect(0.6 * L, -34 * k, 26 * k, 14 * k, 3 * k); g.fill(); g.stroke(); g.beginPath(); g.roundRect(0.6 * L + 6 * k, -40 * k, 8 * k, 8 * k, 2 * k); g.fill(); g.stroke();
+  g.beginPath(); g.roundRect(L - 14 * k, -24 * k, 16 * k, 34 * k, 4 * k); g.fill(); g.stroke();
+  g.fillStyle = '#8a5a2a'; g.beginPath(); g.roundRect(0.86 * L, 10 * k, 12 * k, 26 * k, 6 * k); g.fill(); g.stroke();
+}
+function drawBear(x, y, S, f, t, opt) {
+  opt = opt || {}; const rise = opt.rise ?? 1, walk = opt.walk || 0, ft = opt.fireT ?? 9; if (rise <= 0.01) return;
+  const bob2 = walk ? -Math.abs(Math.sin(walk)) * 10 * S : Math.sin(t * 1.6) * 3 * S, arm = walk ? Math.sin(walk) * 0.12 : Math.sin(t * 1.6) * 0.03;
+  const R = (cx, cy, r, c0, c1, c2) => { const gr = g.createRadialGradient(cx - r * 0.35, cy - r * 0.45, r * 0.08, cx, cy, r * 1.08); gr.addColorStop(0, c0); gr.addColorStop(0.6, c1); gr.addColorStop(1, c2); return gr; };
+  g.save(); g.translate(x, y); const sq = rise < 1 ? 0.2 + 0.8 * (1 - Math.pow(1 - rise, 3)) + Math.sin(rise * Math.PI) * 0.12 : 1; g.scale(rise < 1 ? 0.6 + 0.4 * rise : 1, sq); g.translate(0, bob2);
+  g.lineWidth = 6 * S; g.strokeStyle = LINE; g.lineJoin = 'round';
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(0, 6 * S, 300 * S, 40 * S, 0, 0, 7); g.fill();
+  // Feuermodus: 0..0.15 hoch, 0.15..0.5 halten, 0.5..0.75 zurück
+  const shoot = ft < 0.15 ? ft / 0.15 : ft < 0.5 ? 1 : ft < 0.75 ? 1 - (ft - 0.5) / 0.25 : 0, kick = ft < 0.12 ? Math.sin(ft / 0.12 * Math.PI) : 0;
+  const backAng = f > 0 ? Math.PI + 0.62 : -0.62, gunAng = backAng + ((f > 0 ? Math.PI * 2 : -Math.PI) - backAng) * shoot;
+  const gx = (f > 0 ? 120 : -120) * S * (1 - shoot) + (-f * 160 * S) * shoot - f * kick * 20 * S, gy = -400 * S + (-78 * S) * shoot, L = 470 * S;
+  const gun = () => { g.save(); g.translate(gx, gy); g.rotate(gunAng); if (Math.cos(gunAng) < 0) g.scale(1, -1); rifle(L, S * 1.15); g.restore(); };
+  if (shoot < 0.5) gun();
+  // Hose mit Gürtel
+  const pg = g.createLinearGradient(-170 * S, 0, 170 * S, 0); pg.addColorStop(0, '#8a7ac8'); pg.addColorStop(0.5, '#6a5aa8'); pg.addColorStop(1, '#3e3278'); g.fillStyle = pg; g.beginPath(); g.roundRect(-172 * S, -215 * S, 344 * S, 215 * S, 8 * S); g.fill(); g.stroke();
+  // Arme hinten (Oberarm) + Unterarm + Hände mit Krallen
+  for (const k of [-1, 1]) { g.save(); g.translate(k * 230 * S, -395 * S); g.rotate(k * arm);
+    g.fillStyle = R(0, 120 * S, 70 * S, '#ffffff', '#e4e4e8', '#a8a8b0'); g.beginPath(); g.roundRect(-70 * S, 40 * S, 140 * S, 140 * S, 50 * S); g.fill(); g.stroke();
+    g.fillStyle = R(0, 0, 105 * S, '#ffffff', '#e8e8ec', '#a8a8b0'); g.beginPath(); g.ellipse(k * 10 * S, 0, 105 * S, 85 * S, -k * 0.25, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#f4dc4a'; for (let c = -1; c <= 1; c++) { const cx = c * 22 * S; g.beginPath(); g.moveTo(cx - 10 * S, 228 * S); g.lineTo(cx, 268 * S); g.lineTo(cx + 10 * S, 228 * S); g.closePath(); g.fill(); g.stroke(); }
+    g.fillStyle = R(0, 210 * S, 55 * S, '#e0caa4', '#b09a78', '#6a5a40'); g.beginPath(); g.arc(0, 208 * S, 54 * S, 0, 7); g.fill(); g.stroke(); g.restore(); }
+  // Oberkörper (Tanktop)
+  const tg = g.createLinearGradient(-165 * S, 0, 165 * S, 0); tg.addColorStop(0, '#f0ead4'); tg.addColorStop(0.55, '#d8cfb0'); tg.addColorStop(1, '#a89e80'); g.fillStyle = tg;
+  g.beginPath(); g.moveTo(-160 * S, -205 * S); g.lineTo(-160 * S, -420 * S); g.quadraticCurveTo(0, -500 * S, 160 * S, -420 * S); g.lineTo(160 * S, -205 * S); g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 4 * S; g.beginPath(); g.moveTo(-150 * S, -360 * S); g.quadraticCurveTo(0, -410 * S, 150 * S, -360 * S); g.stroke(); g.strokeStyle = LINE; g.lineWidth = 6 * S;
+  // Fell an den Schultern über dem Tanktop
+  for (const k of [-1, 1]) { g.fillStyle = R(k * 150 * S, -440 * S, 70 * S, '#ffffff', '#e8e8ec', '#b0b0b8'); g.beginPath(); g.moveTo(k * 70 * S, -470 * S); g.quadraticCurveTo(k * 140 * S, -490 * S, k * 175 * S, -430 * S); g.lineTo(k * 160 * S, -400 * S); g.quadraticCurveTo(k * 120 * S, -440 * S, k * 70 * S, -440 * S); g.closePath(); g.fill(); g.stroke(); }
+  // Gürtel mit Knoten
+  g.fillStyle = '#5a4a98'; g.beginPath(); g.roundRect(-172 * S, -225 * S, 344 * S, 30 * S, 8 * S); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(0, -210 * S, 60 * S, 26 * S, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#6a5aa8'; g.beginPath(); g.ellipse(0, -210 * S, 30 * S, 12 * S, 0, 0, 7); g.fill(); g.stroke();
+  for (const k of [-1, 1]) { g.fillStyle = '#6a5aa8'; g.beginPath(); g.moveTo(k * 8 * S, -195 * S); g.lineTo(k * 50 * S, -115 * S + Math.sin(t * 3 + k) * 4 * S); g.lineTo(k * 80 * S, -130 * S); g.lineTo(k * 30 * S, -200 * S); g.closePath(); g.fill(); g.stroke(); }
+  // Kopf
+  const hy = -470 * S; g.fillStyle = R(0, hy, 100 * S, '#ffffff', '#eaeaee', '#a8a8b0'); g.beginPath(); g.ellipse(0, hy, 100 * S, 92 * S, 0, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(160,160,170,.55)'; g.beginPath(); g.ellipse(-40 * S, hy + 8 * S, 26 * S, 14 * S, 0, 0, 7); g.ellipse(40 * S, hy + 8 * S, 26 * S, 14 * S, 0, 0, 7); g.fill();
+  g.fillStyle = R(0, hy - 34 * S, 70 * S, '#e8d4b0', '#b4987a', '#6a5440'); g.beginPath(); g.moveTo(-74 * S, hy - 10 * S); g.quadraticCurveTo(-80 * S, hy - 92 * S, 0, hy - 96 * S); g.quadraticCurveTo(80 * S, hy - 92 * S, 74 * S, hy - 10 * S); g.quadraticCurveTo(0, hy + 6 * S, -74 * S, hy - 10 * S); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(0, hy - 6 * S, 78 * S, 18 * S, 0, 0, Math.PI); g.fill(); g.stroke(); g.beginPath(); g.arc(0, hy - 84 * S, 14 * S, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#f2a8b8'; g.beginPath(); g.ellipse(0, hy + 30 * S, 22 * S, 16 * S, 0, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#8a3a4a'; g.beginPath(); g.ellipse(-7 * S, hy + 30 * S, 4 * S, 5 * S, 0, 0, 7); g.ellipse(7 * S, hy + 30 * S, 4 * S, 5 * S, 0, 0, 7); g.fill();
+  g.lineWidth = 5 * S; g.beginPath(); g.moveTo(-55 * S, hy + 52 * S); g.quadraticCurveTo(-20 * S, hy + 68 * S, 0, hy + 50 * S); g.quadraticCurveTo(20 * S, hy + 68 * S, 55 * S, hy + 52 * S); g.stroke(); g.lineWidth = 6 * S;
+  g.fillStyle = '#ff8aa8'; g.beginPath(); g.ellipse(0, hy + 64 * S, 8 * S, 10 * S, 0, 0, Math.PI); g.fill(); g.stroke();
+  if (shoot >= 0.5) gun();
+  // Mündungsfeuer
+  if (ft < 0.12) { const mx = gx + Math.cos(gunAng) * L * (f < 0 ? 1 : 1), my = gy + Math.sin(gunAng) * L; g.save(); g.translate(mx + f * 10 * S, my - 10 * S); const a = 1 - ft / 0.12; g.fillStyle = `rgba(255,210,60,${a})`; g.beginPath(); for (let i = 0; i < 10; i++) { const an = i * Math.PI / 5, r = i % 2 ? 18 * S : 60 * S; g.lineTo(f * Math.abs(Math.cos(an)) * r + Math.cos(an) * 6 * S, Math.sin(an) * r * 0.7); } g.closePath(); g.fill(); g.fillStyle = `rgba(255,255,220,${a})`; g.beginPath(); g.arc(f * 14 * S, 0, 16 * S, 0, 7); g.fill(); g.restore(); }
+  g.restore();
+}
+function drawBearWorld() {
+  if (!bearOn()) return; const s = scaleAt(bob.y), now = performance.now(), dt = Math.min(0.05, (now - BEAR.last) / 1000); BEAR.last = now;
+  drawBear(bob.x, bob.y + 4 * s, 0.6 * s, bob.face || 1, now / 1000, { rise: bearRise(), walk: bob.moving ? bob.phase : 0, fireT: bearFireT() });
+  for (const p of BEAR.shots) { p.x += p.vx * dt; p.l -= dt; g.strokeStyle = `rgba(255,150,60,${p.l * 2})`; g.lineWidth = 5; g.lineCap = 'round'; for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(p.x - Math.sign(p.vx) * k * 46, p.y); g.lineTo(p.x - Math.sign(p.vx) * (k * 46 + 26), p.y); g.stroke(); } }
+  for (const p of BEAR.puffs) { p.x += p.vx * dt; p.y += p.vy * dt; p.l -= dt; g.fillStyle = p.c; g.globalAlpha = Math.max(0, p.l * 2); g.beginPath(); g.arc(p.x, p.y, p.r * (1.5 - p.l), 0, 7); g.fill(); } g.globalAlpha = 1;
+  BEAR.shots = BEAR.shots.filter(p => p.l > 0); BEAR.puffs = BEAR.puffs.filter(p => p.l > 0);
+  const q = bearRise(); if (q > 0 && q < 1) { for (let i = 0; i < 6; i++) { const a = i * 1.05 + now / 300; g.fillStyle = `rgba(230,230,235,${Math.sin(q * Math.PI) * 0.8})`; g.beginPath(); g.arc(bob.x + Math.cos(a) * 200 * s, bob.y - 20 * s + Math.sin(a) * 30 * s, 40 * s, 0, 7); g.fill(); } }
+}
 // ---------- Einzahlungsautomat im Gartenhaus + Geldwäsche ----------
 const ATM = { room: 'tierhaus', x: 1430 }; let wascheT = null;
 function nearAtm() { return cur === ATM.room && lief.einzahlautomat && !fade.dir && !build.on && Math.abs(bob.x - ATM.x) < 150 && bob.y < FLOOR + 190; }
@@ -8897,7 +8972,7 @@ function drawKal() {
 }
 const PASSES = [
   { id: 'bob', name: 'Bob-Pass', col: '#ffe14a', dark: '#2a2a2a', sub: '100 Level', open: true },
-  { id: 'jeff', name: 'Jeff-Pass', col: '#2fd8e0', dark: '#10262a', sub: '50 Level · Charakter Jeff', open: true, price: 250000 },
+  { id: 'jeff', name: 'Jeff-Pass', col: '#2fd8e0', dark: '#10262a', sub: '100 Level · Charakter Jeff', open: true, price: 250000 },
   { id: 'x2', name: '???', col: '#666', dark: '#1e1e1e', sub: 'Gesperrt', open: false },
 ];
 // Haare/Wolken als Puffs mit Tiefe (dreht sich mit Bob)
@@ -8935,9 +9010,9 @@ function savePass() { try { localStorage.setItem('bob-pass', JSON.stringify(bobp
 function passLevel() { return Math.min(PASS_LV, Math.floor(bobpass.xp / PASS_XP)); }
 let passes = { eq: 'bob', jeff: { bought: false, xp: 0, claimed: [] } }; try { const d = JSON.parse(localStorage.getItem('bob-paesse2') || 'null'); if (d) { passes.eq = d.eq || 'bob'; Object.assign(passes.jeff, d.jeff || {}); } } catch (e) {}
 function savePasses() { try { localStorage.setItem('bob-paesse2', JSON.stringify(passes)); } catch (e) {} savePass(); }
-const JEFF_FIXED = { 1: { char: 'jeff' }, 3: { ja: 'sonnenbrille' }, 5: { jo: 'jeff_nacht' }, 8: { ja: 'cap' }, 12: { ja: 'kopfhoerer' }, 15: { w: 'schlaeger' }, 20: { jo: 'jeff_gold' }, 25: { ja: 'rucksack' }, 30: { jo: 'jeff_skater' }, 35: { ja: 'goldkette' }, 40: { jo: 'jeff_pink' }, 45: { ja: 'umhang' }, 50: { ja: 'krone' } };
+const JEFF_FIXED = { 1: { char: 'jeff' }, 3: { ja: 'sonnenbrille' }, 5: { jo: 'jeff_nacht' }, 8: { ja: 'cap' }, 12: { ja: 'kopfhoerer' }, 15: { w: 'schlaeger' }, 20: { jo: 'jeff_gold' }, 25: { ja: 'rucksack' }, 30: { jo: 'jeff_skater' }, 35: { ja: 'goldkette' }, 40: { jo: 'jeff_pink' }, 45: { ja: 'umhang' }, 50: { ja: 'krone' }, 60: { ja: 'zylinder' }, 70: { ja: 'fliege' }, 80: { ja: 'schnurrbart' }, 90: { w: 'baer' }, 100: { ja: 'heiligenschein' } };
 function pState(id) { return id === 'jeff' ? passes.jeff : bobpass; }
-function pLV(id) { return id === 'jeff' ? 50 : PASS_LV; }
+function pLV(id) { return PASS_LV; }
 function pLevel(id) { return Math.min(pLV(id), Math.floor(pState(id).xp / PASS_XP)); }
 function pReward(id, i) { if (id !== 'jeff') return passReward(i); if (JEFF_FIXED[i]) return JEFF_FIXED[i]; return i % 4 === 0 ? { food: 3, n: 2 } : { cash: 60 + i * 12 }; }
 function pName(id) { return id === 'jeff' ? 'Jeff-Pass' : 'Bob-Pass'; }
@@ -9018,6 +9093,7 @@ function drawPassTab(C, btns, txt) {
     g.save(); g.beginPath(); g.rect(x - sz / 2 + 4, cy - sz / 2 + 4, sz - 8, sz - 8); g.clip(); if (!reached) g.globalAlpha *= 0.55;
     const base = kal.pass === 'jeff' ? 'jeff' : 'gruen';
     if (rw.char) drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, CHARS[rw.char].outfit, false);
+    else if (rw.w && WEAPONS[rw.w].bear) { drawBobFig(x, cy + sz / 2 - 40 - sz * 0.27, sz / 900, 0.5, 0, 1, base, false); drawBear(x, cy + sz / 2 - 36, sz / 1200, 1, t, { fireT: (t % 2.5) }); }
     else if (rw.w) drawBobFig(x - 10, cy + sz / 2 - 40, sz / 760, 0.5, Math.sin(t * 2 + i) * 2, 1, base, false, [WEAPONS[rw.w].acc]);
     else if (rw.jo) drawBobFig(x, cy + sz / 2 - 40, sz / 640, 0.5, Math.sin(t * 2 + i) * 2, 1, rw.jo, false);
     else if (rw.ja) drawBobFig(x, cy + sz / 2 - 40, sz / (rw.ja === 'umhang' || rw.ja === 'rucksack' ? 760 : 640), 0.5, Math.sin(t * 2 + i) * 2, 1, base, false, [rw.ja]);
@@ -10399,7 +10475,7 @@ function drawAbilHud() {
 const wave = { t: 0, age: 0, dir: 1, hit: new Set(), parts: [], pops: [] };
 function waveStart() { wave.t = ABIL.welle.dur; wave.age = 0; wave.dir = bob.face || 1; wave.hit = new Set(); }
 function waveAmt() { if (wave.t <= 0) return 0; return Math.min(1, wave.age * 4, wave.t * 2.5); }
-function waveLift() { return waveAmt() * 85 * scaleAt(bob.y) + (MM.fly > 0 ? (40 + Math.sin(performance.now() / 200) * 8) * scaleAt(bob.y) : 0); }
+function waveLift() { return bearLift() + waveAmt() * 85 * scaleAt(bob.y) + (MM.fly > 0 ? (40 + Math.sin(performance.now() / 200) * 8) * scaleAt(bob.y) : 0); }
 function waveTick(dt) {
   for (const p of wave.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.l -= dt; }
   wave.parts = wave.parts.filter(p => p.l > 0 && p.y < p.gy);
@@ -10873,7 +10949,7 @@ function frameBody(t) {
   if (cur === 'garten') statuesOwned().forEach((k, i) => { const [sx, sy] = STATUE_SPOTS[i % STATUE_SPOTS.length]; list.push({ y: sy, f: () => drawStatue(k, sx, sy) }); });
   if (cur === 'draussen' && !apo.on) for (const p of lief.pkgs) list.push({ y: p.y, f: () => drawPkg(p) });
   if (!bob.hidden && !build.on) { if (apoInHaus()) list.push({ y: 0, f: () => { const o = AP.inside; if (o.hinter) return; const t = performance.now() / 1000, bl = (t % 3.5) < 0.15; g.fillStyle = '#fff'; if (!bl) { g.beginPath(); g.ellipse(o.x - 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.ellipse(o.x + 16 + Math.sin(t * 0.8) * 8, FLOOR - 120, 7, 9, 0, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(o.x - 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.arc(o.x + 16 + Math.sin(t * 0.8) * 10, FLOOR - 119, 3.5, 0, 7); g.fill(); } } }); else { if (wave.t > 0 || wave.parts.length) list.push({ y: bob.y + 0.005, f: drawWave }); list.push({ y: bob.y + 0.01, f: drawBob }); } }
-  apoListItems(list); mmoListItems(list); if (CH.fx.length) list.push({ y: 99996, f: drawCharFx }); if (swordOn() && !bob.hidden && !build.on) swordItems(list);
+  apoListItems(list); mmoListItems(list); if (bearOn() && !bob.hidden && !build.on) list.push({ y: bob.y + 0.05, f: drawBearWorld }); if (CH.fx.length) list.push({ y: 99996, f: drawCharFx }); if (swordOn() && !bob.hidden && !build.on) swordItems(list);
   if (cur === GEAR.room && lief.bobgear && !mmo.on) list.push({ y: FLOOR + 90, f: drawGearStand });
   if (cur === ATM.room && lief.einzahlautomat) list.push({ y: FLOOR + 86, f: drawAtm });
   list.sort((a, b) => a.y - b.y).forEach(it => it.f());
