@@ -3591,7 +3591,7 @@ const ACC = {
   } },
   lolli: { name: 'Riesen-Lolli', slot: 'hand', draw: (bx, by, hx, hy, t, f) => {
     const tt = performance.now() / 1000, x0 = bx + BODY.w + 6, y0 = by + BODY.h - 30;
-    g.save(); g.translate(x0, y0); g.rotate(0.55 + Math.sin(tt * 2) * 0.05);
+    g.save(); g.translate(x0, y0); g.rotate(0.55 + Math.sin(tt * 2) * 0.05 + weapSwingAng());
     g.lineCap = 'round'; g.strokeStyle = '#111'; g.lineWidth = 18; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -120); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 11; g.stroke();
     for (let i = 0; i < 7; i++) { const y = -130 - i * 30; g.fillStyle = i % 2 ? '#0aa0f0' : '#ffe11a'; g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, y, 30 - i * 2.2, 20, (i % 2 ? 0.35 : -0.35), 0, 7); g.fill(); g.stroke(); }
     const cols = ['#e0262b', '#2fd060', '#ff3ad6', '#22e6e6', '#ffe11a']; for (let i = 0; i < 16; i++) { g.fillStyle = cols[i % 5]; g.beginPath(); g.arc(Math.sin(i * 2.3) * 18, -130 - (i * 13) % 190, 4, 0, 7); g.fill(); }
@@ -3692,7 +3692,8 @@ function drawBob() {
   const hop = bob.moving ? -Math.abs(Math.sin(bob.phase)) * 9 * s : Math.sin(bob.phase * 0.5) * 1.2 * s;
   const sq = bob.moving ? 1 - Math.abs(Math.sin(bob.phase)) * 0.03 : 1;
   const lift = waveLift();
-  drawBobFig(bob.x, bob.y - lift, k, bob.turn, lift > 0 ? Math.sin(performance.now() / 120) * 3 * s : hop, sq, wear.on, lift < 5, accWorn());
+  let accs = accWorn(); if (weapActive() && !accs.includes(WEAPONS[weap.on].acc)) accs = accs.filter(a => ACC[a].slot !== 'hand').concat([WEAPONS[weap.on].acc]);
+  drawBobFig(bob.x, bob.y - lift, k, bob.turn, lift > 0 ? Math.sin(performance.now() / 120) * 3 * s : hop, sq, wear.on, lift < 5, accs);
 }
 
 // Steuerung
@@ -3728,7 +3729,7 @@ function kasse() { return (ROOMS[cur].objs || []).find(o => o.type === 'kasse');
 const JOB_SPOTS = { polizei: ['wache', 'theke'], anwalt: ['gerichtssaal', 'gtisch'], richter: ['gerichtssaal', 'richterbank'] };
 function nearRevier() { if (!(job && JOB_SPOTS[job.id] && onShift() && !fade.dir)) return null; const [rm, ty] = JOB_SPOTS[job.id]; if (cur !== rm) return null; const o = (ROOMS[rm].objs || []).find(o => o.type === ty && (ty !== 'gtisch' || o.vert)); return o && Math.abs(bob.x - (o.x + o.w / 2)) < 280 && Math.abs(bob.y - o.base) < 180 ? o : null; }
 function nearKasse() { const k = kasse(); return job && job.id === 'kasse' && onShift() && k && !fade.dir && Math.abs(bob.x - (k.x + k.w / 2)) < 260 && Math.abs(bob.y - k.base) < 170; }
-function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker() || nearAussenBot() || nearTeich() || nearFischer() || nearMitbewohner() || nearErz() || !!nearOre() || nearZM() || nearBB() || nearGear() || nearAtm() || !!mmoNear()); }
+function canInteract() { return !web.open && !kal.open && !(apo.on && AP.act) && !tres.on && !chase.on && !stz.on && !menu.open && !wr.open && !phone.open && !shopCat.open && !wk.on && !sleepFx && !pp.open && !bag.open && (nearStop() || nearHaendler() || nearSchrank() || nearBox() || nearKasse() || nearPakete() || nearSchalter() || nearBett() || nearPet() || nearFurn('topf') || nearFurn('herd') || nearFurn('napf') || nearMuell() || nearFurn('trophaeenregal') || nearGulli() || nearLeiter() || nearSchatz() || nearStand() || nearNpc() || nearDrop() || nearRaub() || nearGuard() || nearPritsche() || nearWerkbank() || nearTerminal() || nearLoot() || nearTakedown() || nearDropBox() || nearHausDoor() || !!AP.inside || apoFloorSleep() || nearFurn('gamingtisch') || nearPkg() || nearHundehaus() || nearRevier() || nearKalender() || nearBotaniker() || nearAussenBot() || nearTeich() || nearFischer() || nearMitbewohner() || nearErz() || !!nearOre() || nearZM() || nearBB() || nearGear() || nearAtm() || !!nearKiste() || !!mmoNear()); }
 
 // ---------- Kleiderschrank ----------
 const wr = { open: false, scroll: 0, sel: 0, just: false };
@@ -3970,6 +3971,7 @@ function openMenu() {
   if (nearBB()) { bbTalk(); return; }
   if (nearGear()) { mmoLogin(); return; }
   if (nearAtm()) { atmUse(); return; }
+  if (nearKiste()) { kisteMenu(); return; }
   if (mmoInteract()) return;
   if (nearZM()) { zmTake(); return; }
   if (nearErz()) { erzMenu(); return; }
@@ -4105,6 +4107,7 @@ function interactTarget() {
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
   if (nearBB()) return { x: BB.x, y: 120, label: 'Big Bobo' };
   if (nearGear()) return { x: GEAR.x, y: FLOOR - 120, label: 'Bobgear aufsetzen' };
+  { const ki = nearKiste(); if (ki) return { x: ki.x, y: furnBox(ki).top - 16, label: 'Waffen' }; }
   if (nearAtm()) return { x: ATM.x, y: FLOOR - 190, label: 'Bargeld einzahlen (' + money(Math.floor(bank.cash || 0)) + ')' };
   { const mn = mmoNear(); if (mn) return { x: mn.x, y: mn.y, label: mn.label }; }
   if (nearZM()) { const m = nearZM(); return { x: m.x - 70, y: m.y - 380, label: 'Ziegel nehmen (' + (garden[m.tr] || 0) + ')' }; }
@@ -4363,7 +4366,7 @@ cv.addEventListener('pointerdown', e => { if (e.button === 2) return; const [x, 
   if (isTouch() && canBag() && Math.hypot(x - BBTN.x, y - BBTN.y) < BBTN.r + 8) { toggleBag(true); return; }
   if (canBag() && hotbarVisible() && !hbHidden) { const hi = hbAt(x, y); if (hi >= 0) { useItem(hotbar[hi]); return; } }
   if (menu.open) { const i = menuHit(x, y); if (i >= 0) { menu.sel = i; choose(i); } return; }
-  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) return; Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
+  if (canInteract() && pill && x > pill.x - 8 && x < pill.x + pill.w + 8 && y > pill.y - 8 && y < pill.y + pill.h + 8) { openMenu(); return; } if (!isTouch()) { weapSwing(); return; } Object.assign(joy, { on: true, ox: x, oy: y, dx: 0, dy: 0 }); cv.setPointerCapture(e.pointerId); });
 cv.addEventListener('pointermove', e => { if (!joy.on) return; const [x, y] = toCanvas(e); let dx = x - joy.ox, dy = y - joy.oy; const m = Math.hypot(dx, dy), R = 90; if (m > R) { dx = dx / m * R; dy = dy / m * R; } joy.dx = dx / R; joy.dy = dy / R; });
 const stop = () => { joy.on = false; joy.dx = joy.dy = 0; };
 cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
@@ -4432,6 +4435,7 @@ const CATS = [
   { id: 'kueche',   name: 'Küche' },
   { id: 'bad',      name: 'Bad' },
   { id: 'gaming',   name: 'Gaming' },
+  { id: 'waffen',   name: 'Waffen' },
   { id: 'deko',     name: 'Deko' },
   { id: 'waende',   name: 'Wände' },
   { id: 'boeden',   name: 'Böden' },
@@ -4586,6 +4590,20 @@ FURN.transportbox.cat = 'deko';
 FURN.topf = { name: 'Blumentopf', cat: 'deko', price: 30, boxes: [ B(-30, 30, 0, 46, 0, 46, '#c8621a'), B(-35, 35, -3, 49, 46, 54, '#b0561a'), B(-28, 28, 5, 41, 54, 56, '#5a3a1a') ] };
 FURN.napf = { name: 'Napf', cat: 'deko', boxes: [ B(-42, 42, 0, 46, 0, 18, '#e0262b'), B(-33, 33, 7, 39, 18, 22, '#9a6a3a') ] };
 FURN.transportbox.name = 'Transportbox';
+// Waffenkisten (alle 3 haben dieselbe Funktion: Waffe auswählen)
+FURN.kiste_mil = { name: 'Militärkiste', cat: 'waffen', price: 250, kiste: true, boxes: [
+  B(-74, 74, 0, 52, 0, 8, '#2a2a22'), B(-70, 70, 2, 50, 8, 52, '#4a5a2a'), B(-74, 74, 0, 52, 52, 64, '#5a6c32'),
+  B(-56, -42, -3, 2, 30, 50, '#22221e'), B(42, 56, -3, 2, 30, 50, '#22221e'), B(-82, -70, 18, 34, 28, 38, '#22221e'), B(70, 82, 18, 34, 28, 38, '#22221e'),
+  B(-26, 26, -1, 2, 16, 24, '#e8e6d0'), B(-74, -66, -2, 2, 8, 64, '#3a4820'), B(66, 74, -2, 2, 8, 64, '#3a4820') ] };
+FURN.kiste_fan = { name: 'Schatztruhe', cat: 'waffen', price: 300, kiste: true, boxes: [
+  B(-70, 70, 0, 50, 0, 42, '#8a5a30'), B(-72, 72, -2, 52, 42, 56, '#9a6a3a'), B(-62, 62, 4, 46, 56, 66, '#a87440'), B(-52, 52, 10, 40, 66, 72, '#b07c46'),
+  B(-56, -44, -4, 54, 0, 72, '#e0b030'), B(44, 56, -4, 54, 0, 72, '#e0b030'), B(-72, 72, -3, 0, 38, 44, '#e0b030'),
+  B(-11, 11, -6, -2, 26, 50, '#ffd23a'), B(-4, 4, -7, -5, 32, 40, '#2a1a0a') ] };
+FURN.kiste_tech = { name: 'Hightech-Kiste', cat: 'waffen', price: 400, kiste: true, boxes: [
+  B(-74, 74, 0, 52, 0, 10, '#14161c'), B(-70, 70, 2, 50, 10, 52, '#2a2e38'), B(-74, 74, 0, 52, 52, 62, '#3a404c'),
+  B(-62, 62, -2, 2, 22, 26, '#3ae8ff'), B(-62, 62, -2, 2, 38, 42, '#3ae8ff'), B(-16, 16, -3, 2, 54, 60, '#ff3ad6'),
+  B(-78, -70, 6, 46, 14, 50, '#1e2128'), B(70, 78, 6, 46, 14, 50, '#1e2128'), B(-8, 8, -3, 2, 6, 10, '#3aff7a') ] };
+
 
 // Wände und Böden
 const WALLS = {
@@ -6106,6 +6124,22 @@ function drawWueste(R) {
   g.fillStyle = 'rgba(255,255,255,.06)'; for (let i = 0; i < 5; i++) g.fillRect(XL, top + 60 + i * 30 + Math.sin(t * 2 + i) * 6, VW, 8);
 }
 
+// ---------- Waffen aus der Kiste ----------
+let weap = { on: null }; try { weap = Object.assign(weap, JSON.parse(localStorage.getItem('bob-waffe') || '{}')); } catch (e) {}
+const WEAPONS = { lolli: { name: 'Riesen-Lolli', acc: 'lolli' } };
+let weapT0 = -9;
+function saveWeap() { try { localStorage.setItem('bob-waffe', JSON.stringify(weap)); } catch (e) {} }
+function nearKiste() { for (const k of ['kiste_mil', 'kiste_fan', 'kiste_tech']) { const f = nearFurn(k); if (f) return f; } return null; }
+function kisteMenu() {
+  menu.kind = 'kiste'; menu.title = 'Waffen-Kiste – wähle deine Waffe';
+  menu.items = [{ label: 'Keine Waffe', tag: weap.on ? '' : 'ausgerüstet', tagCol: '#0a8a1f', fn: () => { weap.on = null; saveWeap(); } }];
+  for (const [k, w] of Object.entries(WEAPONS)) menu.items.push({ label: w.name, tag: weap.on === k ? 'ausgerüstet' : 'Klick zum Schlagen', tagCol: weap.on === k ? '#0a8a1f' : '#777', fn: () => { weap.on = k; saveWeap(); } });
+  menu.items.push({ label: 'Schließen' });
+  MENU.row = Math.min(76, Math.floor((H - 220) / menu.items.length)); menu.t0 = performance.now(); menu.open = true; menu.sel = 0; keys.clear();
+}
+function weapActive() { return weap.on && WEAPONS[weap.on] && !mmo.on && !apo.on; }
+function weapSwingAng() { const e = (performance.now() / 1000 - weapT0) / 0.38; return e >= 0 && e < 1 ? Math.sin(e * Math.PI) * 1.5 : 0; }
+function weapSwing() { if (!weapActive() || build.on || menu.open || phone.open || wr.open || web.open || bag.open) return false; if (performance.now() / 1000 - weapT0 < 0.38) return true; weapT0 = performance.now() / 1000; return true; }
 // ---------- Einzahlungsautomat im Gartenhaus + Geldwäsche ----------
 const ATM = { room: 'tierhaus', x: 1430 }; let wascheT = null;
 function nearAtm() { return cur === ATM.room && lief.einzahlautomat && !fade.dir && !build.on && Math.abs(bob.x - ATM.x) < 150 && bob.y < FLOOR + 190; }
