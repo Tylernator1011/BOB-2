@@ -4082,7 +4082,7 @@ function interactTarget() {
   if (nearGuard()) return { x: guard.x, y: guard.y - 400, label: 'Bestechen' };
   if (nearTerminal()) return { x: 300, y: 420, label: 'Labor-Terminal' };
   { const td = nearTakedown(); if (td) return { x: td.x, y: td.y - 180, label: 'Überwältigen' }; }
-  if (nearBB()) return { x: BB.x - 330, y: BB.y - 220, label: 'Big Bobo' };
+  if (nearBB()) return { x: BB.x - 330, y: BB.y - 270, label: 'Big Bobo' };
   if (nearZM()) return { x: ZM.x - 70, y: ZM.y - 380, label: 'Ziegel nehmen (' + (garden.zmTray || 0) + ')' };
   if (nearErz()) return { x: ERZ.x, y: ERZ.y - 380, label: 'Erzhändler' };
   { const n = nearOre(); if (n) return { x: n.x, y: n.y - 150, label: 'Abbauen (' + n.hp + ')' }; }
@@ -4667,8 +4667,8 @@ function solids(room) {
   if (room === 'garten' && lief.toepfe && lief.tierhaus) { list.push({ x: TH.x - 225, w: 95, base: TH.y + 46, depth: 40 }); list.push({ x: TH.x + 130, w: 95, base: TH.y + 46, depth: 40 }); }
   if (room === 'tierhaus2' && lief.haendler) list.push({ x: TR.x - 220, w: 440, base: TR.y, depth: 70 });
   if (room === 'orange' && lief.mitbewohner) list.push({ x: MB.x - 60, w: 120, base: MB.y, depth: 30 });
-  if (room === 'keller' && lief.bigbobo) list.push({ x: BB.x - 240, w: 480, base: BB.y + 120, depth: 100 }); list.push({ x: BB.x - 330 - 130, w: 260, base: BB.y + 170, depth: 60 });
-  if (room === 'keller' && lief.ziegelmaschine) list.push({ x: ZM.x - 175, w: 430, base: ZM.y, depth: 60 });
+  if (room === 'keller' && lief.bigbobo) list.push({ x: BB.x - 250, w: 500, base: BB.y + 125, depth: 260 }); list.push({ x: BB.x - 330 - 130, w: 260, base: BB.y + 170, depth: 60 });
+  if (room === 'keller' && lief.ziegelmaschine) list.push({ x: ZM.x - 175, w: 620, base: ZM.y + 10, depth: 70 });
   if (room === 'tierhaus2') for (const o of SRV) if (lief[o.id]) list.push({ x: o.x - 55, w: 110, base: SRV_Y, depth: 50 });
   if (room === 'tierhaus2' && lief.investor) list.push({ x: TR2.x - 220, w: 440, base: TR2.y, depth: 70 });
   if (room === 'garten' && lief.botanik && ROOMS.garten.tall) list.push({ x: BH.x - 260 - 54, w: 520 + 54, base: BH.y, depth: 90 });
@@ -6399,8 +6399,14 @@ function drawZM() {
   // Förderband
   cube(x + 30, y - 70, 220, 24, 50, mkPal('#2a2d33', '#3a3e46'), true, 0.3);
   g.fillStyle = '#555'; for (let k = 0; k < 8; k++) { const bx = x + 34 + ((k * 28 + t * 40) % 210); g.fillRect(bx, y - 70, 4, 24); }
-  const n = garden.zmTray || 0; for (let k = 0; k < Math.min(6, n); k++) cube(x + 60 + (k % 3) * 52, y - 96 - Math.floor(k / 3) * 20, 46, 20, 26, MP, true, 0.3);
-  if (on) { const bx = x + 40 + ((t * 60) % 180); cube(bx, y - 94, 40, 18, 24, MP, true, 0.3); }
+  const n = garden.zmTray || 0;
+  if (on) { const q = (t * 0.33) % 1, bx = x + 40 + q * 200; if (q < 0.93) cube(bx, y - 94, 40, 18, 24, MP, true, 0.3); }
+  // Palette am Ende vom Band: dort stapeln sich die Ziegel
+  const px = x + 280, py = y + 10, WP = mkPal('#8a6234', '#a87a44');
+  cube(px, py - 16, 156, 16, 56, WP, true, 0.3);
+  g.fillStyle = '#5a3c1a'; for (const k of [0, 66, 132]) g.fillRect(px + k + 4, py - 12, 16, 8);
+  const shown = Math.min(36, Math.ceil(n * 36 / 60));
+  for (let L = 0; L < 6; L++) for (const row of [1, 0]) for (let c = 0; c < 3; c++) { const i = L * 6 + (1 - row) * 3 + c; if (i >= shown) continue; cube(px + 8 + c * 48 - row * 8, py - 16 - 20 - L * 20 - row * 14, 46, 20, 26, MP, true, 0.3); }
   g.fillStyle = '#e8d28a'; g.beginPath(); g.roundRect(x - 140, y - 120, 140, 30, 8); g.fill(); g.lineWidth = 3; g.stroke(); g.fillStyle = '#3a2814'; g.font = '800 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Ziegel: ' + n + '/60', x - 70, y - 104);
   g.restore();
   if (ZM.sayT > 0) { ZM.sayT -= 1 / 60; g.font = '700 18px system-ui'; const tw = g.measureText(ZM.say).width + 28, bx = x - tw / 2, by = y - 420; g.fillStyle = '#fff'; g.lineWidth = 3; g.strokeStyle = LINE; g.beginPath(); g.roundRect(bx, by, tw, 38, 14); g.fill(); g.stroke(); g.fillStyle = '#b0552e'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ZM.say, x, by + 20); }
@@ -6446,6 +6452,21 @@ function drawBigBobo(x, y, k, t, look) {
   }
   // Rumpf: riesig und rund, oben schmal
   const ty = y - S(250), shY = y - S(660) + br;
+  // Kopf: Glatze, klein im Verhältnis
+  const hx = x + S(26) * tt, hy = shY - S(74); g.save(); g.translate(hx, hy); g.scale(1.3, 1.3); g.translate(-hx, -hy);
+  { const gr = g.createRadialGradient(hx + S(70) * lx, hy - S(50), S(6), hx, hy, S(120)); gr.addColorStop(0, '#fff0d8'); gr.addColorStop(0.45, '#eac08a'); gr.addColorStop(1, '#a8784a'); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(hx - S(78), hy + S(10)); g.bezierCurveTo(hx - S(86), hy - S(110), hx + S(86), hy - S(110), hx + S(78), hy + S(10)); g.bezierCurveTo(hx + S(74), hy + S(80), hx - S(74), hy + S(80), hx - S(78), hy + S(10)); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(hx - S(26) + S(20) * lx, hy - S(62), S(24), S(10), -0.3, 0, 7); g.fill();
+  const fx = hx + S(22) * tt;
+  // Brauen (grimmig)
+  g.strokeStyle = '#3a2410'; g.lineWidth = S(8); g.beginPath(); g.moveTo(fx - S(46), hy - S(22)); g.lineTo(fx - S(12), hy - S(12)); g.moveTo(fx + S(46), hy - S(22)); g.lineTo(fx + S(12), hy - S(12)); g.stroke();
+  // Goldenes Auge + normales Auge
+  const ge = g.createRadialGradient(fx - S(30), hy + S(2), S(2), fx - S(28), hy + S(4), S(26)); ge.addColorStop(0, 'rgba(255,250,170,.95)'); ge.addColorStop(0.35, 'rgba(255,210,40,.8)'); ge.addColorStop(1, 'rgba(255,210,40,0)'); g.fillStyle = ge; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(26), 0, 7); g.fill();
+  g.fillStyle = '#ffd21a'; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(9), 0, 7); g.fill(); g.lineWidth = S(2.5); g.strokeStyle = '#8a6a00'; g.stroke();
+  g.fillStyle = '#111'; g.beginPath(); g.arc(fx + S(28), hy + S(4), S(8), 0, 7); g.fill();
+  // Mund (schiefes Grinsen wie im Original)
+  g.strokeStyle = '#111'; g.lineWidth = S(10); g.beginPath(); g.moveTo(fx - S(16), hy + S(30)); g.quadraticCurveTo(fx - S(22), hy + S(48), fx - S(4), hy + S(46)); g.lineTo(fx + S(26), hy + S(44)); g.moveTo(fx - S(16), hy + S(30)); g.lineTo(fx - S(8), hy + S(24)); g.stroke();
+  g.restore(); g.lineWidth = Math.max(2, S(5)); g.strokeStyle = LINE;
   { const gr = g.createRadialGradient(x + S(220) * lx, y - S(520) + br, S(20), x, y - S(430) + br, S(330)); gr.addColorStop(0, SUIT[0]); gr.addColorStop(0.5, SUIT[1]); gr.addColorStop(1, SUIT[2]); g.fillStyle = gr; }
   g.beginPath(); g.moveTo(x - S(70), shY); g.bezierCurveTo(x - S(250), shY + S(20), x - S(275), y - S(420) + br, x - S(250), ty - S(20)); g.quadraticCurveTo(x, ty + S(30), x + S(250), ty - S(20)); g.bezierCurveTo(x + S(275), y - S(420) + br, x + S(250), shY + S(20), x + S(70), shY); g.closePath(); g.fill(); g.stroke();
   g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(x + S(150) * lx, y - S(540) + br, S(46), S(90), -0.35, 0, 7); g.fill();
@@ -6461,20 +6482,6 @@ function drawBigBobo(x, y, k, t, look) {
   g.lineWidth = Math.max(2, S(5));
   g.fillStyle = '#e0141a'; g.beginPath(); g.moveTo(cx - S(150), vb + S(10)); g.lineTo(cx - S(140), vb - S(20)); g.lineTo(cx - S(120), vb - S(4)); g.lineTo(cx - S(100), vb - S(22)); g.lineTo(cx - S(92), vb + S(10)); g.closePath(); g.fill(); g.stroke();
   g.strokeStyle = 'rgba(120,60,0,.6)'; g.lineWidth = S(4); g.beginPath(); g.moveTo(cx - S(160), vb + S(10)); g.lineTo(cx - S(86), vb + S(10)); g.stroke(); g.strokeStyle = LINE; g.lineWidth = Math.max(2, S(5));
-  // Kopf: Glatze, klein im Verhältnis
-  const hx = x + S(26) * tt, hy = shY - S(70);
-  { const gr = g.createRadialGradient(hx + S(70) * lx, hy - S(50), S(6), hx, hy, S(120)); gr.addColorStop(0, '#fff0d8'); gr.addColorStop(0.45, '#eac08a'); gr.addColorStop(1, '#a8784a'); g.fillStyle = gr; }
-  g.beginPath(); g.moveTo(hx - S(78), hy + S(10)); g.bezierCurveTo(hx - S(86), hy - S(110), hx + S(86), hy - S(110), hx + S(78), hy + S(10)); g.bezierCurveTo(hx + S(74), hy + S(80), hx - S(74), hy + S(80), hx - S(78), hy + S(10)); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(hx - S(26) + S(20) * lx, hy - S(62), S(24), S(10), -0.3, 0, 7); g.fill();
-  const fx = hx + S(22) * tt;
-  // Brauen (grimmig)
-  g.strokeStyle = '#3a2410'; g.lineWidth = S(8); g.beginPath(); g.moveTo(fx - S(46), hy - S(22)); g.lineTo(fx - S(12), hy - S(12)); g.moveTo(fx + S(46), hy - S(22)); g.lineTo(fx + S(12), hy - S(12)); g.stroke();
-  // Goldenes Auge + normales Auge
-  const ge = g.createRadialGradient(fx - S(30), hy + S(2), S(2), fx - S(28), hy + S(4), S(26)); ge.addColorStop(0, 'rgba(255,250,170,.95)'); ge.addColorStop(0.35, 'rgba(255,210,40,.8)'); ge.addColorStop(1, 'rgba(255,210,40,0)'); g.fillStyle = ge; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(26), 0, 7); g.fill();
-  g.fillStyle = '#ffd21a'; g.beginPath(); g.arc(fx - S(28), hy + S(4), S(9), 0, 7); g.fill(); g.lineWidth = S(2.5); g.strokeStyle = '#8a6a00'; g.stroke();
-  g.fillStyle = '#111'; g.beginPath(); g.arc(fx + S(28), hy + S(4), S(8), 0, 7); g.fill();
-  // Mund (schiefes Grinsen wie im Original)
-  g.strokeStyle = '#111'; g.lineWidth = S(10); g.beginPath(); g.moveTo(fx - S(16), hy + S(30)); g.quadraticCurveTo(fx - S(22), hy + S(48), fx - S(4), hy + S(46)); g.lineTo(fx + S(26), hy + S(44)); g.moveTo(fx - S(16), hy + S(30)); g.lineTo(fx - S(8), hy + S(24)); g.stroke();
   g.restore();
 }
 function drawBBBuero() {
